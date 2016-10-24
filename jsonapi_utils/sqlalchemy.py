@@ -32,3 +32,7 @@ def sort_query(query, querystring):
         order = expressions.get(sort_opt['order'])
         order_items.append(order(field))
     return query.order_by(*order_items)
+
+
+def include_query(query, include_kwargs):
+    pass
