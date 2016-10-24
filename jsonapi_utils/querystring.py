@@ -1,3 +1,6 @@
+# -*- coding: utf-8 -*-
+
+
 class QueryStringManager(object):
     """Querystring parser for JSONAPI
 
@@ -75,8 +78,6 @@ class QueryStringManager(object):
             {
                 "number": '25',
                 "size": '150',
-                "offset": '250',
-                "limit": '150'
             }
 
             Example with number strategy::
@@ -84,13 +85,6 @@ class QueryStringManager(object):
                 >>> query_string = {'page[number]': '25', 'page[size]': '10'}
                 >>> parsed_query.pagination
                 {'number': '25', 'size': '10'}
-
-            Example with offset / limit strategy::
-
-                >>> query_string = {'page[offset]': '100', 'page[limit]': '100'}
-                >>> parsed_query.pagination
-                {'offset': '100', 'limit': '100'}
-
         """
         # check values type
         result = self._get_key_values('page', multiple_values=False)
