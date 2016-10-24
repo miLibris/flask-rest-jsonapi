@@ -25,6 +25,14 @@ def invalid_querystring():
 
 
 @pytest.fixture
+def invalid_pagination():
+    return {
+        'page[size]': 'test',
+        'page[number]': 'test'
+    }
+
+
+@pytest.fixture
 def qs_manager(valid_querystring):
     return QueryStringManager(valid_querystring)
 
@@ -61,6 +69,12 @@ def test_pagination(qs_manager):
     assert qs_manager.pagination == wanted
 
 
+def test_pagination_error(invalid_pagination):
+    qs = QueryStringManager(invalid_pagination)
+    with pytest.raises(Exception):
+        qs.pagination
+
+
 def test_fields(qs_manager):
     wanted = {
         'test': ['one', 'two'],
@@ -75,6 +89,11 @@ def test_sorting(qs_manager):
         {'field': 'author.name', 'order': 'asc', 'raw': 'author.name'}
     ]
     assert qs_manager.sorting == wanted
+
+
+def test_sorting_empty(invalid_pagination):
+    qs = QueryStringManager(invalid_pagination)
+    assert qs.sorting == []
 
 
 def test_include(qs_manager):
