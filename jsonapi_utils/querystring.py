@@ -80,11 +80,11 @@ class QueryStringManager(object):
                 "size": '150',
             }
 
-            Example with number strategy::
+        Example with number strategy::
 
-                >>> query_string = {'page[number]': '25', 'page[size]': '10'}
-                >>> parsed_query.pagination
-                {'number': '25', 'size': '10'}
+            >>> query_string = {'page[number]': '25', 'page[size]': '10'}
+            >>> parsed_query.pagination
+            {'number': '25', 'size': '10'}
         """
         # check values type
         result = self._get_key_values('page', multiple_values=False)
@@ -106,6 +106,7 @@ class QueryStringManager(object):
                 "user": ['name', 'email'],
                 "articles": ['title', 'short_description']
             }
+
         """
         return self._get_key_values('fields')
 
@@ -115,11 +116,13 @@ class QueryStringManager(object):
         sort parameter for other ORMs
 
         Example of return value::
+
             [
                 {'field': 'created_at', 'order': 'desc', 'raw': '-created_at'},
                 {'field': 'number', 'order': 'asc', 'raw': 'number'},
                 {'field': 'author.number', 'order': 'asc', 'raw': 'author.number'}
             ]
+
         """
         sort_fields = self.query.get('sort')
         if not sort_fields:
