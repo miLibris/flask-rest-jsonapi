@@ -3,6 +3,15 @@ class QueryStringManager(object):
 
     :param dict query_string: query string dict from flask to use
     """
+
+    MANAGED_KEYS = (
+        'filter',
+        'page',
+        'fields',
+        'sort',
+        'include'
+    )
+
     def __init__(self, query_string):
         self.query = query_string
 
@@ -26,6 +35,16 @@ class QueryStringManager(object):
                 item_value = value
             results.update({item_key: item_value})
         return results
+
+    @property
+    def querystring(self):
+        """Return original querystring but containing only managed keys
+        """
+        ret = {}
+        for key, value in self.query.items():
+            if key.startswith(self.MANAGED_KEYS):
+                ret[key] = value
+        return ret
 
     @property
     def filters(self):
