@@ -79,17 +79,17 @@ class QueryStringManager(object):
                 "limit": '150'
             }
 
-            Example with number strategy::
+        Example with number strategy::
 
-                >>> query_string = {'page[number]': '25', 'page[size]': '10'}
-                >>> parsed_query.pagination
-                {'number': '25', 'size': '10'}
+            >>> query_string = {'page[number]': '25', 'page[size]': '10'}
+            >>> parsed_query.pagination
+            {'number': '25', 'size': '10'}
 
-            Example with offset / limit strategy::
+        Example with offset / limit strategy::
 
-                >>> query_string = {'page[offset]': '100', 'page[limit]': '100'}
-                >>> parsed_query.pagination
-                {'offset': '100', 'limit': '100'}
+            >>> query_string = {'page[offset]': '100', 'page[limit]': '100'}
+            >>> parsed_query.pagination
+            {'offset': '100', 'limit': '100'}
 
         """
         # check values type
@@ -112,6 +112,7 @@ class QueryStringManager(object):
                 "user": ['name', 'email'],
                 "articles": ['title', 'short_description']
             }
+
         """
         return self._get_key_values('fields')
 
@@ -121,11 +122,13 @@ class QueryStringManager(object):
         sort parameter for other ORMs
 
         Example of return value::
+
             [
                 {'field': 'created_at', 'order': 'desc', 'raw': '-created_at'},
                 {'field': 'number', 'order': 'asc', 'raw': 'number'},
                 {'field': 'author.number', 'order': 'asc', 'raw': 'author.number'}
             ]
+
         """
         sort_fields = self.query.get('sort')
         if not sort_fields:
