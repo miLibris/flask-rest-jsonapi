@@ -13,6 +13,9 @@ class QueryStringManager(object):
     )
 
     def __init__(self, query_string):
+        if not isinstance(query_string, dict):
+            raise ValueError('QueryStringManager require a dict-like object query_string parameter')
+
         self.query = query_string
 
     def _get_key_values(self, index, multiple_values=True):
