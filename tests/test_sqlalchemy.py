@@ -5,7 +5,7 @@ from sqlalchemy import create_engine, Column, Integer, DateTime
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 
-from jsonapi_utils.sqlalchemy import paginate_query, sort_query
+from jsonapi_utils.alchemy import paginate_query, sort_query
 from jsonapi_utils.querystring import QueryStringManager
 
 Base = declarative_base()
