@@ -8,9 +8,8 @@ from jsonapi_utils.constants import DEFAULT_PAGE_SIZE
 def paginate_query(query, pagination_kwargs):
     """Paginate query result according to jsonapi rfc
 
-    Args:
-        query (sqlalchemy.orm.query.Query): sqlalchemy queryset
-        pagination_kwargs (dict): pagination informations
+    :param sqlalchemy.orm.query.Query query: sqlalchemy queryset
+    :param dict pagination_kwargs: pagination informations
     """
     page_size = int(pagination_kwargs.get('size', 0)) or DEFAULT_PAGE_SIZE
     query = query.limit(page_size)
