@@ -39,13 +39,12 @@ def paginate_result(data, object_count, querystring, base_url):
     links['last'] += '?' + urlencode(all_qs_args)
 
     # compute previous and next link
-    if querystring.pagination.get('number'):
-        current_page = int(querystring.pagination['number'])
-        if current_page > 1:
-            all_qs_args.update({'page[number]': current_page - 1})
-            links['prev'] = '?'.join((base_url, urlencode(all_qs_args)))
-        if current_page < last_page:
-            all_qs_args.update({'page[number]': current_page + 1})
-            links['next'] = '?'.join((base_url, urlencode(all_qs_args)))
+    current_page = int(querystring.pagination.get('number', 0)) or 1
+    if current_page > 1:
+        all_qs_args.update({'page[number]': current_page - 1})
+        links['prev'] = '?'.join((base_url, urlencode(all_qs_args)))
+    if current_page < last_page:
+        all_qs_args.update({'page[number]': current_page + 1})
+        links['next'] = '?'.join((base_url, urlencode(all_qs_args)))
 
     data['links'] = links
