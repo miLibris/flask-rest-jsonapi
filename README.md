@@ -64,5 +64,7 @@ class PostDetail(Resource):
 
     @oauth2.require_oauth('post_detail')
     def get(self, post_id):
+        """Get post details
+        """
         return jsonapi_detail('post', PostSchema, Post, 'id', post_id, sql_db.session)
 ```
