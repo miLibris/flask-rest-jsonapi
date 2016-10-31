@@ -11,9 +11,9 @@ from jsonapi_utils.querystring import QueryStringManager
 Base = declarative_base()
 
 
-class Article(Base):
+class Item(Base):
 
-    __tablename__ = 'articles'
+    __tablename__ = 'item'
 
     id = Column(Integer, primary_key=True)
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
@@ -23,7 +23,7 @@ class Article(Base):
 @pytest.fixture
 def engine():
     engine = create_engine("sqlite:///:memory:")
-    Article.metadata.create_all(engine)
+    Item.metadata.create_all(engine)
     return engine
 
 
@@ -34,12 +34,12 @@ def session(engine):
 
 
 @pytest.fixture
-def articles(session):
-    articles_list = []
+def items(session):
+    items_list = []
     for i in range(0, 200):
-        a = Article(number=i)
-        articles_list.append(a)
-    session.add_all(articles_list)
+        item = Item(number=i)
+        items_list.append(item)
+    session.add_all(items_list)
     session.commit()
 
 
@@ -53,16 +53,16 @@ def querystring_paginate():
     return QueryStringManager({'page[size]': '10', 'page[number]': 2})
 
 
-def test_paginate_query(session, articles, querystring_paginate):
-    query = session.query(Article)
+def test_paginate_query(session, items, querystring_paginate):
+    query = session.query(Item)
     query = paginate_query(query, querystring_paginate.pagination)
     results = query.all()
     assert len(results) == 10
     assert results[0].number == 10
 
 
-def test_sort_query(session, articles, querystring_sort):
-    query = session.query(Article)
+def test_sort_query(session, items, querystring_sort):
+    query = session.query(Item)
     query = sort_query(query, querystring_sort.sorting)
     results = query.all()
     assert results[0].number == 199
