@@ -1,7 +1,14 @@
 # jsonapi-utils
 Python utils to help you build a jsonapi http://jsonapi.org/
 
-# Build rest api easily with oauthlib, flask_restful, marshmallow_jsonapi and sqlalchemy according to jsonapi rfc
+# Build rest api easily
+
+## Stack
+
+- oauthlib
+- flask_restful
+- marshmallow_jsonapi
+- sqlalchemy
 
 ## Managed concepts:
 
