@@ -10,12 +10,26 @@ Python utils to help you build a jsonapi http://jsonapi.org/
 - marshmallow_jsonapi
 - sqlalchemy
 
-## Managed concepts:
+## Managed concepts
 
-- jsonapi result structure
-- pagination
-- sort
-- fields limitation
+### jsonapi result structure
+http://jsonapi.org/
+
+### pagination
+querystring MUST be urlencoded
+
+Example: ?page[number]=2&page[size]=10
+
+### sort
+querystring MUST be urlencoded
+
+Example: ?sort=-created,title
+
+### fields limitation
+- querystring MUST be urlencoded
+- only available on current resource type
+
+Example: ?fields[post]=id,title
 
 ## Exemple
 
