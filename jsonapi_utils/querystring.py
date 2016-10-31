@@ -3,8 +3,6 @@
 
 class QueryStringManager(object):
     """Querystring parser for JSONAPI
-
-    :param dict query_string: query string dict from flask to use
     """
 
     MANAGED_KEYS = (
@@ -16,6 +14,10 @@ class QueryStringManager(object):
     )
 
     def __init__(self, query_string):
+        """Initialization method
+
+        :param dict query_string: query string dict from flask to use
+        """
         if not isinstance(query_string, dict):
             raise ValueError('QueryStringManager require a dict-like object query_string parameter')
 
@@ -133,10 +135,3 @@ class QueryStringManager(object):
             order = 'desc' if sort_field.startswith('-') else 'asc'
             sorting_results.append({'field': field, 'order': order, 'raw': sort_field})
         return sorting_results
-
-    @property
-    def include(self):
-        """Return fields to include
-        """
-        include_param = self.query.get('include')
-        return include_param.split(',') if include_param else []

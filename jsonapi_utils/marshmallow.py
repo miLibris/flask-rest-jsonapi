@@ -7,12 +7,13 @@ from copy import copy
 from jsonapi_utils.constants import DEFAULT_PAGE_SIZE
 
 
-def paginate_result(data, object_count, querystring, base_url):
+def paginate_result(data, item_count, querystring, base_url):
     """Add pagination links to result
 
-    Args:
-        data (dict): the result of the view
-        object_count (int): number of main objects in result
+    :param dict data: the result of the view
+    :param int item_count: number of main item in result
+    :param QueryStringManager querystring: the managed querystring fields and values
+    :param str base_url: the base url for pagination
     """
     links = {}
     all_qs_args = copy(querystring.querystring)
@@ -34,7 +35,7 @@ def paginate_result(data, object_count, querystring, base_url):
 
     # compute last link
     page_size = int(querystring.pagination.get('size', 0)) or DEFAULT_PAGE_SIZE
-    last_page = int(ceil(object_count / page_size))
+    last_page = int(ceil(item_count / page_size))
     all_qs_args.update({'page[number]': last_page})
     links['last'] += '?' + urlencode(all_qs_args)
 
