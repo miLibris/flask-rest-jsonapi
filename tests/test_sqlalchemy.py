@@ -63,6 +63,6 @@ def test_paginate_query(session, articles, querystring_paginate):
 
 def test_sort_query(session, articles, querystring_sort):
     query = session.query(Article)
-    query = sort_query(query, querystring_sort)
+    query = sort_query(query, querystring_sort.sorting)
     results = query.all()
     assert results[0].number == 199

@@ -94,10 +94,3 @@ def test_sorting(qs_manager):
 def test_sorting_empty(invalid_pagination):
     qs = QueryStringManager(invalid_pagination)
     assert qs.sorting == []
-
-
-def test_include(qs_manager):
-    wanted = [
-        'author'
-    ]
-    assert qs_manager.include == wanted
