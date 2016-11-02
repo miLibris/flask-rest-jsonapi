@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-from urllib.parse import urlencode
+from six.moves.urllib.parse import urlencode
 from math import ceil
 from copy import copy
 
