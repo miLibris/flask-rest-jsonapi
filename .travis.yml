@@ -6,6 +6,9 @@ python:
   - '3.5'
 install:
   - pip install -r requirements.txt
+  - pip install coveralls coverage
 script:
-  - python setup.py test
   - python setup.py install
+  - coverage run --source zerolog -m py.test -v --cache-clear
+after_success:
+  - coveralls
