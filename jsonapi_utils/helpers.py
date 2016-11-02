@@ -4,11 +4,11 @@ from flask import request, url_for
 from sqlalchemy.orm.exc import NoResultFound
 
 from jsonapi_utils.querystring import QueryStringManager as QSManager
-from jsonapi_utils.alchemy import sort_query, paginate_query
+from jsonapi_utils.alchemy import sort_query, paginate_query, filter_query
 from jsonapi_utils.marshmallow import paginate_result
 
 
-def jsonapi_list(type_, schema_kls, query, endpoint, endpoint_kwargs=None):
+def jsonapi_list(type_, schema_kls, model, query, endpoint, endpoint_kwargs=None):
     """Helper to get jsonapi result for "get" method on list resource
     Managed concepts:
         - sorting
@@ -19,6 +19,7 @@ def jsonapi_list(type_, schema_kls, query, endpoint, endpoint_kwargs=None):
 
     :param str tyoe_: resource type
     :param marshmallow.schema.SchemaMeta schema_kls: a schema class to manage serialization
+    :param sqlalchemy.ext.declarative.api.DeclarativeMeta model: an sqlalchemy model
     :param sqlalchemy.orm.query.Query query: the sqlalchemy data provider
     :param str endpoint: the endpoint name to create pagination
     :param dict endpoint_kwargs: kwargs for endpoint url creation
@@ -27,6 +28,9 @@ def jsonapi_list(type_, schema_kls, query, endpoint, endpoint_kwargs=None):
     item_count = query.count()
 
     qs = QSManager(request.args)
+
+    if qs.filters:
+        query = filter_query(query, qs.filters, model)
 
     if qs.sorting:
         query = sort_query(query, qs.sorting)

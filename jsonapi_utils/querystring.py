@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 
+import json
+
 
 class QueryStringManager(object):
     """Querystring parser for JSONAPI
@@ -65,11 +67,14 @@ class QueryStringManager(object):
         Return value will be a dict containing all fields by resource, for example::
 
             {
-                "user": [1, 2],
-                "articles": [12]
+                "user": [{'field': 'username', 'op': 'eq', 'value': 'test'}],
             }
         """
-        return self._get_key_values('filter')
+        filters = self._get_key_values('filter', multiple_values=False)
+        for key, value in filters.items():
+            filters[key] = json.loads(value)
+
+        return filters
 
     @property
     def pagination(self):
@@ -106,7 +111,6 @@ class QueryStringManager(object):
 
             {
                 "user": ['name', 'email'],
-                "articles": ['title', 'short_description']
             }
 
         """
@@ -121,8 +125,6 @@ class QueryStringManager(object):
 
             [
                 {'field': 'created_at', 'order': 'desc', 'raw': '-created_at'},
-                {'field': 'number', 'order': 'asc', 'raw': 'number'},
-                {'field': 'author.number', 'order': 'asc', 'raw': 'author.number'}
             ]
 
         """

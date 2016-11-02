@@ -34,3 +34,31 @@ def sort_query(query, sort_info):
         order = expressions.get(sort_opt['order'])
         order_items.append(order(field))
     return query.order_by(*order_items)
+
+
+def filter_query(query, filter_info, model):
+    """Filter query according to jsonapi rfc
+
+    :param sqlalchemy.orm.query.Query query: sqlalchemy query to sort
+    :param list filter_info: filter informations
+    :return sqlalchemy.orm.query.Query: the sorted query
+    :param sqlalchemy.ext.declarative.api.DeclarativeMeta model: an sqlalchemy model
+    """
+    for item in filter_info[model.__name__.lower()]:
+        try:
+            column = getattr(model, item['field'])
+        except AttributeError:
+            raise Exception("field: %s not found on model: %s" % (item['field'], model.__name__))
+        if item['op'] == 'in':
+            filt = column.in_(item['value'].split(','))
+        else:
+            try:
+                attr = next(filter(lambda e: hasattr(column, e % item['op']), ['%s', '%s_', '__%s__'])) % item['op']
+            except IndexError:
+                raise Exception("Invalid filter operator for field: %s" % (item['field']))
+            if item['value'] == 'null':
+                item['value'] = None
+            filt = getattr(column, attr)(item['value'])
+            query = query.filter(filt)
+
+    return query
