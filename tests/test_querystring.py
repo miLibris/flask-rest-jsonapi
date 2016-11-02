@@ -8,8 +8,8 @@ def valid_querystring():
     return {
         'fields[test]': 'one,two',
         'fields[other]': 'other',
-        'filter[test]': 'active',
-        'filter[other]': 'published',
+        'filter[test]': '[{"field":"name", "op":"eq", "value":"test"}]',
+        'filter[other]': '[{"field":"title", "op":"in", "value":"test1,test2"}]',
         'page[number]': '25',
         'page[size]': '10',
         'page[offset]': '100',
@@ -53,8 +53,8 @@ def test_querystring_property():
 
 def test_filters(qs_manager):
     wanted = {
-        'test': ['active'],
-        'other': ['published']
+        'test': [{"field": "name", "op": "eq", "value": "test"}],
+        'other': [{"field": "title", "op": "in", "value": "test1,test2"}]
     }
     assert qs_manager.filters == wanted
 

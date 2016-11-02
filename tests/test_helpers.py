@@ -59,7 +59,7 @@ def items(session):
 def test_list(item_schema_kls, query, app):
     with app.test_request_context():
         request.args = {'fields[item]': 'id', 'sort': 'id'}
-        result = jsonapi_list('item', item_schema_kls, query, 'test')
+        result = jsonapi_list('item', item_schema_kls, Item, query, 'test')
         assert result is not None
 
 
