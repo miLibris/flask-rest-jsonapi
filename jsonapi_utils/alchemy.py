@@ -48,14 +48,14 @@ def filter_query(query, filter_info, model):
         try:
             column = getattr(model, item['field'])
         except AttributeError:
-            raise Exception("field: %s not found on model: %s" % (item['field'], model.__name__))
+            continue
         if item['op'] == 'in':
             filt = column.in_(item['value'].split(','))
         else:
             try:
                 attr = next(filter(lambda e: hasattr(column, e % item['op']), ['%s', '%s_', '__%s__'])) % item['op']
             except IndexError:
-                raise Exception("Invalid filter operator for field: %s" % (item['field']))
+                continue
             if item['value'] == 'null':
                 item['value'] = None
             filt = getattr(column, attr)(item['value'])
