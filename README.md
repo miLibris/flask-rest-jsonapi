@@ -1,3 +1,6 @@
+[![Build Status](https://travis-ci.org/miLibris/jsonapi-utils.svg?branch=master)](https://travis-ci.org/miLibris/jsonapi-utils)
+[![Coverage Status](https://coveralls.io/repos/github/miLibris/jsonapi-utils/badge.svg)](https://coveralls.io/github/miLibris/jsonapi-utils)
+
 # jsonapi-utils
 Python utils to help you build a jsonapi http://jsonapi.org/
 
