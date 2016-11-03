@@ -71,7 +71,7 @@ def jsonapi_detail(type_, schema_kls, model, key, value, sql_db_session):
     try:
         item = sql_db_session.query(model).filter(getattr(model, key) == value).one()
     except NoResultFound:
-        return {'errors': [{'detail': "%s not found" % model.__class__.__name__}]}, 404
+        return {'errors': [{'detail': "%s not found" % model.__name__}]}, 404
 
     qs = QSManager(request.args)
 
