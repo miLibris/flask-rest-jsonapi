@@ -42,6 +42,7 @@ def jsonapi_list(type_, schema_kls, model, query, endpoint, endpoint_kwargs=None
     schema_kwargs = {}
     if qs.fields.get(type_):
         schema_kwargs = {'only': set(schema_kls._declared_fields.keys()) & set(qs.fields[type_])}
+        schema_kwargs['only'].add('id')
     schema = schema_kls(many=True, **schema_kwargs)
 
     result = schema.dump(items)
