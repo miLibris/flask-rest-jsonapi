@@ -78,6 +78,7 @@ def jsonapi_detail(type_, schema_kls, model, key, value, sql_db_session):
     schema_kwargs = {}
     if qs.fields.get(type_):
         schema_kwargs = {'only': set(schema_kls._declared_fields.keys()) & set(qs.fields[type_])}
+        schema_kwargs['only'].add('id')
     schema = schema_kls(**schema_kwargs)
 
     result = schema.dump(item)
