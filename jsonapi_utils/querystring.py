@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 import json
+from copy import copy
 
 
 class QueryStringManager(object):
@@ -71,8 +72,11 @@ class QueryStringManager(object):
             }
         """
         filters = self._get_key_values('filter', multiple_values=False)
-        for key, value in filters.items():
-            filters[key] = json.loads(value)
+        for key, value in copy(filters).items():
+            try:
+                filters[key] = json.loads(value)
+            except ValueError:
+                del filters[key]
 
         return filters
 
