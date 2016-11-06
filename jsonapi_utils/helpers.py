@@ -2,6 +2,8 @@
 
 from flask import request, url_for
 from sqlalchemy.orm.exc import NoResultFound
+from marshmallow import ValidationError
+from marshmallow_jsonapi.exceptions import IncorrectTypeError
 
 from jsonapi_utils.querystring import QueryStringManager as QSManager
 from jsonapi_utils.alchemy import sort_query, paginate_query, filter_query
@@ -84,3 +86,76 @@ def jsonapi_detail(type_, schema_kls, model, key, value, sql_db_session):
     result = schema.dump(item)
 
     return result.data
+
+
+def jsonapi_update(schema_kls, model, key, value, sql_db_session):
+    """Helper to update a resource
+
+    :param marshmallow.schema.SchemaMeta schema_kls: a schema class to manage serialization
+    :param sqlalchemy.ext.declarative.api.DeclarativeMeta model: an sqlalchemy model
+    :param str key: the model field to filter on
+    :param value: the model field value to filter on
+    :param sqlalchemy.orm.scoping.scoped_session sql_db_session: an sqlalchmy session
+    :return tuple: result message and status code
+    """
+    json_data = request.get_json()
+
+    schema = schema_kls(partial=True)
+    try:
+        data, errors = schema.load(json_data)
+    except ValidationError as err:
+        return err.messages, 422
+    except IncorrectTypeError as err:
+        return err.messages, 409
+
+    try:
+        if json_data['data']['id'] is None:
+            raise KeyError
+    except KeyError:
+        return {'errors': [{'detail': 'You must provide id of the entity'}]}, 422
+
+    try:
+        item = sql_db_session.query(model).filter_by(getattr(model, key) == value).one()
+    except NoResultFound:
+        return {'errors': [{'detail': 'Entity not found'}]}, 404
+
+    for field in schema.declared_fields.keys():
+        if data.get(field):
+            setattr(getattr(item, field), data[field])
+
+    sql_db_session.commit()
+
+    return '', 204
+
+
+def jsonapi_create(schema_kls, model, sql_db_session, before_create_instance):
+    """Helper to create a resource
+
+    :param marshmallow.schema.SchemaMeta schema_kls: a schema class to manage serialization
+    :param sqlalchemy.ext.declarative.api.DeclarativeMeta model: an sqlalchemy model
+    :param sqlalchemy.orm.scoping.scoped_session sql_db_session: an sqlalchmy session
+    :param function before_create_instance: a function executed before instance create. You can add additional data for
+                                            the new object or make several checks
+    :return tuple: result message and status code
+    """
+    json_data = request.get_json()
+
+    schema = schema_kls()
+    try:
+        data, errors = schema.load(json_data)
+    except ValidationError as err:
+        return err.messages, 422
+    except IncorrectTypeError as err:
+        return err.messages, 409
+
+    before_create_instance(data, sql_db_session)
+
+    item = model(**data)
+
+    sql_db_session.add(item)
+    sql_db_session.commit()
+
+    if json_data['data'].get('id') is not None:
+        return '', 204
+    else:
+        return schema.dump(item).data
