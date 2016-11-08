@@ -81,7 +81,7 @@ class ResourceList(with_metaclass(ResourceListMeta, Resource)):
         """
         qs = QSManager(request.args)
 
-        items = self.data_layer.get_items(self, qs, **kwargs)
+        item_count, items = self.data_layer.get_items(self, qs, **kwargs)
 
         schema_kwargs = {}
         if qs.fields.get(self.resource_type):
@@ -96,7 +96,7 @@ class ResourceList(with_metaclass(ResourceListMeta, Resource)):
             self.endpoint_kwargs = request.view_args
         else:
             self.endpoint_kwargs = {}
-        paginate_result(result.data, len(items), qs, url_for(self.collection_endpoint, **self.endpoint_kwargs))
+        paginate_result(result.data, item_count, qs, url_for(self.collection_endpoint, **self.endpoint_kwargs))
 
         return result.data
 

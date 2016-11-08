@@ -47,9 +47,11 @@ class SqlalchemyDataLayer(object):
         if qs.sorting:
             query = self.sort_query(query, qs.sorting)
 
+        item_count = query.count()
+
         query = self.paginate_query(query, qs.pagination)
 
-        return query.all()
+        return item_count, query.all()
 
     def filter_query(self, query, filter_info, model):
         """Filter query according to jsonapi rfc
