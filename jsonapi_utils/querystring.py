@@ -24,7 +24,7 @@ class QueryStringManager(object):
         if not isinstance(query_string, dict):
             raise ValueError('QueryStringManager require a dict-like object query_string parameter')
 
-        self.query = query_string
+        self.qs = query_string
 
     def _get_key_values(self, index, multiple_values=True):
         """Return a dict containing key / values items for a given key, used for items like filters, page, etc.
@@ -34,7 +34,7 @@ class QueryStringManager(object):
         :return: a dict of key / values items
         """
         results = {}
-        for key, value in self.query.items():
+        for key, value in self.qs.items():
             if not key.startswith(index):
                 continue
             key_start = key.index('[') + 1
@@ -52,7 +52,7 @@ class QueryStringManager(object):
         """Return original querystring but containing only managed keys
         """
         ret = {}
-        for key, value in self.query.items():
+        for key, value in self.qs.items():
             if key.startswith(self.MANAGED_KEYS):
                 ret[key] = value
         return ret
@@ -132,7 +132,7 @@ class QueryStringManager(object):
             ]
 
         """
-        sort_fields = self.query.get('sort')
+        sort_fields = self.qs.get('sort')
         if not sort_fields:
             return []
         sorting_results = []
