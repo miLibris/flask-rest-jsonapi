@@ -15,7 +15,10 @@ class SqlalchemyDataLayer(BaseDataLayer):
         self.kwargs = kwargs
 
     def get_item(self, **kwargs):
-        """
+        """Retrieve an item through sqlalchemy
+
+        :params dict kwargs: kwargs from the resource view
+        :return DeclarativeMeta: an item from sqlalchemy
         """
         try:
             filter_field = getattr(self.kwargs['model'], self.kwargs['id_field'])
@@ -33,12 +36,17 @@ class SqlalchemyDataLayer(BaseDataLayer):
         return item
 
     def persiste_update(self):
-        """
+        """Commit the session content to make changes made on instance in the session persistant
         """
         self.session.commit()
 
     def get_items(self, qs, **kwargs):
-        """
+        """Retrieve a collection of items
+
+        :param QueryStringManager qs: a querystring manager to retrieve informations from url
+        :param dict kwargs: kwargs from the resource view
+        :return int item_count: the number of items in the collection
+        :return list query.all(): the list of items
         """
         query = self.get_base_query(**kwargs)
 
@@ -57,10 +65,10 @@ class SqlalchemyDataLayer(BaseDataLayer):
     def filter_query(self, query, filter_info, model):
         """Filter query according to jsonapi rfc
 
-        :param sqlalchemy.orm.query.Query query: sqlalchemy query to sort
+        :param Query query: sqlalchemy query to sort
         :param list filter_info: filter informations
-        :return sqlalchemy.orm.query.Query: the sorted query
-        :param sqlalchemy.ext.declarative.api.DeclarativeMeta model: an sqlalchemy model
+        :param DeclarativeMeta model: an sqlalchemy model
+        :return Query: the sorted query
         """
         for item in filter_info[model.__name__.lower()]:
             try:
@@ -84,9 +92,9 @@ class SqlalchemyDataLayer(BaseDataLayer):
     def sort_query(self, query, sort_info):
         """Sort query according to jsonapi rfc
 
-        :param sqlalchemy.orm.query.Query query: sqlalchemy query to sort
+        :param Query query: sqlalchemy query to sort
         :param list sort_info: sort informations
-        :return sqlalchemy.orm.query.Query: the sorted query
+        :return Query: the sorted query
         """
         expressions = {'asc': asc, 'desc': desc}
         order_items = []
@@ -99,9 +107,9 @@ class SqlalchemyDataLayer(BaseDataLayer):
     def paginate_query(self, query, paginate_info):
         """Paginate query according to jsonapi rfc
 
-        :param sqlalchemy.orm.query.Query query: sqlalchemy queryset
+        :param Query query: sqlalchemy queryset
         :param dict paginate_info: pagination informations
-        :return sqlalchemy.orm.query.Query: the paginated query
+        :return Query: the paginated query
         """
         page_size = int(paginate_info.get('size', 0)) or DEFAULT_PAGE_SIZE
         query = query.limit(page_size)
@@ -111,7 +119,11 @@ class SqlalchemyDataLayer(BaseDataLayer):
         return query
 
     def create_and_save_item(self, data, **kwargs):
-        """
+        """Create and save an item through sqlalchemy
+
+        :param dict data: the data validated by marshmallow
+        :param dict kwargs: kwargs from the resource view
+        :return DeclarativeMeta: an item from sqlalchemy
         """
         self.before_create_instance(data, **kwargs)
 
@@ -123,18 +135,25 @@ class SqlalchemyDataLayer(BaseDataLayer):
         return item
 
     def before_create_instance(self, data, **kwargs):
-        """
+        """Provide additional data before instance creation
+
+        :param dict data: the data validated by marshmallow
+        :param dict kwargs: kwargs from the resource view
         """
         pass
 
     def get_base_query(self, **kwargs):
-        """
+        """Construct the base query to retrieve wanted data
+
+        :param dict kwargs: kwargs from the resource view
         """
         raise NotImplemented
 
     @classmethod
     def configure(cls, data_layer):
-        """
+        """Plug get_base_query and optionally before_create_instance to the instance class
+
+        :param dict data_layer: informations from Meta class used to configure the data layer instance
         """
         if data_layer.get('get_base_query') is None or not callable(data_layer['get_base_query']):
             raise Exception("You must provide a get_base_query function with self as first parameter")

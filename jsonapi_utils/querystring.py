@@ -17,9 +17,9 @@ class QueryStringManager(object):
     )
 
     def __init__(self, query_string):
-        """Initialization method
+        """Initialization instance
 
-        :param dict query_string: query string dict from flask to use
+        :param dict query_string: query string dict from request.args
         """
         if not isinstance(query_string, dict):
             raise ValueError('QueryStringManager require a dict-like object query_string parameter')

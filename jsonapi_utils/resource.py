@@ -81,7 +81,7 @@ class ResourceDetailMeta(ResourceMeta):
 class ResourceList(with_metaclass(ResourceListMeta, Resource)):
 
     def get(self, *args, **kwargs):
-        """
+        """Retrieve a collection of items
         """
         qs = QSManager(request.args)
 
@@ -105,7 +105,7 @@ class ResourceList(with_metaclass(ResourceListMeta, Resource)):
         return result.data
 
     def post(self, *args, **kwargs):
-        """
+        """Create an item
         """
         json_data = request.get_json()
 
@@ -128,6 +128,8 @@ class ResourceList(with_metaclass(ResourceListMeta, Resource)):
 class ResourceDetail(with_metaclass(ResourceDetailMeta, Resource)):
 
     def get(self, *args, **kwargs):
+        """Get item details
+        """
         try:
             item = self.data_layer.get_item(**kwargs)
         except Exception as e:
@@ -146,6 +148,8 @@ class ResourceDetail(with_metaclass(ResourceDetailMeta, Resource)):
         return result.data
 
     def patch(self, *args, **kwargs):
+        """Update an item
+        """
         json_data = request.get_json()
 
         schema = self.schema_cls(partial=True)
