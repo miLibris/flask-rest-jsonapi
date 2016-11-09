@@ -5,7 +5,7 @@ from copy import copy
 
 
 class QueryStringManager(object):
-    """Querystring parser for JSONAPI
+    """Querystring parser according to jsonapi reference
     """
 
     MANAGED_KEYS = (

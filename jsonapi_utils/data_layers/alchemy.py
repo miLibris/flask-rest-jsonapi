@@ -4,9 +4,10 @@ from sqlalchemy.orm.exc import NoResultFound
 from sqlalchemy.sql.expression import desc, asc, text
 
 from jsonapi_utils.constants import DEFAULT_PAGE_SIZE
+from jsonapi_utils.data_layers.base import BaseDataLayer
 
 
-class SqlalchemyDataLayer(object):
+class SqlalchemyDataLayer(BaseDataLayer):
 
     def __init__(self, **kwargs):
         if kwargs.get('session_factory') is not None:
@@ -36,10 +37,10 @@ class SqlalchemyDataLayer(object):
         """
         self.session.commit()
 
-    def get_items(self, resource_list_instance, qs, **kwargs):
+    def get_items(self, qs, **kwargs):
         """
         """
-        query = getattr(resource_list_instance, 'get_base_query')(self.session, **kwargs)
+        query = self.get_base_query(**kwargs)
 
         if qs.filters:
             query = self.filter_query(query, qs.filters, self.kwargs['model'])
@@ -109,10 +110,10 @@ class SqlalchemyDataLayer(object):
 
         return query
 
-    def create_and_save_item(self, data, before_create_instance, **kwargs):
+    def create_and_save_item(self, data, **kwargs):
         """
         """
-        before_create_instance(self.session, data, **kwargs)
+        self.before_create_instance(data, **kwargs)
 
         item = self.kwargs['model'](**data)
 
@@ -120,3 +121,25 @@ class SqlalchemyDataLayer(object):
         self.session.commit()
 
         return item
+
+    def before_create_instance(self, data, **kwargs):
+        """
+        """
+        pass
+
+    def get_base_query(self, **kwargs):
+        """
+        """
+        raise NotImplemented
+
+    @classmethod
+    def configure(cls, data_layer):
+        """
+        """
+        if data_layer.get('get_base_query') is None or not callable(data_layer['get_base_query']):
+            raise Exception("You must provide a get_base_query function with self as first parameter")
+
+        cls.get_base_query = data_layer['get_base_query']
+
+        if data_layer.get('before_create_instance') is not None and callable(data_layer['before_create_instance']):
+            cls.before_create_instance = data_layer['before_create_instance']

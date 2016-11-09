@@ -27,17 +27,18 @@ class ResourceMeta(MethodViewType):
         if meta is not None:
             data_layer = getattr(meta, 'data_layer')
 
-            if data_layer is None:
-                raise Exception("You must provider a data layer")
+            if data_layer is None or not isinstance(data_layer, dict):
+                raise Exception("You must provide data layer informations as dictionary")
+
+            if data_layer.get('name') is None:
+                raise Exception("You must provide a data layer name")
 
             try:
-                data_layer_cls = DATA_LAYERS[data_layer]
+                data_layer_cls = DATA_LAYERS[data_layer['name']]
             except KeyError:
                 raise Exception("data_layer not found")
 
-            data_layer_kwargs = getattr(meta, 'data_layer_kwargs', {})
-
-            cls.data_layer = data_layer_cls(**data_layer_kwargs)
+            cls.data_layer = type('DataLayer', (data_layer_cls, ), {})(**data_layer.get('kwargs', {}))
 
 
 class ResourceListMeta(ResourceMeta):
@@ -47,6 +48,9 @@ class ResourceListMeta(ResourceMeta):
         meta = nmspc.get('Meta')
 
         if meta is not None:
+            data_layer = getattr(meta, 'data_layer')
+            cls.data_layer.configure(data_layer)
+
             get_decorators = getattr(meta, 'get_decorators', [])
             post_decorators = getattr(meta, 'post_decorators', [])
 
@@ -81,7 +85,7 @@ class ResourceList(with_metaclass(ResourceListMeta, Resource)):
         """
         qs = QSManager(request.args)
 
-        item_count, items = self.data_layer.get_items(self, qs, **kwargs)
+        item_count, items = self.data_layer.get_items(qs, **kwargs)
 
         schema_kwargs = {}
         if qs.fields.get(self.resource_type):
@@ -93,10 +97,10 @@ class ResourceList(with_metaclass(ResourceListMeta, Resource)):
 
         if hasattr(self, 'collection_endpoint_request_view_args')\
                 and self.collection_endpoint_request_view_args is True:
-            self.endpoint_kwargs = request.view_args
+            endpoint_kwargs = request.view_args
         else:
-            self.endpoint_kwargs = {}
-        paginate_result(result.data, item_count, qs, url_for(self.collection_endpoint, **self.endpoint_kwargs))
+            endpoint_kwargs = {}
+        paginate_result(result.data, item_count, qs, url_for(self.collection_endpoint, **endpoint_kwargs))
 
         return result.data
 
@@ -113,7 +117,7 @@ class ResourceList(with_metaclass(ResourceListMeta, Resource)):
         except IncorrectTypeError as err:
             return err.messages, 409
 
-        item = self.data_layer.create_and_save_item(data, self.before_create_instance, **kwargs)
+        item = self.data_layer.create_and_save_item(data, **kwargs)
 
         if json_data['data'].get('id') is not None:
             return '', 204
