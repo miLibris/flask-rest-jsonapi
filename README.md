@@ -70,7 +70,7 @@ Example: ?sort=-created,title
 
 You can filter list view result with url querystring parameter "filter".
 
-The structure of the value for this parameter like this: '[{"field":<field_name>,"op":<operator>,"value":<value>},...]'.
+The structure of the value for this parameter like this: '[{"field":"field_name","op":"operator","value":"value"},...]'.
 
 This structure is not a json object but is parsable by json.loads because it is easier to parse than a json object.
 
