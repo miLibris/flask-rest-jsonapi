@@ -14,10 +14,10 @@ class SqlalchemyDataLayer(BaseDataLayer):
             self.session = kwargs['session_factory'].session
         self.kwargs = kwargs
 
-    def get_item(self, **kwargs):
+    def get_item(self, **view_kwargs):
         """Retrieve an item through sqlalchemy
 
-        :params dict kwargs: kwargs from the resource view
+        :params dict view_kwargs: kwargs from the resource view
         :return DeclarativeMeta: an item from sqlalchemy
         """
         try:
@@ -26,7 +26,7 @@ class SqlalchemyDataLayer(BaseDataLayer):
             raise Exception("Unable to find column name: %s on model: %s"
                             % (self.kwargs['id_field'], self.kwargs['model'].__name__))
 
-        filter_value = str(kwargs[self.kwargs['url_param_name']])
+        filter_value = str(view_kwargs[self.kwargs['url_param_name']])
 
         try:
             item = self.session.query(self.kwargs['model']).filter(filter_field == filter_value).one()
@@ -40,15 +40,15 @@ class SqlalchemyDataLayer(BaseDataLayer):
         """
         self.session.commit()
 
-    def get_items(self, qs, **kwargs):
+    def get_items(self, qs, **view_kwargs):
         """Retrieve a collection of items
 
         :param QueryStringManager qs: a querystring manager to retrieve informations from url
-        :param dict kwargs: kwargs from the resource view
+        :param dict view_kwargs: kwargs from the resource view
         :return int item_count: the number of items in the collection
         :return list query.all(): the list of items
         """
-        query = self.get_base_query(**kwargs)
+        query = self.get_base_query(**view_kwargs)
 
         if qs.filters:
             query = self.filter_query(query, qs.filters, self.kwargs['model'])
@@ -118,14 +118,14 @@ class SqlalchemyDataLayer(BaseDataLayer):
 
         return query
 
-    def create_and_save_item(self, data, **kwargs):
+    def create_and_save_item(self, data, **view_kwargs):
         """Create and save an item through sqlalchemy
 
         :param dict data: the data validated by marshmallow
-        :param dict kwargs: kwargs from the resource view
+        :param dict view_kwargs: kwargs from the resource view
         :return DeclarativeMeta: an item from sqlalchemy
         """
-        self.before_create_instance(data, **kwargs)
+        self.before_create_instance(data, **view_kwargs)
 
         item = self.kwargs['model'](**data)
 
@@ -134,18 +134,18 @@ class SqlalchemyDataLayer(BaseDataLayer):
 
         return item
 
-    def before_create_instance(self, data, **kwargs):
+    def before_create_instance(self, data, **view_kwargs):
         """Provide additional data before instance creation
 
         :param dict data: the data validated by marshmallow
-        :param dict kwargs: kwargs from the resource view
+        :param dict view_kwargs: kwargs from the resource view
         """
         pass
 
-    def get_base_query(self, **kwargs):
+    def get_base_query(self, **view_kwargs):
         """Construct the base query to retrieve wanted data
 
-        :param dict kwargs: kwargs from the resource view
+        :param dict view_kwargs: kwargs from the resource view
         """
         raise NotImplemented
 
