@@ -149,7 +149,7 @@ class PostDetail(ResourceDetail):
                       'kwargs': {'session': sql_db.session,
                                  'model': Post,
                                  'id_field': 'id', # the model attribute you want to filter on when you retrieve an item
-                                 'url_param_name':  'post_id'}} # the name of the url parameter to filter with
+                                 'url_param_name': 'post_id'}} # the name of the url parameter to filter with
 
         get_decorators = [oauth2.require_oauth('post_detail')]
         patch_decorators = [oauth2.require_oauth('post_update')]
