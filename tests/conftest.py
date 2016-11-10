@@ -5,12 +5,13 @@ import pytest
 from flask import Flask
 
 
-@pytest.fixture
+@pytest.fixture(scope="session")
 def app():
     app = Flask(__name__)
-
-    @app.route("/", endpoint='test')
-    def test():
-        pass
-
     return app
+
+
+@pytest.yield_fixture(scope="session")
+def client(app):
+    with app.test_client() as client:
+        yield client

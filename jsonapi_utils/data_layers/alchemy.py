@@ -10,8 +10,9 @@ from jsonapi_utils.data_layers.base import BaseDataLayer
 class SqlalchemyDataLayer(BaseDataLayer):
 
     def __init__(self, **kwargs):
-        if kwargs.get('session_factory') is not None:
-            self.session = kwargs['session_factory'].session
+        if kwargs.get('session') is None:
+            raise Exception("You must provide de session")
+        self.session = kwargs['session']
         self.kwargs = kwargs
 
     def get_item(self, **view_kwargs):

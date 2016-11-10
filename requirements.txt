@@ -2,3 +2,4 @@ sqlalchemy
 sphinx
 flask
 marshmallow_jsonapi
+Flask-RESTful
