@@ -49,7 +49,7 @@ Pagination structure in view result (not url encoded for readability):
 "links": {
     "self": "/post?page[number]=4&page[size]=10",
     "next": "/post?page[number]=5&page[size]=10",
-    "previous": "/post?page[number]=3&page[size]=10"
+    "previous": "/post?page[number]=3&page[size]=10",
     "first": "/post?&page[size]=10",
     "last": "/post?page[number]=20&page[size]=10",
 }
