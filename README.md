@@ -16,9 +16,9 @@ Python utils to help you build easily a restfull api according to jsonapi refere
 ### Managed concepts
 
 - fields restrictions
-- pagination (daya layer responsability too)
-- sorting (daya layer responsability too)
-- filtering (daya layer responsability too)
+- pagination
+- sorting
+- filtering
 
 
 ### Fields restriction
