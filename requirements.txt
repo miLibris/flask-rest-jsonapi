@@ -1,5 +1,6 @@
 sqlalchemy
 sphinx
-flask
+Flask
 marshmallow_jsonapi
 Flask-RESTful
+pytest
