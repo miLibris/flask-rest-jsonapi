@@ -23,20 +23,22 @@ Python utils to help you build easily a restfull api according to jsonapi refere
 
 ### Fields restriction
 You can restrict fields returned by the view with url querystring parameter "fields".
+
 This dicrease the amount of data transfered and can avoid additional queries to retrieve relationships for example.
-It only restrict fields returned for the current resource type not for related entities
+It only restrict fields returned for the current resource type not for related entities.
 
 *note: this "id" field is returned in all case so you don't have to specify this field*
 
 Example: ?fields[post]=title,content
-In this case you avoid to make additional queries to create related comments links
+
+In this case you avoid to make additional queries to create related comments links.
 
 
 ### Pagination
 *note: You have to implement the pagination feature in your data layer too*
 
-You can add pagination informations with the url querystring parameter "page"
-You can specify the page number with "number" and the page size with "size"
+You can add pagination informations with the url querystring parameter "page".
+You can specify the page number with "number" and the page size with "size".
 
 Example: ?page[number]=4&page[size]=10
 
@@ -58,7 +60,7 @@ Pagination structure in view result (not url encoded for readability):
 ### Sorting
 *note: You have to implement the pagination feature in your data layer too*
 
-You can sort result with url querystring parameter "sort"
+You can sort result with url querystring parameter "sort".
 
 Example: ?sort=-created,title
 
@@ -66,10 +68,11 @@ Example: ?sort=-created,title
 ### Filtering
 *note: You have to implement the pagination feature in your data layer too*
 
-You can filter list view result with url querystring parameter "filter"
+You can filter list view result with url querystring parameter "filter".
 
-The structure of the value for this parameter like this: '[{"field":<field_name>,"op":<operator>,"value":<value>},...]'
-This structure is not a json object but is parsable by json.loads because it is easier to parse than a json object
+The structure of the value for this parameter like this: '[{"field":<field_name>,"op":<operator>,"value":<value>},...]'.
+
+This structure is not a json object but is parsable by json.loads because it is easier to parse than a json object.
 
 Example (not url encoded for readability): ?filter[post]=[{"field":"created","op":"gt","value":"2016-11-10"}]
 
