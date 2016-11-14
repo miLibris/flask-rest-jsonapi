@@ -1,5 +1,6 @@
 from jsonapi_utils.constants import DEFAULT_PAGE_SIZE
 from jsonapi_utils.data_layers.base import BaseDataLayer
+from jsonapi_utils.exceptions import EntityNotFound
 from pymongo import ASCENDING, DESCENDING
 
 
@@ -10,7 +11,10 @@ class MongoDataLayer(BaseDataLayer):
             raise Exception('You must provide a mongo connection')
         if kwargs.get('collection') is None:
             raise Exception('You must provide a collection to query')
+        if kwargs.get('model') is None:
+            raise Exception('You must provide a proper model class !')
         self.mongo = kwargs['mongo']
+        self.key_param_name = kwargs.get('url_param_name')
         self.kwargs = kwargs
 
     def get_collection(self):
@@ -21,19 +25,21 @@ class MongoDataLayer(BaseDataLayer):
             )
         return collection
 
+    def get_single_item_query(self, **view_kwargs):
+        return {self.kwargs['id_field']: view_kwargs.get(self.key_param_name)}
+
     def get_item(self, **view_kwargs):
         """Retrieve a single item from mongodb.
 
         :params dict view_kwargs: kwargs from the resource view
         :return dict: a mongo document
         """
-        query = {self.kwargs['id_field']: self.kwargs['url_param_name']}
-        self.get_collection().find_one(query)
-
-    def persiste_update(self):
-        """Since mongo does not use transaction, this method
-        does not need an implementation."""
-        pass
+        query = self.get_single_item_query(**view_kwargs)
+        result = self.get_collection().find_one(query)
+        if result is None:
+            raise EntityNotFound(self.kwargs['collection'],
+                                 view_kwargs.get('key_param_name'))
+        return result
 
     def get_items(self, qs, **view_kwargs):
         query = self.get_base_query(**view_kwargs)
@@ -100,6 +106,12 @@ class MongoDataLayer(BaseDataLayer):
         item = self.kwargs['model'](**data)
         self.get_collection().save(item)
         return item
+
+    def persist_update(self, item, **view_kwargs):
+        """Make changes made on an item persistant
+        through the data layer"""
+        id_query = self.get_single_item_query(**view_kwargs)
+        self.get_collection().update(id_query, item)
 
     def before_create_instance(self, data, **view_kwargs):
         """

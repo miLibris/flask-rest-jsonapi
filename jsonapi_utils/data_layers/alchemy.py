@@ -37,7 +37,7 @@ class SqlalchemyDataLayer(BaseDataLayer):
 
         return item
 
-    def persiste_update(self):
+    def persist_update(self, *args, **kwargs):
         """Commit the session content to make changes made on instance in the session persistant
         """
         self.session.commit()
