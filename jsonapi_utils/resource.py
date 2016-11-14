@@ -180,7 +180,7 @@ class ResourceDetail(with_metaclass(ResourceDetailMeta, Resource)):
             if hasattr(item, field):
                 setattr(item, field, data[field])
 
-        self.data_layer.persiste_update()
+        self.data_layer.persist_update(item, **kwargs)
 
         result = schema.dump(item)
 
