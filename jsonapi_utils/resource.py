@@ -5,13 +5,13 @@ from six import with_metaclass
 from flask import request, url_for
 from flask.views import MethodViewType
 from flask_restful import Resource
-from marshmallow import ValidationError
 from marshmallow_jsonapi.exceptions import IncorrectTypeError
 
 from jsonapi_utils.data_layers.alchemy import SqlalchemyDataLayer
 from jsonapi_utils.errors import ErrorFormatter
 from jsonapi_utils.querystring import QueryStringManager as QSManager
 from jsonapi_utils.marshmallow import paginate_result
+from jsonapi_utils.exceptions import EntityNotFound, EntityAlreadyExists
 
 DATA_LAYERS = {
     'sqlalchemy': SqlalchemyDataLayer
@@ -118,12 +118,12 @@ class ResourceList(with_metaclass(ResourceListMeta, Resource)):
         if errors:
             return errors, 422
 
-        item = self.data_layer.create_and_save_item(data, **kwargs)
+        try:
+            item = self.data_layer.create_and_save_item(data, **kwargs)
+        except (EntityNotFound, EntityAlreadyExists) as e:
+            return ErrorFormatter.format_error([e.message]), e.status_code
 
-        if json_data['data'].get('id') is not None:
-            return '', 204
-        else:
-            return schema.dump(item).data
+        return schema.dump(item).data, 201
 
 
 class ResourceDetail(with_metaclass(ResourceDetailMeta, Resource)):
@@ -156,10 +156,11 @@ class ResourceDetail(with_metaclass(ResourceDetailMeta, Resource)):
         schema = self.schema_cls(partial=True)
         try:
             data, errors = schema.load(json_data)
-        except ValidationError as err:
-            return err.messages, 422
         except IncorrectTypeError as err:
             return err.messages, 409
+
+        if errors:
+            return errors, 422
 
         try:
             if json_data['data']['id'] is None:
