@@ -1,5 +1,6 @@
 from jsonapi_utils.constants import DEFAULT_PAGE_SIZE
 from jsonapi_utils.data_layers.base import BaseDataLayer
+from jsonapi_utils.exceptions import EntityNotFound
 from pymongo import ASCENDING, DESCENDING
 
 
@@ -13,6 +14,7 @@ class MongoDataLayer(BaseDataLayer):
         if kwargs.get('model') is None:
             raise Exception('You must provide a proper model class !')
         self.mongo = kwargs['mongo']
+        self.key_param_name = kwargs.get('url_param_name')
         self.kwargs = kwargs
 
     def get_collection(self):
@@ -29,8 +31,12 @@ class MongoDataLayer(BaseDataLayer):
         :params dict view_kwargs: kwargs from the resource view
         :return dict: a mongo document
         """
-        query = {self.kwargs['id_field']: self.kwargs['url_param_name']}
-        self.get_collection().find_one(query)
+        query = {self.kwargs['id_field']: view_kwargs.get('key_param_name')}
+        result = self.get_collection().find_one(query)
+        if result is None:
+            raise EntityNotFound(self.kwargs['collection'],
+                                 view_kwargs.get('key_param_name'))
+        return result
 
     def persiste_update(self):
         """Since mongo does not use transaction, this method
