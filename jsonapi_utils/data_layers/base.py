@@ -8,7 +8,7 @@ class BaseDataLayer(object):
         """
         raise NotImplemented
 
-    def persiste_update(self, *args, **kwargs):
+    def persist_update(self, *args, **kwargs):
         """Make changes made on an item persistant through the data layer
         """
         raise NotImplemented

@@ -103,6 +103,11 @@ class MongoDataLayer(BaseDataLayer):
         self.get_collection().save(item)
         return item
 
+    def persist_update(self):
+        """Make changes made on an item persistant
+        through the data layer"""
+        pass
+
     def before_create_instance(self, data, **view_kwargs):
         """
         Hook called at object creation.
