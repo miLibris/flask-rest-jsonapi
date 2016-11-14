@@ -27,9 +27,9 @@ You can restrict fields returned by the view with url querystring parameter "fie
 This dicrease the amount of data transfered and can avoid additional queries to retrieve relationships for example.
 It only restrict fields returned for the current resource type not for related entities.
 
-*note: this "id" field is returned in all case so you don't have to specify this field*
+*note: the "id" field is always returned so you don't have to specify this field*
 
-Example: ?fields[post]=title,content
+Example (not url encoded for readability): ?fields[post]=title,content
 
 In this case you avoid to make additional queries to create related comments links.
 
@@ -40,7 +40,7 @@ In this case you avoid to make additional queries to create related comments lin
 You can add pagination informations with the url querystring parameter "page".
 You can specify the page number with "number" and the page size with "size".
 
-Example: ?page[number]=4&page[size]=10
+Example (not url encoded for readability): ?page[number]=4&page[size]=10
 
 *note: default page size is 20*
 
@@ -62,7 +62,7 @@ Pagination structure in view result (not url encoded for readability):
 
 You can sort result with url querystring parameter "sort".
 
-Example: ?sort=-created,title
+Example (not url encoded for readability): ?sort=-created,title
 
 
 ### Filtering
@@ -70,9 +70,9 @@ Example: ?sort=-created,title
 
 You can filter list view result with url querystring parameter "filter".
 
-The structure of the value for this parameter like this: '[{"field":"field_name","op":"operator","value":"value"},...]'.
+The structure of the value for this parameter looks like this: '[{"field":"field_name","op":"operator","value":"value"},...]'.
 
-This structure is not a json object but is parsable by json.loads because it is easier to parse than a json object.
+This structure is not a json object but is parsable by json.loads because use.
 
 Example (not url encoded for readability): ?filter[post]=[{"field":"created","op":"gt","value":"2016-11-10"}]
 
@@ -127,7 +127,7 @@ class PostList(ResourceList):
     class Meta:
         # configure your data layer here
         data_layer = {'name': 'sqlalchemy',
-                      'kwargs': {'model': Post, 'session_factory': sql_db},
+                      'kwargs': {'model': Post, 'session': sql_db.session},
                       'get_base_query': get_base_query,
                       'before_create_instance': before_create_instance}
 
@@ -146,10 +146,10 @@ class PostDetail(ResourceDetail):
 
     class Meta:
         data_layer = {'name': 'sqlalchemy',
-                      'kwargs': {'session_factory': sql_db,
+                      'kwargs': {'session': sql_db.session,
                                  'model': Post,
                                  'id_field': 'id', # the model attribute you want to filter on when you retrieve an item
-                                 'url_param_name':  'post_id'}} # the name of the key in view kwargs to retrieve the item value you want to filter with
+                                 'url_param_name': 'post_id'}} # the name of the url parameter to filter with
 
         get_decorators = [oauth2.require_oauth('post_detail')]
         patch_decorators = [oauth2.require_oauth('post_update')]
