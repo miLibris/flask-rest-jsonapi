@@ -5,6 +5,7 @@ from sqlalchemy.sql.expression import desc, asc, text
 
 from jsonapi_utils.constants import DEFAULT_PAGE_SIZE
 from jsonapi_utils.data_layers.base import BaseDataLayer
+from jsonapi_utils.exceptions import EntityNotFound
 
 
 class SqlalchemyDataLayer(BaseDataLayer):
@@ -32,7 +33,7 @@ class SqlalchemyDataLayer(BaseDataLayer):
         try:
             item = self.session.query(self.kwargs['model']).filter(filter_field == filter_value).one()
         except NoResultFound:
-            raise Exception("%s not found" % self.kwargs['model'].__name__)
+            raise EntityNotFound(self.kwargs['model'].__name__, filter_value)
 
         return item
 
