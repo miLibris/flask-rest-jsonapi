@@ -8,13 +8,15 @@ from flask_restful import Resource
 from marshmallow_jsonapi.exceptions import IncorrectTypeError
 
 from jsonapi_utils.data_layers.alchemy import SqlalchemyDataLayer
+from jsonapi_utils.data_layers.mongo import MongoDataLayer
 from jsonapi_utils.errors import ErrorFormatter
 from jsonapi_utils.querystring import QueryStringManager as QSManager
 from jsonapi_utils.marshmallow import paginate_result
 from jsonapi_utils.exceptions import EntityNotFound, EntityAlreadyExists
 
 DATA_LAYERS = {
-    'sqlalchemy': SqlalchemyDataLayer
+    'sqlalchemy': SqlalchemyDataLayer,
+    'mongo': MongoDataLayer
 }
 
 
