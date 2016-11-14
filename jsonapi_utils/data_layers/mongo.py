@@ -10,6 +10,8 @@ class MongoDataLayer(BaseDataLayer):
             raise Exception('You must provide a mongo connection')
         if kwargs.get('collection') is None:
             raise Exception('You must provide a collection to query')
+        if kwargs.get('model') is None:
+            raise Exception('You must provide a proper model class !')
         self.mongo = kwargs['mongo']
         self.kwargs = kwargs
 
