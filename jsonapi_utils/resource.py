@@ -112,10 +112,11 @@ class ResourceList(with_metaclass(ResourceListMeta, Resource)):
         schema = self.schema_cls()
         try:
             data, errors = schema.load(json_data)
-        except ValidationError as err:
-            return err.messages, 422
         except IncorrectTypeError as err:
             return err.messages, 409
+
+        if errors:
+            return errors, 422
 
         item = self.data_layer.create_and_save_item(data, **kwargs)
 
