@@ -25,23 +25,21 @@ class MongoDataLayer(BaseDataLayer):
             )
         return collection
 
+    def get_single_item_query(self, **view_kwargs):
+        return {self.kwargs['id_field']: view_kwargs.get(self.key_param_name)}
+
     def get_item(self, **view_kwargs):
         """Retrieve a single item from mongodb.
 
         :params dict view_kwargs: kwargs from the resource view
         :return dict: a mongo document
         """
-        query = {self.kwargs['id_field']: view_kwargs.get('key_param_name')}
+        query = self.get_single_item_query(**view_kwargs)
         result = self.get_collection().find_one(query)
         if result is None:
             raise EntityNotFound(self.kwargs['collection'],
                                  view_kwargs.get('key_param_name'))
         return result
-
-    def persiste_update(self):
-        """Since mongo does not use transaction, this method
-        does not need an implementation."""
-        pass
 
     def get_items(self, qs, **view_kwargs):
         query = self.get_base_query(**view_kwargs)
@@ -109,10 +107,11 @@ class MongoDataLayer(BaseDataLayer):
         self.get_collection().save(item)
         return item
 
-    def persist_update(self):
+    def persist_update(self, item, **view_kwargs):
         """Make changes made on an item persistant
         through the data layer"""
-        pass
+        id_query = self.get_single_item_query(**view_kwargs)
+        self.get_collection().update(id_query, item)
 
     def before_create_instance(self, data, **view_kwargs):
         """
