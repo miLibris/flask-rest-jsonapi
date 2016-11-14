@@ -85,7 +85,10 @@ class ResourceList(with_metaclass(ResourceListMeta, Resource)):
         """
         qs = QSManager(request.args)
 
-        item_count, items = self.data_layer.get_items(qs, **kwargs)
+        try:
+            item_count, items = self.data_layer.get_items(qs, **kwargs)
+        except EntityNotFound as e:
+            return ErrorFormatter.format_error([e.message]), e.status_code
 
         schema_kwargs = {}
         if qs.fields.get(self.resource_type):
@@ -133,8 +136,8 @@ class ResourceDetail(with_metaclass(ResourceDetailMeta, Resource)):
         """
         try:
             item = self.data_layer.get_item(**kwargs)
-        except Exception as e:
-            return ErrorFormatter.format_error(e.args), 404
+        except EntityNotFound as e:
+            return ErrorFormatter.format_error([e.message]), e.status_code
 
         qs = QSManager(request.args)
 
@@ -153,6 +156,12 @@ class ResourceDetail(with_metaclass(ResourceDetailMeta, Resource)):
         """
         json_data = request.get_json()
 
+        try:
+            if json_data['data']['id'] is None:
+                raise KeyError
+        except KeyError:
+            return ErrorFormatter.format_error(["You must provide id of the entity"]), 422
+
         schema = self.schema_cls(partial=True)
         try:
             data, errors = schema.load(json_data)
@@ -163,20 +172,16 @@ class ResourceDetail(with_metaclass(ResourceDetailMeta, Resource)):
             return errors, 422
 
         try:
-            if json_data['data']['id'] is None:
-                raise KeyError
-        except KeyError:
-            return ErrorFormatter.format_error(["You must provide id of the entity"]), 422
-
-        try:
             item = self.data_layer.get_item(**kwargs)
-        except Exception as e:
-            return ErrorFormatter.format_error(e.args), 404
+        except EntityNotFound as e:
+            return ErrorFormatter.format_error([e.message]), e.status_code
 
-        for field in schema.declared_fields.keys():
-            if data.get(field):
+        for field in data:
+            if hasattr(item, field):
                 setattr(item, field, data[field])
 
         self.data_layer.persiste_update()
 
-        return '', 204
+        result = schema.dump(item)
+
+        return result.data
