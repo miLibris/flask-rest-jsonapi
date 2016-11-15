@@ -7,15 +7,13 @@ from pymongo import ASCENDING, DESCENDING
 class MongoDataLayer(BaseDataLayer):
 
     def __init__(self, **kwargs):
-        if kwargs.get('mongo') is None:
+        super(MongoDataLayer, self).__init__(**kwargs)
+        if self.get('mongo') is None:
             raise Exception('You must provide a mongo connection')
-        if kwargs.get('collection') is None:
+        if self.get('collection') is None:
             raise Exception('You must provide a collection to query')
-        if kwargs.get('model') is None:
+        if self.get('model') is None:
             raise Exception('You must provide a proper model class !')
-        self.mongo = kwargs['mongo']
-        self.key_param_name = kwargs.get('url_param_name')
-        self.kwargs = kwargs
 
     def get_item(self, **view_kwargs):
         """Retrieve a single item from mongodb.
@@ -26,14 +24,13 @@ class MongoDataLayer(BaseDataLayer):
         query = self.get_single_item_query(**view_kwargs)
         result = self.get_collection().find_one(query)
         if result is None:
-            raise EntityNotFound(self.kwargs['collection'],
-                                 view_kwargs.get('key_param_name'))
+            raise EntityNotFound(self.collection, view_kwargs.get(self.url_param_name))
         return result
 
     def get_items(self, qs, **view_kwargs):
         query = self.get_base_query(**view_kwargs)
         if qs.filters:
-            query = self.filter_query(query, qs.filters, self.kwargs['model'])
+            query = self.filter_query(query, qs.filters, self.model)
         query = self.get_collection().find(query)
         if qs.sorting:
             query = self.sort_query(query, qs.sorting)
@@ -50,7 +47,7 @@ class MongoDataLayer(BaseDataLayer):
         :return object: A publimodels object
         """
         self.before_create_instance(data, **view_kwargs)
-        item = self.kwargs['model'](**data)
+        item = self.model(**data)
         self.get_collection().save(item)
         return item
 
@@ -71,15 +68,15 @@ class MongoDataLayer(BaseDataLayer):
         self.get_collection().update(id_query, item)
 
     def get_collection(self):
-        collection = getattr(self.mongo, self.kwargs['collection'], None)
+        collection = getattr(self.mongo, self.collection, None)
         if collection is None:
             raise Exception(
-                'Collection %s does not exist' % self.kwargs['collection']
+                'Collection %s does not exist' % self.collection
             )
         return collection
 
     def get_single_item_query(self, **view_kwargs):
-        return {self.kwargs['id_field']: view_kwargs.get(self.key_param_name)}
+        return {self.id_field: view_kwargs.get(self.url_param_name)}
 
     def filter_query(self, query, filter_info, model):
         """Filter query according to jsonapi rfc

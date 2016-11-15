@@ -11,10 +11,9 @@ from jsonapi_utils.exceptions import EntityNotFound
 class SqlalchemyDataLayer(BaseDataLayer):
 
     def __init__(self, **kwargs):
-        if kwargs.get('session') is None:
+        super(SqlalchemyDataLayer, self).__init__(**kwargs)
+        if self.get('session') is None:
             raise Exception("You must provide de session")
-        self.session = kwargs['session']
-        self.kwargs = kwargs
 
     def get_item(self, **view_kwargs):
         """Retrieve an item through sqlalchemy
@@ -23,17 +22,16 @@ class SqlalchemyDataLayer(BaseDataLayer):
         :return DeclarativeMeta: an item from sqlalchemy
         """
         try:
-            filter_field = getattr(self.kwargs['model'], self.kwargs['id_field'])
+            filter_field = getattr(self.model, self.id_field)
         except Exception:
-            raise Exception("Unable to find column name: %s on model: %s"
-                            % (self.kwargs['id_field'], self.kwargs['model'].__name__))
+            raise Exception("Unable to find column name: %s on model: %s" % (self.id_field, self.model.__name__))
 
-        filter_value = str(view_kwargs[self.kwargs['url_param_name']])
+        filter_value = str(view_kwargs[self.url_param_name])
 
         try:
-            item = self.session.query(self.kwargs['model']).filter(filter_field == filter_value).one()
+            item = self.session.query(self.model).filter(filter_field == filter_value).one()
         except NoResultFound:
-            raise EntityNotFound(self.kwargs['model'].__name__, filter_value)
+            raise EntityNotFound(self.model.__name__, filter_value)
 
         return item
 
@@ -48,7 +46,7 @@ class SqlalchemyDataLayer(BaseDataLayer):
         query = self.get_base_query(**view_kwargs)
 
         if qs.filters:
-            query = self.filter_query(query, qs.filters, self.kwargs['model'])
+            query = self.filter_query(query, qs.filters, self.model)
 
         if qs.sorting:
             query = self.sort_query(query, qs.sorting)
@@ -68,7 +66,7 @@ class SqlalchemyDataLayer(BaseDataLayer):
         """
         self.before_create_instance(data, **view_kwargs)
 
-        item = self.kwargs['model'](**data)
+        item = self.model(**data)
 
         self.session.add(item)
         self.session.commit()

@@ -3,6 +3,14 @@
 
 class BaseDataLayer(object):
 
+    def __init__(self, **kwargs):
+        """Intialize an data layer instance with kwargs
+
+        :param dict kwargs: information about data layer instance
+        """
+        for key, value in kwargs:
+            setattr(self, key, value)
+
     def get_items(self, *args, **kwargs):
         """Get a collection of items through the data layer
         """
