@@ -37,15 +37,10 @@ class SqlalchemyDataLayer(BaseDataLayer):
 
         return item
 
-    def persist_update(self, *args, **kwargs):
-        """Commit the session content to make changes made on instance in the session persistant
-        """
-        self.session.commit()
-
     def get_items(self, qs, **view_kwargs):
         """Retrieve a collection of items
 
-        :param QueryStringManager qs: a querystring manager to retrieve informations from url
+        :param QueryStringManager qs: a querystring manager to retrieve information from url
         :param dict view_kwargs: kwargs from the resource view
         :return int item_count: the number of items in the collection
         :return list query.all(): the list of items
@@ -64,11 +59,42 @@ class SqlalchemyDataLayer(BaseDataLayer):
 
         return item_count, query.all()
 
+    def create_and_save_item(self, data, **view_kwargs):
+        """Create and save an item through sqlalchemy
+
+        :param dict data: the data validated by marshmallow
+        :param dict view_kwargs: kwargs from the resource view
+        :return DeclarativeMeta: an item from sqlalchemy
+        """
+        self.before_create_instance(data, **view_kwargs)
+
+        item = self.kwargs['model'](**data)
+
+        self.session.add(item)
+        self.session.commit()
+
+        return item
+
+    def update_and_save_item(self, item, data, **view_kwargs):
+        """Update an instance of an item and store changes
+
+        :param DeclarativeMeta item: an item from sqlalchemy
+        :param dict data: the data validated by marshmallow
+        :param dict view_kwargs: kwargs from the resource view
+        """
+        self.before_update_instance(item, data)
+
+        for field in data:
+            if hasattr(item, field):
+                setattr(item, field, data[field])
+
+        self.session.commit()
+
     def filter_query(self, query, filter_info, model):
         """Filter query according to jsonapi rfc
 
         :param Query query: sqlalchemy query to sort
-        :param list filter_info: filter informations
+        :param list filter_info: filter information
         :param DeclarativeMeta model: an sqlalchemy model
         :return Query: the sorted query
         """
@@ -95,7 +121,7 @@ class SqlalchemyDataLayer(BaseDataLayer):
         """Sort query according to jsonapi rfc
 
         :param Query query: sqlalchemy query to sort
-        :param list sort_info: sort informations
+        :param list sort_info: sort information
         :return Query: the sorted query
         """
         expressions = {'asc': asc, 'desc': desc}
@@ -110,7 +136,7 @@ class SqlalchemyDataLayer(BaseDataLayer):
         """Paginate query according to jsonapi rfc
 
         :param Query query: sqlalchemy queryset
-        :param dict paginate_info: pagination informations
+        :param dict paginate_info: pagination information
         :return Query: the paginated query
         """
         page_size = int(paginate_info.get('size', 0)) or DEFAULT_PAGE_SIZE
@@ -120,21 +146,12 @@ class SqlalchemyDataLayer(BaseDataLayer):
 
         return query
 
-    def create_and_save_item(self, data, **view_kwargs):
-        """Create and save an item through sqlalchemy
+    def get_base_query(self, **view_kwargs):
+        """Construct the base query to retrieve wanted data
 
-        :param dict data: the data validated by marshmallow
         :param dict view_kwargs: kwargs from the resource view
-        :return DeclarativeMeta: an item from sqlalchemy
         """
-        self.before_create_instance(data, **view_kwargs)
-
-        item = self.kwargs['model'](**data)
-
-        self.session.add(item)
-        self.session.commit()
-
-        return item
+        raise NotImplemented
 
     def before_create_instance(self, data, **view_kwargs):
         """Provide additional data before instance creation
@@ -144,18 +161,19 @@ class SqlalchemyDataLayer(BaseDataLayer):
         """
         pass
 
-    def get_base_query(self, **view_kwargs):
-        """Construct the base query to retrieve wanted data
+    def before_update_instance(self, item, data):
+        """Provide additional data before instance creation
 
-        :param dict view_kwargs: kwargs from the resource view
+        :param DeclarativeMeta item: an item from sqlalchemy
+        :param dict data: the data validated by marshmallow
         """
-        raise NotImplemented
+        pass
 
     @classmethod
     def configure(cls, data_layer):
         """Plug get_base_query and optionally before_create_instance to the instance class
 
-        :param dict data_layer: informations from Meta class used to configure the data layer instance
+        :param dict data_layer: information from Meta class used to configure the data layer instance
         """
         if data_layer.get('get_base_query') is None or not callable(data_layer['get_base_query']):
             raise Exception("You must provide a get_base_query function with self as first parameter")

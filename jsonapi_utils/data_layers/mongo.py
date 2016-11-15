@@ -17,17 +17,6 @@ class MongoDataLayer(BaseDataLayer):
         self.key_param_name = kwargs.get('url_param_name')
         self.kwargs = kwargs
 
-    def get_collection(self):
-        collection = getattr(self.mongo, self.kwargs['collection'], None)
-        if collection is None:
-            raise Exception(
-                'Collection %s does not exist' % self.kwargs['collection']
-            )
-        return collection
-
-    def get_single_item_query(self, **view_kwargs):
-        return {self.kwargs['id_field']: view_kwargs.get(self.key_param_name)}
-
     def get_item(self, **view_kwargs):
         """Retrieve a single item from mongodb.
 
@@ -52,6 +41,45 @@ class MongoDataLayer(BaseDataLayer):
         query = self.paginate_query(query, qs.pagination)
 
         return item_count, list(query)
+
+    def create_and_save_item(self, data, **view_kwargs):
+        """Create and save a mongo document.
+
+        :param dict data: the data validated by marshmallow
+        :param dict view_kwargs: kwargs from the resource view
+        :return object: A publimodels object
+        """
+        self.before_create_instance(data, **view_kwargs)
+        item = self.kwargs['model'](**data)
+        self.get_collection().save(item)
+        return item
+
+    def update_and_save_item(self, item, data, **view_kwargs):
+        """Update an instance of an item and store changes
+
+        :param item: a doucment from mongodb
+        :param dict data: the data validated by marshmallow
+        :param dict view_kwargs: kwargs from the resource view
+        """
+        self.before_update_instance(item, data)
+
+        for field in data:
+            if hasattr(item, field):
+                setattr(item, field, data[field])
+
+        id_query = self.get_single_item_query(**view_kwargs)
+        self.get_collection().update(id_query, item)
+
+    def get_collection(self):
+        collection = getattr(self.mongo, self.kwargs['collection'], None)
+        if collection is None:
+            raise Exception(
+                'Collection %s does not exist' % self.kwargs['collection']
+            )
+        return collection
+
+    def get_single_item_query(self, **view_kwargs):
+        return {self.kwargs['id_field']: view_kwargs.get(self.key_param_name)}
 
     def filter_query(self, query, filter_info, model):
         """Filter query according to jsonapi rfc
@@ -94,37 +122,24 @@ class MongoDataLayer(BaseDataLayer):
             query = query.sort(field, order)
         return query
 
-    def create_and_save_item(self, data, **view_kwargs):
-        """
-        Create and save a mongo document.
-
-        :param dict data: the data validated by marshmallow
-        :param dict view_kwargs: kwargs from the resource view
-        :return object: A publimodels object
-        """
-        self.before_create_instance(data, **view_kwargs)
-        item = self.kwargs['model'](**data)
-        self.get_collection().save(item)
-        return item
-
-    def persist_update(self, item, **view_kwargs):
-        """Make changes made on an item persistant
-        through the data layer"""
-        id_query = self.get_single_item_query(**view_kwargs)
-        self.get_collection().update(id_query, item)
-
     def before_create_instance(self, data, **view_kwargs):
-        """
-        Hook called at object creation.
+        """Hook called at object creation.
 
         :param dict data: data validated by marshmallow
         :param dict view_kwargs: kwargs from the resource view
         """
         pass
 
-    def get_base_query(self, **view_kwargs):
+    def before_update_instance(self, item, data):
+        """Hook called at object update.
+
+        :param item: a document from sqlalchemy
+        :param dict data: the data validated by marshmallow
         """
-        Construct the base query to retrieve wanted data.
+        pass
+
+    def get_base_query(self, **view_kwargs):
+        """Construct the base query to retrieve wanted data.
         This would be created through metaclass.
 
         :param dict view_kwargs: Kwargs from the resource view
@@ -133,8 +148,7 @@ class MongoDataLayer(BaseDataLayer):
 
     @classmethod
     def configure(cls, data_layer):
-        """
-        Plug get_base_query to the instance class.
+        """Plug get_base_query to the instance class.
 
         :param dict data_layer: information from Meta class used to configure
         the data layer

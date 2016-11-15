@@ -178,11 +178,7 @@ class ResourceDetail(with_metaclass(ResourceDetailMeta, Resource)):
         except EntityNotFound as e:
             return ErrorFormatter.format_error([e.message]), e.status_code
 
-        for field in data:
-            if hasattr(item, field):
-                setattr(item, field, data[field])
-
-        self.data_layer.persist_update(item, **kwargs)
+        self.data_layer.update_and_save_item(item, data, **kwargs)
 
         result = schema.dump(item)
 
