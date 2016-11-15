@@ -71,7 +71,7 @@ class MongoDataLayer(BaseDataLayer):
         self.get_collection().update(id_query, item)
 
     def get_collection(self):
-        collection = getattr(self.mongo, self.kwargs['collection'], None)
+        collection = getattr(self.mongo.db, self.kwargs['collection'], None)
         if collection is None:
             raise Exception(
                 'Collection %s does not exist' % self.kwargs['collection']
