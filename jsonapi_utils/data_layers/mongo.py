@@ -68,7 +68,7 @@ class MongoDataLayer(BaseDataLayer):
         self.get_collection().update(id_query, item)
 
     def get_collection(self):
-        collection = getattr(self.mongo, self.collection, None)
+        collection = getattr(self.mongo.db, self.collection, None)
         if collection is None:
             raise Exception(
                 'Collection %s does not exist' % self.collection
@@ -98,7 +98,7 @@ class MongoDataLayer(BaseDataLayer):
         :param dict paginate_info: pagination information
         :return pymongo.cursor.Cursor: the paginated query
         """
-        page_size = int(paginate_info.get('sitze, 0')) or DEFAULT_PAGE_SIZE
+        page_size = int(paginate_info.get('size', 0)) or DEFAULT_PAGE_SIZE
         if paginate_info.get('number'):
             offset = int(paginate_info['number'] - 1) * page_size
         else:
