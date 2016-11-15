@@ -88,6 +88,14 @@ class SqlalchemyDataLayer(BaseDataLayer):
 
         self.session.commit()
 
+    def delete_item(self, item):
+        """Delete an item
+
+        :param DeclarativeMeta item: an item from sqlalchemy
+        """
+        self.session.delete(item)
+        self.session.commit()
+
     def filter_query(self, query, filter_info, model):
         """Filter query according to jsonapi rfc
 

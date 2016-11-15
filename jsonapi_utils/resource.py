@@ -72,12 +72,16 @@ class ResourceDetailMeta(ResourceMeta):
         if meta is not None:
             get_decorators = getattr(meta, 'get_decorators', [])
             patch_decorators = getattr(meta, 'patch_decorators', [])
+            delete_decorators = getattr(meta, 'delete_decorators', [])
 
             for get_decorator in get_decorators:
                 cls.get = get_decorator(cls.get)
 
             for patch_decorator in patch_decorators:
                 cls.patch = patch_decorator(cls.patch)
+
+            for delete_decorator in delete_decorators:
+                cls.delete = delete_decorator(cls.delete)
 
 
 class ResourceList(with_metaclass(ResourceListMeta, Resource)):
@@ -183,3 +187,15 @@ class ResourceDetail(with_metaclass(ResourceDetailMeta, Resource)):
         result = schema.dump(item)
 
         return result.data
+
+    def delete(self, *args, **kwargs):
+        """Delete an item
+        """
+        try:
+            item = self.data_layer.get_item(**kwargs)
+        except EntityNotFound as e:
+            return ErrorFormatter.format_error([e.message]), e.status_code
+
+        self.data_layer.delete_item(item)
+
+        return '', 204

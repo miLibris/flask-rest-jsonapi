@@ -31,6 +31,11 @@ class BaseDataLayer(object):
         """
         raise NotImplemented
 
+    def delete_item(self, *args, **kwargs):
+        """Delete an item through the data layer
+        """
+        raise NotImplemented
+
     def configure(self, *args, **kwargs):
         """Make change on the class instance. For example: add new methods to the data layer instance class.
         """
