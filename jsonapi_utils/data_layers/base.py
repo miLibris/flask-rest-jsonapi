@@ -8,7 +8,7 @@ class BaseDataLayer(object):
 
         :param dict kwargs: information about data layer instance
         """
-        for key, value in kwargs:
+        for key, value in kwargs.items():
             setattr(self, key, value)
 
     def get_items(self, *args, **kwargs):

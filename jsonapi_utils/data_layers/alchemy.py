@@ -12,7 +12,7 @@ class SqlalchemyDataLayer(BaseDataLayer):
 
     def __init__(self, **kwargs):
         super(SqlalchemyDataLayer, self).__init__(**kwargs)
-        if self.get('session') is None:
+        if not hasattr(self, 'session') or self.session is None:
             raise Exception("You must provide de session")
 
     def get_item(self, **view_kwargs):

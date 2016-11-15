@@ -8,11 +8,11 @@ class MongoDataLayer(BaseDataLayer):
 
     def __init__(self, **kwargs):
         super(MongoDataLayer, self).__init__(**kwargs)
-        if self.get('mongo') is None:
+        if not hasattr(self, 'mongo') or self.mongo is None:
             raise Exception('You must provide a mongo connection')
-        if self.get('collection') is None:
+        if not hasattr(self, 'collection') or self.collection is None:
             raise Exception('You must provide a collection to query')
-        if self.get('model') is None:
+        if not hasattr(self, 'model') or self.model is None:
             raise Exception('You must provide a proper model class !')
 
     def get_item(self, **view_kwargs):
