@@ -13,6 +13,7 @@ from jsonapi_utils.errors import ErrorFormatter
 from jsonapi_utils.querystring import QueryStringManager as QSManager
 from jsonapi_utils.marshmallow import paginate_result
 from jsonapi_utils.exceptions import EntityNotFound, EntityAlreadyExists
+from jsonapi_utils.decorators import disable_method
 
 DATA_LAYERS = {
     'sqlalchemy': SqlalchemyDataLayer,
@@ -41,6 +42,11 @@ class ResourceMeta(MethodViewType):
                 raise Exception("data_layer not found")
 
             cls.data_layer = type('DataLayer', (data_layer_cls, ), {})(**data_layer.get('kwargs', {}))
+
+            not_allowed_methods = getattr(meta, 'not_allowed_methods', [])
+            for not_allowed_method in not_allowed_methods:
+                if hasattr(cls, not_allowed_method.lower()):
+                    setattr(cls, not_allowed_method.lower(), disable_method(getattr(cls, not_allowed_method.lower())))
 
 
 class ResourceListMeta(ResourceMeta):
