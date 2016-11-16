@@ -113,7 +113,7 @@ class SqlalchemyDataLayer(BaseDataLayer):
                 filt = column.in_(item['value'].split(','))
             else:
                 try:
-                    attr = next(filter(lambda e: hasattr(column, e % item['op']), ['%s', '%s_', '__%s__'])) % item['op']
+                    attr = next(iter(filter(lambda e: hasattr(column, e % item['op']), ['%s', '%s_', '__%s__']))) % item['op']
                 except IndexError:
                     continue
                 if item['value'] == 'null':
