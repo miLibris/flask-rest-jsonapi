@@ -100,7 +100,7 @@ class MongoDataLayer(BaseDataLayer):
         """
         page_size = int(paginate_info.get('size', 0)) or DEFAULT_PAGE_SIZE
         if paginate_info.get('number'):
-            offset = int(paginate_info['number'] - 1) * page_size
+            offset = (int(paginate_info['number']) - 1) * page_size
         else:
             offset = 0
         return query[offset:offset+page_size]
