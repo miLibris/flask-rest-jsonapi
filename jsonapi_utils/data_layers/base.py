@@ -3,7 +3,7 @@
 
 class BaseDataLayer(object):
 
-    def __init__(self, **kwargs):
+    def __init__(self, *args, **kwargs):
         """Intialize an data layer instance with kwargs
 
         :param dict kwargs: information about data layer instance

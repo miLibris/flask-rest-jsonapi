@@ -13,9 +13,3 @@ class EntityNotFound(HttpException):
     def __init__(self, entity_name, identifier, additional_message=''):
         super(EntityNotFound, self).__init__(". ".join(["%s with id: %s not found" % (entity_name, identifier),
                                                        additional_message]), 404)
-
-
-class EntityAlreadyExists(HttpException):
-
-    def __init__(self, entity_name, additional_message=''):
-        super(EntityAlreadyExists, self).__init__(". ".join(["%s conflict" % entity_name, additional_message]), 409)

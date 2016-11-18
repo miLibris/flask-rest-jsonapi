@@ -10,10 +10,18 @@ from jsonapi_utils.exceptions import EntityNotFound
 
 class SqlalchemyDataLayer(BaseDataLayer):
 
-    def __init__(self, **kwargs):
-        super(SqlalchemyDataLayer, self).__init__(**kwargs)
-        if not hasattr(self, 'session') or self.session is None:
-            raise Exception("You must provide de session")
+    def __init__(self, *args, **kwargs):
+        super(SqlalchemyDataLayer, self).__init__(*args, **kwargs)
+
+        assert hasattr(self, 'session')
+
+        if 'ResourceList' in [cls.__name__ for cls in self.resource_cls.__bases__]:
+            assert hasattr(self, 'model')
+
+        if 'ResourceDetail' in [cls.__name__ for cls in self.resource_cls.__bases__]:
+            assert hasattr(self, 'model')
+            assert hasattr(self, 'id_field')
+            assert hasattr(self, 'url_param_name')
 
     def get_item(self, **view_kwargs):
         """Retrieve an item through sqlalchemy
@@ -113,7 +121,8 @@ class SqlalchemyDataLayer(BaseDataLayer):
                 filt = column.in_(item['value'].split(','))
             else:
                 try:
-                    attr = next(iter(filter(lambda e: hasattr(column, e % item['op']), ['%s', '%s_', '__%s__']))) % item['op']
+                    attr = next(iter(filter(lambda e: hasattr(column, e % item['op']),
+                                            ['%s', '%s_', '__%s__']))) % item['op']
                 except IndexError:
                     continue
                 if item['value'] == 'null':
