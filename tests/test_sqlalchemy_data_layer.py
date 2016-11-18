@@ -13,7 +13,7 @@ from flask_restful import Api
 from marshmallow_jsonapi.flask import Schema
 from marshmallow_jsonapi import fields
 
-from jsonapi_utils.resource import ResourceList
+from flask_rest_jsonapi import ResourceList
 
 
 @pytest.fixture(scope="session")
