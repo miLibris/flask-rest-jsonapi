@@ -10,7 +10,7 @@ from marshmallow_jsonapi.exceptions import IncorrectTypeError
 from flask_rest_jsonapi.data_layers import SqlalchemyDataLayer, MongoDataLayer
 from flask_rest_jsonapi.errors import ErrorFormatter
 from flask_rest_jsonapi.querystring import QueryStringManager as QSManager
-from flask_rest_jsonapi.marshmallow import paginate_result
+from flask_rest_jsonapi.pagination import paginate_result
 from flask_rest_jsonapi.exceptions import EntityNotFound
 from flask_rest_jsonapi.decorators import disable_method
 
