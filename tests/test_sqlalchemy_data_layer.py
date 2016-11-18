@@ -9,7 +9,6 @@ from sqlalchemy import create_engine, Column, Integer, DateTime, String
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.ext.declarative import declarative_base
 from flask import Blueprint
-from flask_restful import Api
 from marshmallow_jsonapi.flask import Schema
 from marshmallow_jsonapi import fields
 
@@ -94,11 +93,10 @@ def item_list_resource(session, item_cls, base_query, dummy_decorator, item_sche
 
 
 def test_get_list_resource(client, item_list_resource):
-    rest_api_bp = Blueprint('rest_api', __name__)
-    rest_api = Api(rest_api_bp)
-    rest_api.add_resource(item_list_resource, '/items', endpoint='item_list')
+    rest_api = Blueprint('rest_api', __name__)
+    rest_api.add_url_rule('/items', view_func=item_list_resource.as_view('item_list'))
 
-    client.application.register_blueprint(rest_api_bp)
+    client.application.register_blueprint(rest_api)
 
     querystring = urlencode({'page[number]': 3,
                              'page[size]': 1,
