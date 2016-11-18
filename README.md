@@ -1,12 +1,12 @@
-[![Build Status](https://travis-ci.org/miLibris/jsonapi-utils.svg?branch=master)](https://travis-ci.org/miLibris/jsonapi-utils)
-[![Coverage Status](https://coveralls.io/repos/github/miLibris/jsonapi-utils/badge.svg?branch=master)](https://coveralls.io/github/miLibris/jsonapi-utils?branch=master)
+[![Build Status](https://travis-ci.org/miLibris/flask-rest-jsonapi.svg?branch=master)](https://travis-ci.org/miLibris/flask-rest-jsonapi)
+[![Coverage Status](https://coveralls.io/repos/github/miLibris/flask-rest-jsonapi/badge.svg?branch=master)](https://coveralls.io/github/miLibris/flask-rest-jsonapi?branch=master)
 
-# jsonapi-utils
+# flask-rest-jsonapi
 Python utils to help you build easily a restfull api according to jsonapi reference. http://jsonapi.org/
 
 ## Stack
 
-- flask_restful
+- flask
 - marshmallow_jsonapi
 - sqlalchemy
 - mongodb (coming soon)
@@ -153,6 +153,7 @@ class PostDetail(ResourceDetail):
 
         get_decorators = [oauth2.require_oauth('post_detail')]
         patch_decorators = [oauth2.require_oauth('post_update')]
+        not_allowed_methods = ['DELETE']
 
     resource_type = 'post'
     schema_cls = PostSchema
