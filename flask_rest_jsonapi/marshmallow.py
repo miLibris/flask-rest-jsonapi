@@ -4,7 +4,7 @@ from six.moves.urllib.parse import urlencode
 from math import ceil
 from copy import copy
 
-from jsonapi_utils.constants import DEFAULT_PAGE_SIZE
+from flask_rest_jsonapi.constants import DEFAULT_PAGE_SIZE
 
 
 def paginate_result(data, item_count, querystring, base_url):

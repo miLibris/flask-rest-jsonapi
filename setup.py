@@ -5,9 +5,9 @@ __version__ = '0.1'
 
 
 setup(
-    name="jsonapi-utils",
+    name="flask-rest-jsonapi",
     version=__version__,
-    author='python-jsonapi',
+    author='miLibris',
     packages=find_packages(),
     description='empty',
     setup_requires=['pytest-runner'],

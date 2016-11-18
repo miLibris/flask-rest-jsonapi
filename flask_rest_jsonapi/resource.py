@@ -7,13 +7,12 @@ from flask import request, url_for, make_response
 from flask.views import MethodViewType, MethodView
 from marshmallow_jsonapi.exceptions import IncorrectTypeError
 
-from jsonapi_utils.data_layers.alchemy import SqlalchemyDataLayer
-from jsonapi_utils.data_layers.mongo import MongoDataLayer
-from jsonapi_utils.errors import ErrorFormatter
-from jsonapi_utils.querystring import QueryStringManager as QSManager
-from jsonapi_utils.marshmallow import paginate_result
-from jsonapi_utils.exceptions import EntityNotFound
-from jsonapi_utils.decorators import disable_method
+from flask_rest_jsonapi.data_layers import SqlalchemyDataLayer, MongoDataLayer
+from flask_rest_jsonapi.errors import ErrorFormatter
+from flask_rest_jsonapi.querystring import QueryStringManager as QSManager
+from flask_rest_jsonapi.marshmallow import paginate_result
+from flask_rest_jsonapi.exceptions import EntityNotFound
+from flask_rest_jsonapi.decorators import disable_method
 
 DATA_LAYERS = {
     'sqlalchemy': SqlalchemyDataLayer,

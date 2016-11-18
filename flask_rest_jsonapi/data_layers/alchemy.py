@@ -3,9 +3,9 @@
 from sqlalchemy.orm.exc import NoResultFound
 from sqlalchemy.sql.expression import desc, asc, text
 
-from jsonapi_utils.constants import DEFAULT_PAGE_SIZE
-from jsonapi_utils.data_layers.base import BaseDataLayer
-from jsonapi_utils.exceptions import EntityNotFound
+from flask_rest_jsonapi.constants import DEFAULT_PAGE_SIZE
+from flask_rest_jsonapi.data_layers.base import BaseDataLayer
+from flask_rest_jsonapi.exceptions import EntityNotFound
 
 
 class SqlalchemyDataLayer(BaseDataLayer):
