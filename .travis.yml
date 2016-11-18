@@ -9,6 +9,6 @@ install:
   - pip install coveralls coverage
 script:
   - python setup.py install
-  - coverage run --source jsonapi_utils -m pytest -v
+  - coverage run --source flask-rest-jsonapi -m pytest -v
 after_success:
   - coveralls
