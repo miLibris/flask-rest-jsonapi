@@ -87,11 +87,10 @@ If you want to add a new data layer this will be better to inherit it from BaseD
 ```python
 # -*- coding: utf-8 -*-
 
-from jsonapi_utils.resource import ResourceDetail, ResourceList
-from jsonapi_utils.errors import ErrorFormatter
+from flask_rest_jsonapi import ResourceDetail, ResourceList
 
-from your_project.models import Post
 from your_project.extensions import oauth2, sql_db
+from your_project.models import Post
 from your_project.schemas.post import PostSchema
 
 
