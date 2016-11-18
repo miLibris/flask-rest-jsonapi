@@ -173,7 +173,7 @@ class ResourceList(with_metaclass(ResourceListMeta, Resource)):
         return schema.dump(item).data, 201
 
 
-class ResourceDetail(with_metaclass(ResourceDetailMeta, MethodView)):
+class ResourceDetail(with_metaclass(ResourceDetailMeta, Resource)):
 
     def get(self, *args, **kwargs):
         """Get item details

@@ -12,7 +12,7 @@ from flask import Blueprint
 from marshmallow_jsonapi.flask import Schema
 from marshmallow_jsonapi import fields
 
-from flask_rest_jsonapi import ResourceList
+from flask_rest_jsonapi import ResourceList, ResourceDetail
 
 
 @pytest.fixture(scope="session")
@@ -46,14 +46,14 @@ def session(engine):
     return Session()
 
 
-@pytest.fixture
+@pytest.fixture(scope="session")
 def base_query(item_cls):
     def get_base_query(self, **view_kwargs):
         return self.session.query(item_cls)
     yield get_base_query
 
 
-@pytest.fixture
+@pytest.fixture(scope="session")
 def dummy_decorator():
     def deco(f):
         def wrapper_f(*args, **kwargs):
@@ -62,12 +62,12 @@ def dummy_decorator():
     yield deco
 
 
-@pytest.fixture
+@pytest.fixture(scope="session")
 def item_schema():
     class ItemSchema(Schema):
         class Meta:
             type_ = 'item'
-            self_view = 'item_detail'
+            self_view = 'rest_api.item_detail'
             self_view_kwargs = {'item_id': '<id>'}
             self_view_many = 'rest_api.item_list'
         id = fields.Str(dump_only=True)
@@ -77,7 +77,7 @@ def item_schema():
     yield ItemSchema
 
 
-@pytest.fixture
+@pytest.fixture(scope="session")
 def item_list_resource(session, item_cls, base_query, dummy_decorator, item_schema):
     class ItemList(ResourceList):
         class Meta:
@@ -92,16 +92,67 @@ def item_list_resource(session, item_cls, base_query, dummy_decorator, item_sche
     yield ItemList
 
 
-def test_get_list_resource(client, item_list_resource):
-    rest_api = Blueprint('rest_api', __name__)
-    rest_api.add_url_rule('/items', view_func=item_list_resource.as_view('item_list'))
+@pytest.fixture(scope="session")
+def item_detail_resource(session, item_cls, base_query, dummy_decorator, item_schema):
+    class ItemDetail(ResourceDetail):
+        class Meta:
+            data_layer = {'name': 'sqlalchemy',
+                          'kwargs': {'model': item_cls,
+                                     'session': session,
+                                     'id_field': 'id',
+                                     'url_param_name': 'item_id'},
+                          'get_base_query': base_query}
+            get_decorators = [dummy_decorator]
+            patch_decorators = [dummy_decorator]
+            delete_decorators = [dummy_decorator]
+        resource_type = 'item'
+        schema_cls = item_schema
+    yield ItemDetail
 
-    client.application.register_blueprint(rest_api)
 
+@pytest.fixture(scope="session")
+def rest_api_blueprint(client):
+    bp = Blueprint('rest_api', __name__)
+    yield bp
+
+
+@pytest.fixture(scope="session")
+def register_routes(client, rest_api_blueprint, item_list_resource, item_detail_resource):
+    rest_api_blueprint.add_url_rule('/items', view_func=item_list_resource.as_view('item_list'))
+    rest_api_blueprint.add_url_rule('/items/<int:item_id>', view_func=item_detail_resource.as_view('item_detail'))
+    client.application.register_blueprint(rest_api_blueprint)
+
+
+def test_get_list_resource(client, register_routes):
     querystring = urlencode({'page[number]': 3,
                              'page[size]': 1,
                              'fields[item]': 'title,content',
                              'sort': '-created,title',
                              'filter[item]': json.dumps([{'field': 'created', 'op': 'gt', 'value': '2016-11-10'}])})
-    response = client.get('/items' + '?' + querystring)
+    response = client.get('/items' + '?' + querystring,
+                          content_type='application/vnd.api+json')
     assert response.status_code == 200
+
+
+def test_post_list_resource(client, register_routes):
+    response = client.post('/items',
+                           data=json.dumps({"data": {"type": "item", "attributes": {"title": "test"}}}),
+                           content_type='application/vnd.api+json')
+    assert response.status_code == 201
+
+
+def test_get_detail_resource(client, register_routes):
+    response = client.get('/items/1')
+    assert response.status_code == 200
+
+
+def test_patch_patch_resource(client, register_routes):
+    response = client.patch('/items/1',
+                            data=json.dumps({"data": {"type": "item", "id": 1, "attributes": {"title": "test2"}}}),
+                            content_type='application/vnd.api+json')
+    assert response.status_code == 200
+
+
+def test_delete_detail_resource(client, register_routes):
+    response = client.delete('/items/1', content_type='application/vnd.api+json')
+    assert response.status_code == 204
