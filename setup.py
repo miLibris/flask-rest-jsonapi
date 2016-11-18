@@ -11,5 +11,6 @@ setup(
     packages=find_packages(),
     description='empty',
     setup_requires=['pytest-runner'],
-    tests_require=['pytest']
+    tests_require=['pytest'],
+    test_suite="tests"
 )
