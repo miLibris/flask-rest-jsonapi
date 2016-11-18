@@ -1,5 +1,5 @@
 [![Build Status](https://travis-ci.org/miLibris/flask-rest-jsonapi.svg?branch=master)](https://travis-ci.org/miLibris/flask-rest-jsonapi)
-[![Coverage Status](https://coveralls.io/repos/github/miLibris/flask-rest-jsonapi/badge.svg)](https://coveralls.io/github/miLibris/flask-rest-jsonapi)
+[![Coverage Status](https://coveralls.io/repos/github/miLibris/flask-rest-jsonapi/badge.svg?branch=master)](https://coveralls.io/github/miLibris/flask-rest-jsonapi?branch=master)
 
 # flask-rest-jsonapi
 Python utils to help you build easily a restfull api according to jsonapi reference. http://jsonapi.org/
