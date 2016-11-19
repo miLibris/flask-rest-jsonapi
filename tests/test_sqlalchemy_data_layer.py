@@ -111,15 +111,33 @@ def item_detail_resource(session, item_cls, base_query, dummy_decorator, item_sc
 
 
 @pytest.fixture(scope="session")
+def item_list_resource_not_allowed(session, item_cls, base_query, dummy_decorator, item_schema):
+    class ItemList(ResourceList):
+        class Meta:
+            data_layer = {'name': 'sqlalchemy',
+                          'kwargs': {'model': item_cls, 'session': session},
+                          'get_base_query': base_query}
+            get_decorators = [dummy_decorator]
+            not_allowed_methods = ['POST']
+        resource_type = 'item'
+        schema_cls = item_schema
+        collection_endpoint = 'rest_api.item_list'
+    yield ItemList
+
+
+@pytest.fixture(scope="session")
 def rest_api_blueprint(client):
     bp = Blueprint('rest_api', __name__)
     yield bp
 
 
 @pytest.fixture(scope="session")
-def register_routes(client, rest_api_blueprint, item_list_resource, item_detail_resource):
+def register_routes(client, rest_api_blueprint, item_list_resource, item_detail_resource,
+                    item_list_resource_not_allowed):
     rest_api_blueprint.add_url_rule('/items', view_func=item_list_resource.as_view('item_list'))
     rest_api_blueprint.add_url_rule('/items/<int:item_id>', view_func=item_detail_resource.as_view('item_detail'))
+    rest_api_blueprint.add_url_rule('/items_not_allowed',
+                                    view_func=item_list_resource_not_allowed.as_view('item_list_not_allowed'))
     client.application.register_blueprint(rest_api_blueprint)
 
 
@@ -156,3 +174,22 @@ def test_patch_patch_resource(client, register_routes):
 def test_delete_detail_resource(client, register_routes):
     response = client.delete('/items/1', content_type='application/vnd.api+json')
     assert response.status_code == 204
+
+
+def test_post_list_resource_not_allowed(client, register_routes):
+    response = client.post('/items_not_allowed',
+                           data=json.dumps({"data": {"type": "item", "attributes": {"title": "test"}}}),
+                           content_type='application/vnd.api+json')
+    assert response.status_code == 405
+
+
+def test_get_detail_resource_not_found(client, register_routes):
+    response = client.get('/items/2')
+    assert response.status_code == 404
+
+
+def test_patch_patch_resource_error(client, register_routes):
+    response = client.patch('/items/1',
+                            data=json.dumps({"data": {"type": "item", "attributes": {"title": "test2"}}}),
+                            content_type='application/vnd.api+json')
+    assert response.status_code == 422
