@@ -160,7 +160,7 @@ def test_post_list_resource(client, register_routes):
 
 
 def test_get_detail_resource(client, register_routes):
-    response = client.get('/items/1')
+    response = client.get('/items/1', content_type='application/vnd.api+json')
     assert response.status_code == 200
 
 
@@ -184,7 +184,7 @@ def test_post_list_resource_not_allowed(client, register_routes):
 
 
 def test_get_detail_resource_not_found(client, register_routes):
-    response = client.get('/items/2')
+    response = client.get('/items/2', content_type='application/vnd.api+json')
     assert response.status_code == 404
 
 
@@ -193,3 +193,13 @@ def test_patch_patch_resource_error(client, register_routes):
                             data=json.dumps({"data": {"type": "item", "attributes": {"title": "test2"}}}),
                             content_type='application/vnd.api+json')
     assert response.status_code == 422
+
+
+def test_wrong_content_type(client, register_routes):
+    response = client.delete('/items/1')
+    assert response.status_code == 415
+
+
+def test_response_content_type(client, register_routes):
+    response = client.delete('/items/1', content_type='application/vnd.api+json')
+    assert response.headers['Content-Type'] == 'application/vnd.api+json'

@@ -12,7 +12,7 @@ from flask_rest_jsonapi.errors import ErrorFormatter
 from flask_rest_jsonapi.querystring import QueryStringManager as QSManager
 from flask_rest_jsonapi.pagination import paginate_result
 from flask_rest_jsonapi.exceptions import EntityNotFound
-from flask_rest_jsonapi.decorators import disable_method
+from flask_rest_jsonapi.decorators import disable_method, check_headers, add_headers
 
 DATA_LAYERS = {
     'sqlalchemy': SqlalchemyDataLayer,
@@ -96,6 +96,8 @@ class Resource(MethodView):
     """Base Resource class to serialize the response of the resource internal methods (get, post, patch, delete).
     According to jsonapi reference, returns a json string and the right status code.
     """
+    decorators = (check_headers, add_headers)
+
     def __new__(cls):
         assert hasattr(cls, 'resource_type')
         assert hasattr(cls, 'schema_cls')
