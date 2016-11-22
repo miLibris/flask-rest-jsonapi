@@ -69,7 +69,7 @@ flask_rest_jsonapi.data_layers.alchemy module
 flask_rest_jsonapi.data_layers.mongo module
 -------------------------------
 
-.. automodule:: flask_rest_jsonapi.data_layers.alchemy
+.. automodule:: flask_rest_jsonapi.data_layers.mongo
     :members:
     :undoc-members:
     :show-inheritance:
