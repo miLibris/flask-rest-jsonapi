@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 #
-# jsonapi-utils documentation build configuration file, created by
+# flask-rest-jsonapi documentation build configuration file, created by
 # sphinx-quickstart on Fri Oct 21 14:33:15 2016.
 #
 # This file is execfile()d with the current directory set to its
