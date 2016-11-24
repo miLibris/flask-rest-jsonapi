@@ -23,8 +23,8 @@ Contents:
 
 
 
-
-------------------
+Api reference
+-------------
 
 * :ref:`genindex`
 * :ref:`modindex`
