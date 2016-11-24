@@ -1,4 +1,4 @@
-Paginaion
-=========
+Pagination
+==========
 
 coming soon
