@@ -6,7 +6,8 @@
 Welcome to flask-rest-jsonapi documentation!
 ============================================
 
-Contents:
+Contents
+--------
 
 .. toctree::
    :maxdepth: 2
