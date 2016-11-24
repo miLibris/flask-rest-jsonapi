@@ -4,7 +4,7 @@
    contain the root `toctree` directive.
 
 Welcome to flask-rest-jsonapi documentation!
-=========================================
+============================================
 
 Contents:
 
@@ -12,8 +12,6 @@ Contents:
    :maxdepth: 2
    :glob:
    
-   ref:`genindex`
-   * :ref:`genindex`
    overview
    install
    resource
@@ -25,7 +23,7 @@ Contents:
 
 
 
-Indices and tables
+
 ------------------
 
 * :ref:`genindex`
