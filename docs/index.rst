@@ -12,6 +12,8 @@ Contents:
    :maxdepth: 2
    :glob:
    
+   ref:`genindex`
+   * :ref:`genindex`
    overview
    install
    resource
