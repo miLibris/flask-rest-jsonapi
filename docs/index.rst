@@ -19,6 +19,7 @@ Contents
    data_layer
    sorting
    filtering
+   pagination
    full_example
 
 
