@@ -15,11 +15,11 @@ Contents:
    overview
    install
    resource
-   data layer
+   data_layer
    sorting
    filtering
    pagination
-   full example
+   full_example
 
 
 
