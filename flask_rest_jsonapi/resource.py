@@ -46,10 +46,10 @@ class ResourceMeta(MethodViewType):
             cls.data_layer = type('DataLayer', (data_layer_cls, ), {})(**data_layer_kwargs)
             cls.data_layer.configure(data_layer)
 
-            not_allowed_methods = getattr(meta, 'not_allowed_methods', [])
-            for not_allowed_method in not_allowed_methods:
-                if hasattr(cls, not_allowed_method.lower()):
-                    setattr(cls, not_allowed_method.lower(), disable_method(getattr(cls, not_allowed_method.lower())))
+        not_allowed_methods = nmspc.get('not_allowed_methods', [])
+        for not_allowed_method in not_allowed_methods:
+            if hasattr(cls, not_allowed_method.lower()):
+                setattr(cls, not_allowed_method.lower(), disable_method(getattr(cls, not_allowed_method.lower())))
 
 
 class ResourceListMeta(ResourceMeta):
