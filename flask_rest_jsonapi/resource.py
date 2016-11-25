@@ -236,6 +236,6 @@ class ResourceDetail(with_metaclass(ResourceDetailMeta, Resource)):
         except EntityNotFound as e:
             return ErrorFormatter.format_error([e.message]), e.status_code
 
-        self.data_layer.delete_item(item)
+        self.data_layer.delete_item(item, **kwargs)
 
         return '', 204

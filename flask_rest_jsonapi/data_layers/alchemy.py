@@ -88,7 +88,7 @@ class SqlalchemyDataLayer(BaseDataLayer):
         :param dict data: the data validated by marshmallow
         :param dict view_kwargs: kwargs from the resource view
         """
-        self.before_update_instance(item, data)
+        self.before_update_instance(item, data, **view_kwargs)
 
         for field in data:
             if hasattr(item, field):
@@ -96,11 +96,13 @@ class SqlalchemyDataLayer(BaseDataLayer):
 
         self.session.commit()
 
-    def delete_item(self, item):
+    def delete_item(self, item, **view_kwargs):
         """Delete an item
 
         :param DeclarativeMeta item: an item from sqlalchemy
         """
+        self.before_delete_instance(item)
+
         self.session.delete(item)
         self.session.commit()
 
@@ -176,11 +178,20 @@ class SqlalchemyDataLayer(BaseDataLayer):
         """
         pass
 
-    def before_update_instance(self, item, data):
-        """Provide additional data before instance creation
+    def before_update_instance(self, item, data, **view_kwargs):
+        """Make checks or provide additional data before update instance
 
         :param DeclarativeMeta item: an item from sqlalchemy
         :param dict data: the data validated by marshmallow
+        :param dict view_kwargs: kwargs from the resource view
+        """
+        pass
+
+    def before_delete_instance(self, item, **view_kwargs):
+        """Make checks before delete instance
+
+        :param DeclarativeMeta item: an item from sqlalchemy
+        :param dict view_kwargs: kwargs from the resource view
         """
         pass
 
@@ -197,3 +208,9 @@ class SqlalchemyDataLayer(BaseDataLayer):
 
         if data_layer.get('before_create_instance') is not None and callable(data_layer['before_create_instance']):
             cls.before_create_instance = data_layer['before_create_instance']
+
+        if data_layer.get('before_update_instance') is not None and callable(data_layer['before_update_instance']):
+            cls.before_update_instance = data_layer['before_update_instance']
+
+        if data_layer.get('before_delete_instance') is not None and callable(data_layer['before_delete_instance']):
+            cls.before_delete_instance = data_layer['before_delete_instance']
