@@ -16,6 +16,7 @@ class SqlalchemyDataLayer(BaseDataLayer):
         assert hasattr(self, 'session')
 
         if 'ResourceList' in [cls.__name__ for cls in self.resource_cls.__bases__]:
+            assert hasattr(self, 'get_base_query')
             assert hasattr(self, 'model')
 
         if 'ResourceDetail' in [cls.__name__ for cls in self.resource_cls.__bases__]:
@@ -202,10 +203,8 @@ class SqlalchemyDataLayer(BaseDataLayer):
 
         :param dict data_layer: information from Meta class used to configure the data layer instance
         """
-        if data_layer.get('get_base_query') is None or not callable(data_layer['get_base_query']):
-            raise Exception("You must provide a get_base_query function with self as first parameter")
-
-        cls.get_base_query = data_layer['get_base_query']
+        if data_layer.get('get_base_query') is not None and callable(data_layer['get_base_query']):
+            cls.get_base_query = data_layer['get_base_query']
 
         if data_layer.get('before_create_instance') is not None and callable(data_layer['before_create_instance']):
             cls.before_create_instance = data_layer['before_create_instance']

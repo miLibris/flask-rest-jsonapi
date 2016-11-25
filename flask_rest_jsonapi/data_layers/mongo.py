@@ -152,8 +152,5 @@ class MongoDataLayer(BaseDataLayer):
         :param dict data_layer: information from Meta class used to configure
         the data layer
         """
-        if (data_layer.get('get_base_query') is None or
-                not callable(data_layer['get_base_query'])):
-            raise Exception('You must provide a get_base_query function'
-                            ' width self as first parameter')
-        cls.get_base_query = data_layer['get_base_query']
+        if data_layer.get('get_base_query') is not None and callable(data_layer['get_base_query']):
+            cls.get_base_query = data_layer['get_base_query']
