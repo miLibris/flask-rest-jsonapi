@@ -44,6 +44,7 @@ class ResourceMeta(MethodViewType):
             data_layer_kwargs['resource_cls'] = cls
             data_layer_kwargs.update(data_layer.get('kwargs', {}))
             cls.data_layer = type('DataLayer', (data_layer_cls, ), {})(**data_layer_kwargs)
+            cls.data_layer.configure(data_layer)
 
             not_allowed_methods = getattr(meta, 'not_allowed_methods', [])
             for not_allowed_method in not_allowed_methods:
@@ -58,9 +59,6 @@ class ResourceListMeta(ResourceMeta):
         meta = nmspc.get('Meta')
 
         if meta is not None:
-            data_layer = getattr(meta, 'data_layer')
-            cls.data_layer.configure(data_layer)
-
             get_decorators = getattr(meta, 'get_decorators', [])
             post_decorators = getattr(meta, 'post_decorators', [])
 
