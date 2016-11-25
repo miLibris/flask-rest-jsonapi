@@ -3,20 +3,29 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-Welcome to jsonapi-utils's documentation!
-=========================================
+Welcome to flask-rest-jsonapi documentation!
+============================================
 
-Contents:
+Contents
+--------
 
 .. toctree::
    :maxdepth: 2
+   :glob:
+   
+   overview
+   install
+   resource
+   data_layer
+   sorting
+   filtering
+   pagination
+   full_example
 
 
 
-Indices and tables
-==================
+Api reference
+-------------
 
 * :ref:`genindex`
 * :ref:`modindex`
-* :ref:`search`
-
