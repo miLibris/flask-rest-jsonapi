@@ -14,13 +14,12 @@ class SqlalchemyDataLayer(BaseDataLayer):
         super(SqlalchemyDataLayer, self).__init__(*args, **kwargs)
 
         assert hasattr(self, 'session')
+        assert hasattr(self, 'model')
 
         if 'ResourceList' in [cls.__name__ for cls in self.resource_cls.__bases__]:
             assert hasattr(self, 'get_base_query')
-            assert hasattr(self, 'model')
 
         if 'ResourceDetail' in [cls.__name__ for cls in self.resource_cls.__bases__]:
-            assert hasattr(self, 'model')
             assert hasattr(self, 'id_field')
             assert hasattr(self, 'url_param_name')
 
