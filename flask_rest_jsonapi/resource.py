@@ -27,29 +27,30 @@ class ResourceMeta(MethodViewType):
         meta = nmspc.get('Meta')
 
         if meta is not None:
-            data_layer = getattr(meta, 'data_layer')
+            data_layer = getattr(meta, 'data_layer', None)
 
-            if data_layer is None or not isinstance(data_layer, dict):
-                raise Exception("You must provide data layer informations as dictionary")
+            if data_layer is not None:
+                if not isinstance(data_layer, dict):
+                    raise Exception("You must provide data layer informations as dictionary")
 
-            if data_layer.get('name') is None:
-                raise Exception("You must provide a data layer name")
+                if data_layer.get('name') is None:
+                    raise Exception("You must provide a data layer name")
 
-            try:
-                data_layer_cls = DATA_LAYERS[data_layer['name']]
-            except KeyError:
-                raise Exception("Data layer not found")
+                try:
+                    data_layer_cls = DATA_LAYERS[data_layer['name']]
+                except KeyError:
+                    raise Exception("Data layer not found")
 
-            data_layer_kwargs = {}
-            data_layer_kwargs['resource_cls'] = cls
-            data_layer_kwargs.update(data_layer.get('kwargs', {}))
-            cls.data_layer = type('DataLayer', (data_layer_cls, ), {})(**data_layer_kwargs)
-            cls.data_layer.configure(data_layer)
+                data_layer_kwargs = {}
+                data_layer_kwargs['resource_cls'] = cls
+                data_layer_kwargs.update(data_layer.get('kwargs', {}))
+                cls._data_layer = type('DataLayer', (data_layer_cls, ), {})(**data_layer_kwargs)
+                cls._data_layer.configure(data_layer)
 
-        not_allowed_methods = nmspc.get('not_allowed_methods', [])
-        for not_allowed_method in not_allowed_methods:
-            if hasattr(cls, not_allowed_method.lower()):
-                setattr(cls, not_allowed_method.lower(), disable_method(getattr(cls, not_allowed_method.lower())))
+            not_allowed_methods = getattr(meta, 'not_allowed_methods', [])
+            for not_allowed_method in not_allowed_methods:
+                if hasattr(cls, not_allowed_method.lower()):
+                    setattr(cls, not_allowed_method.lower(), disable_method(getattr(cls, not_allowed_method.lower())))
 
 
 class ResourceListMeta(ResourceMeta):
@@ -96,11 +97,6 @@ class Resource(MethodView):
     """
     decorators = (check_headers, add_headers)
 
-    def __new__(cls):
-        assert hasattr(cls, 'resource_type')
-        assert hasattr(cls, 'schema_cls')
-        return super(Resource, cls).__new__(cls)
-
     def dispatch_request(self, *args, **kwargs):
         meth = getattr(self, request.method.lower(), None)
         if meth is None and request.method == 'HEAD':
@@ -117,12 +113,16 @@ class Resource(MethodView):
 
         return make_response(json.dumps(data), status_code)
 
+    @property
+    def data_layer(self):
+        if hasattr(self, '_data_layer'):
+            return self._data_layer
+        else:
+            raise Exception("You must provide data layer information in your resource class Meta or disable access to \
+                            this method with not_allowed_methods option")
+
 
 class ResourceList(with_metaclass(ResourceListMeta, Resource)):
-
-    def __new__(cls):
-        assert hasattr(cls, 'collection_endpoint')
-        return super(ResourceList, cls).__new__(cls)
 
     def get(self, *args, **kwargs):
         """Retrieve a collection of items
