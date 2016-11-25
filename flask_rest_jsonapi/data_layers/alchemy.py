@@ -100,8 +100,9 @@ class SqlalchemyDataLayer(BaseDataLayer):
         """Delete an item
 
         :param DeclarativeMeta item: an item from sqlalchemy
+        :param dict view_kwargs: kwargs from the resource view
         """
-        self.before_delete_instance(item)
+        self.before_delete_instance(item, **view_kwargs)
 
         self.session.delete(item)
         self.session.commit()
