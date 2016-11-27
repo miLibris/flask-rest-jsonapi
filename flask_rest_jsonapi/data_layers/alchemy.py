@@ -13,15 +13,10 @@ class SqlalchemyDataLayer(BaseDataLayer):
     def __init__(self, *args, **kwargs):
         super(SqlalchemyDataLayer, self).__init__(*args, **kwargs)
 
-        assert hasattr(self, 'session')
-        assert hasattr(self, 'model')
-
-        if 'ResourceList' in [cls.__name__ for cls in self.resource_cls.__bases__]:
-            assert hasattr(self, 'get_base_query')
-
-        if 'ResourceDetail' in [cls.__name__ for cls in self.resource_cls.__bases__]:
-            assert hasattr(self, 'id_field')
-            assert hasattr(self, 'url_param_name')
+        if not hasattr(self, 'session'):
+            raise Exception("You must provide a session to use sqlalchemy data layer")
+        if not hasattr(self, 'model'):
+            raise Exception("You must provide a model to use sqlalchemy data layer")
 
     def get_item(self, **view_kwargs):
         """Retrieve an item through sqlalchemy
@@ -29,6 +24,12 @@ class SqlalchemyDataLayer(BaseDataLayer):
         :params dict view_kwargs: kwargs from the resource view
         :return DeclarativeMeta: an item from sqlalchemy
         """
+        if not hasattr(self, 'id_field'):
+            raise Exception("You must provide an id_field in data layer kwargs in %s" % self.resource_cls.__name__)
+        if not hasattr(self, 'url_param_name'):
+            raise Exception("You must provide an url_param_name in data layer kwargs in %s"
+                            % self.resource_cls.__name__)
+
         try:
             filter_field = getattr(self.model, self.id_field)
         except Exception:
@@ -51,6 +52,10 @@ class SqlalchemyDataLayer(BaseDataLayer):
         :return int item_count: the number of items in the collection
         :return list query.all(): the list of items
         """
+        if not hasattr(self, 'get_base_query'):
+            raise Exception("You must provide an get_base_query in data layer kwargs in %s"
+                            % self.resource_cls.__name__)
+
         query = self.get_base_query(**view_kwargs)
 
         if qs.filters:

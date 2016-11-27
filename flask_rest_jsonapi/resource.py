@@ -7,17 +7,12 @@ from flask import request, url_for, make_response
 from flask.views import MethodViewType, MethodView
 from marshmallow_jsonapi.exceptions import IncorrectTypeError
 
-from flask_rest_jsonapi.data_layers import SqlalchemyDataLayer, MongoDataLayer
+from flask_rest_jsonapi.data_layers.base import BaseDataLayer
 from flask_rest_jsonapi.errors import ErrorFormatter
 from flask_rest_jsonapi.querystring import QueryStringManager as QSManager
 from flask_rest_jsonapi.pagination import paginate_result
 from flask_rest_jsonapi.exceptions import EntityNotFound
-from flask_rest_jsonapi.decorators import disable_method, check_headers, add_headers
-
-DATA_LAYERS = {
-    'sqlalchemy': SqlalchemyDataLayer,
-    'mongo': MongoDataLayer
-}
+from flask_rest_jsonapi.decorators import disable_method, check_headers, check_requirements, add_headers
 
 
 class ResourceMeta(MethodViewType):
@@ -32,20 +27,14 @@ class ResourceMeta(MethodViewType):
             if data_layer is not None:
                 if not isinstance(data_layer, dict):
                     raise Exception("You must provide data layer informations as dictionary")
-
-                if data_layer.get('name') is None:
-                    raise Exception("You must provide a data layer name")
-
-                try:
-                    data_layer_cls = DATA_LAYERS[data_layer['name']]
-                except KeyError:
-                    raise Exception("Data layer not found")
+                if data_layer.get('cls') is None or not isinstance(data_layer['cls'], BaseDataLayer):
+                    raise Exception("You must provide a data layer class inherited from BaseDataLayer")
 
                 data_layer_kwargs = {}
                 data_layer_kwargs['resource_cls'] = cls
                 data_layer_kwargs.update(data_layer.get('kwargs', {}))
-                cls._data_layer = type('DataLayer', (data_layer_cls, ), {})(**data_layer_kwargs)
-                cls._data_layer.configure(data_layer)
+                cls.data_layer = type('DataLayer', (data_layer['cls'], ), {})(**data_layer_kwargs)
+                cls.data_layer.configure(data_layer)
 
             not_allowed_methods = getattr(meta, 'not_allowed_methods', [])
             for not_allowed_method in not_allowed_methods:
@@ -113,17 +102,10 @@ class Resource(MethodView):
 
         return make_response(json.dumps(data), status_code)
 
-    @property
-    def data_layer(self):
-        if hasattr(self, '_data_layer'):
-            return self._data_layer
-        else:
-            raise Exception("You must provide data layer information in your resource class Meta or disable access to \
-                            this method with not_allowed_methods option")
-
 
 class ResourceList(with_metaclass(ResourceListMeta, Resource)):
 
+    @check_requirements
     def get(self, *args, **kwargs):
         """Retrieve a collection of items
         """
@@ -134,29 +116,36 @@ class ResourceList(with_metaclass(ResourceListMeta, Resource)):
         except EntityNotFound as e:
             return ErrorFormatter.format_error([e.message]), e.status_code
 
-        schema_kwargs = {}
+        schema_kwargs = self.schema.get('get_kwargs', {})
         if qs.fields.get(self.resource_type):
-            schema_kwargs = {'only': set(self.schema_cls._declared_fields.keys()) & set(qs.fields[self.resource_type])}
-            schema_kwargs['only'].add('id')
-        schema = self.schema_cls(many=True, **schema_kwargs)
+            if schema_kwargs.get('only'):
+                schema_kwargs['only'] = tuple(set(schema_kwargs['only']) &
+                                              set(self.schema['cls']._declared_fields.keys()) &
+                                              set(qs.fields[self.resource_type]))
+            else:
+                schema_kwargs['only'] = tuple(set(self.schema['cls']._declared_fields.keys()) &
+                                              set(qs.fields[self.resource_type]))
+        if schema_kwargs.get('only') and 'id' not in schema_kwargs['only']:
+            schema_kwargs['only'] += ('id',)
+        schema_kwargs.pop('many', None)
+        schema = self.schema['cls'](many=True, **schema_kwargs)
 
         result = schema.dump(items)
 
-        if hasattr(self, 'collection_endpoint_request_view_args')\
-                and self.collection_endpoint_request_view_args is True:
-            endpoint_kwargs = request.view_args
-        else:
-            endpoint_kwargs = {}
-        paginate_result(result.data, item_count, qs, url_for(self.collection_endpoint, **endpoint_kwargs))
+        paginate_result(result.data,
+                        item_count,
+                        qs,
+                        url_for(self.endpoint['alias'], **self.endpoint.get('kwargs', {})))
 
         return result.data
 
+    @check_requirements
     def post(self, *args, **kwargs):
         """Create an item
         """
         json_data = request.get_json()
 
-        schema = self.schema_cls()
+        schema = self.schema['cls'](**self.schema.get('post_kwargs', {}))
         try:
             data, errors = schema.load(json_data)
         except IncorrectTypeError as err:
@@ -175,6 +164,7 @@ class ResourceList(with_metaclass(ResourceListMeta, Resource)):
 
 class ResourceDetail(with_metaclass(ResourceDetailMeta, Resource)):
 
+    @check_requirements
     def get(self, *args, **kwargs):
         """Get item details
         """
@@ -185,16 +175,24 @@ class ResourceDetail(with_metaclass(ResourceDetailMeta, Resource)):
 
         qs = QSManager(request.args)
 
-        schema_kwargs = {}
+        schema_kwargs = self.schema.get('get_kwargs', {})
         if qs.fields.get(self.resource_type):
-            schema_kwargs = {'only': set(self.schema_cls._declared_fields.keys()) & set(qs.fields[self.resource_type])}
-            schema_kwargs['only'].add('id')
+            if schema_kwargs.get('only'):
+                schema_kwargs['only'] = tuple(set(schema_kwargs['only']) &
+                                              set(self.schema['cls']._declared_fields.keys()) &
+                                              set(qs.fields[self.resource_type]))
+            else:
+                schema_kwargs['only'] = tuple(set(self.schema['cls']._declared_fields.keys()) &
+                                              set(qs.fields[self.resource_type]))
+        if schema_kwargs.get('only') and 'id' not in schema_kwargs['only']:
+            schema_kwargs['only'] += ('id',)
         schema = self.schema_cls(**schema_kwargs)
 
         result = schema.dump(item)
 
         return result.data
 
+    @check_requirements
     def patch(self, *args, **kwargs):
         """Update an item
         """
@@ -226,6 +224,7 @@ class ResourceDetail(with_metaclass(ResourceDetailMeta, Resource)):
 
         return result.data
 
+    @check_requirements
     def delete(self, *args, **kwargs):
         """Delete an item
         """
