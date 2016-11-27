@@ -12,7 +12,7 @@ from flask import Blueprint
 from marshmallow_jsonapi.flask import Schema
 from marshmallow_jsonapi import fields
 
-from flask_rest_jsonapi import ResourceList, ResourceDetail
+from flask_rest_jsonapi import ResourceList, ResourceDetail, SqlalchemyDataLayer
 
 
 @pytest.fixture(scope="session")
@@ -81,14 +81,14 @@ def item_schema():
 def item_list_resource(session, item_cls, base_query, dummy_decorator, item_schema):
     class ItemList(ResourceList):
         class Meta:
-            data_layer = {'name': 'sqlalchemy',
+            data_layer = {'cls': SqlalchemyDataLayer,
                           'kwargs': {'model': item_cls, 'session': session},
                           'get_base_query': base_query}
             get_decorators = [dummy_decorator]
             post_decorators = [dummy_decorator]
         resource_type = 'item'
-        schema_cls = item_schema
-        collection_endpoint = 'rest_api.item_list'
+        schema = {'cls': item_schema}
+        endpoint = {'alias': 'rest_api.item_list'}
     yield ItemList
 
 
@@ -96,7 +96,7 @@ def item_list_resource(session, item_cls, base_query, dummy_decorator, item_sche
 def item_detail_resource(session, item_cls, base_query, dummy_decorator, item_schema):
     class ItemDetail(ResourceDetail):
         class Meta:
-            data_layer = {'name': 'sqlalchemy',
+            data_layer = {'cls': SqlalchemyDataLayer,
                           'kwargs': {'model': item_cls,
                                      'session': session,
                                      'id_field': 'id',
@@ -106,7 +106,7 @@ def item_detail_resource(session, item_cls, base_query, dummy_decorator, item_sc
             patch_decorators = [dummy_decorator]
             delete_decorators = [dummy_decorator]
         resource_type = 'item'
-        schema_cls = item_schema
+        schema = {'cls': item_schema}
     yield ItemDetail
 
 
@@ -114,7 +114,7 @@ def item_detail_resource(session, item_cls, base_query, dummy_decorator, item_sc
 def item_list_resource_not_allowed(session, item_cls, base_query, dummy_decorator, item_schema):
     class ItemList(ResourceList):
         class Meta:
-            data_layer = {'name': 'sqlalchemy',
+            data_layer = {'cls': SqlalchemyDataLayer,
                           'kwargs': {'model': item_cls, 'session': session},
                           'get_base_query': base_query}
             get_decorators = [dummy_decorator]

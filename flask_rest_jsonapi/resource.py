@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 
+import inspect
 from six import with_metaclass
 import json
 
@@ -7,7 +8,6 @@ from flask import request, url_for, make_response
 from flask.views import MethodViewType, MethodView
 from marshmallow_jsonapi.exceptions import IncorrectTypeError
 
-from flask_rest_jsonapi.data_layers.base import BaseDataLayer
 from flask_rest_jsonapi.errors import ErrorFormatter
 from flask_rest_jsonapi.querystring import QueryStringManager as QSManager
 from flask_rest_jsonapi.pagination import paginate_result
@@ -27,8 +27,11 @@ class ResourceMeta(MethodViewType):
             if data_layer is not None:
                 if not isinstance(data_layer, dict):
                     raise Exception("You must provide data layer informations as dictionary")
-                if data_layer.get('cls') is None or not isinstance(data_layer['cls'], BaseDataLayer):
-                    raise Exception("You must provide a data layer class inherited from BaseDataLayer")
+                if data_layer.get('cls') is None:
+                    raise Exception("You must provide a data layer class")
+                else:
+                    if 'BaseDataLayer' not in [cls_.__name__ for cls_ in inspect.getmro(data_layer['cls'])]:
+                        raise Exception("You must provide a data layer class inherited from BaseDataLayer")
 
                 data_layer_kwargs = {}
                 data_layer_kwargs['resource_cls'] = cls
@@ -186,7 +189,7 @@ class ResourceDetail(with_metaclass(ResourceDetailMeta, Resource)):
                                               set(qs.fields[self.resource_type]))
         if schema_kwargs.get('only') and 'id' not in schema_kwargs['only']:
             schema_kwargs['only'] += ('id',)
-        schema = self.schema_cls(**schema_kwargs)
+        schema = self.schema['cls'](**schema_kwargs)
 
         result = schema.dump(item)
 
@@ -204,7 +207,9 @@ class ResourceDetail(with_metaclass(ResourceDetailMeta, Resource)):
         except KeyError:
             return ErrorFormatter.format_error(["You must provide id of the entity"]), 422
 
-        schema = self.schema_cls(partial=True)
+        schema_kwargs = self.schema.get('patch_kwargs', {})
+        schema_kwargs.pop('partial', None)
+        schema = self.schema['cls'](partial=True, **schema_kwargs)
         try:
             data, errors = schema.load(json_data)
         except IncorrectTypeError as err:
