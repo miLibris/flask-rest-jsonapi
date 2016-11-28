@@ -1,8 +1,5 @@
 # -*- coding: utf-8 -*-
 
-import inspect
-import sys
-
 from flask import abort, request
 
 
@@ -39,50 +36,34 @@ def add_headers(f):
 def check_requirements(f):
     """
     """
-    def wrapped_f(*args, **kwargs):
-        cls = get_class_from_function(f)
-        if not hasattr(args[0], 'data_layer'):
+    def wrapped_f(self, *args, **kwargs):
+        cls = type(self)
+        if not hasattr(self, 'data_layer'):
             raise Exception("You must provide data layer information in %s to get access to the default %s \
-                            method" % (get_class_from_function(f).__name__, f.__name__.upper()))
+                            method" % (cls.__name__, f.__name__.upper()))
         if 'ResourceList' in [cls_.__name__ for cls_ in cls.__bases__]:
-            if not hasattr(args[0], 'schema') or not isinstance(args[0].schema, dict) \
-                    or args[0].schema.get('cls') is None:
+            if not hasattr(self, 'schema') or not isinstance(self.schema, dict) \
+                    or self.schema.get('cls') is None:
                 raise Exception("You must provide schema information in %s to get access to the default %s method"
-                                % (get_class_from_function(f).__name__, f.__name__.upper()))
+                                % (cls.__name__, f.__name__.upper()))
             if f.__name__.upper() == 'GET':
-                if not hasattr(args[0], 'resource_type'):
+                if not hasattr(self, 'resource_type'):
                     raise Exception("You must provide resource type in %s to get access to the default %s method"
-                                    % (get_class_from_function(f).__name__, f.__name__.upper()))
-                if not hasattr(args[0], 'endpoint') or not isinstance(args[0].endpoint, dict) \
-                        or args[0].endpoint.get('alias') is None:
+                                    % (cls.__name__, f.__name__.upper()))
+                if not hasattr(self, 'endpoint') or not isinstance(self.endpoint, dict) \
+                        or self.endpoint.get('alias') is None:
                     raise Exception("You must provide schema information in %s to get access to the default %s method"
-                                    % (get_class_from_function(f).__name__, f.__name__.upper()))
+                                    % (cls.__name__, f.__name__.upper()))
         if 'ResourceDetail' in [cls_.__name__ for cls_ in cls.__bases__]:
             if f.__name__.upper() in ('GET', 'PATCH'):
-                if not hasattr(args[0], 'schema') or not isinstance(args[0].schema, dict) \
-                        or args[0].schema.get('cls') is None:
+                if not hasattr(self, 'schema') or not isinstance(self.schema, dict) \
+                        or self.schema.get('cls') is None:
                     raise Exception("You must provide schema information in %s to get access to the default %s method"
-                                    % (get_class_from_function(f).__name__, f.__name__.upper()))
+                                    % (cls.__name__, f.__name__.upper()))
                 if f.__name__.upper() == 'GET':
-                    if not hasattr(args[0], 'resource_type'):
+                    if not hasattr(self, 'resource_type'):
                         raise Exception("You must provide resource type in %s to get access to the default %s method"
-                                        % (get_class_from_function(f).__name__, f.__name__.upper()))
+                                        % (cls.__name__, f.__name__.upper()))
 
-        return f(*args, **kwargs)
+        return f(self, *args, **kwargs)
     return wrapped_f
-
-
-# Utils function
-if sys.version_info[0] < 3:
-    # For python 2
-    def get_class_from_function(f):
-        for cls in inspect.getmro(f.im_class):
-            if f.__name__ in cls.__dict__:
-                return cls
-        return None
-else:
-    # For python 3
-    def get_class_from_function(f):
-        cls = getattr(inspect.getmodule(f), f.__qualname__.split('.<locals>', 1)[0].rsplit('.', 1)[0])
-        if isinstance(cls, type):
-            return cls
