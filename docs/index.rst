@@ -21,6 +21,8 @@ MongoDB or what ever data storage interface you want.
 
 Here is a quick example:
 
+.. code:: python
+
     from flask import Flask
     from flask_rest_jsonapi import ResourceDetail
 
@@ -38,12 +40,17 @@ Here is a quick example:
 Save this file as api.py
 
 Launch local server:
+
+.. code:: bash
+
     $ python api.py
      * Running on http://127.0.0.1:5000/
      * Restarting with reloader
 
 
 Now you can try this:
+
+.. code:: bash
 
     $ curl http://127.0.0.1:5000/
     Hello world
@@ -54,7 +61,7 @@ Contents
 .. toctree::
    :maxdepth: 2
    :glob:
-   
+
    install
    resource
    data_layer
