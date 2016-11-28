@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 import inspect
+import sys
 
 from flask import abort, request
 
@@ -72,9 +73,16 @@ def check_requirements(f):
 
 
 # Utils function
-def get_class_from_function(f):
-    if inspect.isfunction(f):
-            cls = getattr(inspect.getmodule(f),
-                          f.__qualname__.split('.<locals>', 1)[0].rsplit('.', 1)[0])
-            if isinstance(cls, type):
+if sys.version_info[0] < 3:
+    # For python 2
+    def get_class_that_defined_method(f):
+        for cls in inspect.getmro(f.im_class):
+            if f.__name__ in cls.__dict__:
                 return cls
+        return None
+else:
+    # For python 3
+    def get_class_from_function(f):
+        cls = getattr(inspect.getmodule(f), f.__qualname__.split('.<locals>', 1)[0].rsplit('.', 1)[0])
+        if isinstance(cls, type):
+            return cls
