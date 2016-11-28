@@ -75,7 +75,7 @@ def check_requirements(f):
 # Utils function
 if sys.version_info[0] < 3:
     # For python 2
-    def get_class_that_defined_method(f):
+    def get_class_from_function(f):
         for cls in inspect.getmro(f.im_class):
             if f.__name__ in cls.__dict__:
                 return cls
