@@ -135,7 +135,7 @@ class ResourceList(with_metaclass(ResourceListMeta, Resource)):
 
         result = schema.dump(items)
 
-        endpoint_kwargs = request.view_args if self.endpoint.get('view_args') is True else {}
+        endpoint_kwargs = request.view_args if self.endpoint.get('include_view_args') is True else {}
         paginate_result(result.data,
                         item_count,
                         qs,
