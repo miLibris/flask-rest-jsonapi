@@ -4,6 +4,7 @@ import inspect
 from six import with_metaclass
 import json
 
+from werkzeug.wrappers import Response
 from flask import request, url_for, make_response
 from flask.views import MethodViewType, MethodView
 from marshmallow_jsonapi.exceptions import IncorrectTypeError
@@ -97,13 +98,24 @@ class Resource(MethodView):
 
         resp = meth(*args, **kwargs)
 
-        if isinstance(resp, tuple):
-            data, status_code = resp
-        else:
-            data = resp
-            status_code = 200
+        if isinstance(resp, Response):
+            return resp
 
-        return make_response(json.dumps(data), status_code)
+        if not isinstance(resp, tuple):
+            return make_response(json.dumps(resp))
+
+        try:
+            data, status_code, headers = resp
+        except ValueError:
+            pass
+
+        try:
+            data, status_code = resp
+            headers = {}
+        except ValueError:
+            pass
+
+        return make_response(json.dumps(data), status_code, headers)
 
 
 class ResourceList(with_metaclass(ResourceListMeta, Resource)):
