@@ -1,6 +1,6 @@
-sqlalchemy
-sphinx
 Flask
 marshmallow_jsonapi
-pytest
+sqlalchemy
 pymongo
+pytest
+sphinx

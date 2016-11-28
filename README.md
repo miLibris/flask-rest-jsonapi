@@ -2,24 +2,12 @@
 [![Coverage Status](https://coveralls.io/repos/github/miLibris/flask-rest-jsonapi/badge.svg?branch=master)](https://coveralls.io/github/miLibris/flask-rest-jsonapi?branch=master)
 
 # flask-rest-jsonapi
-Python utils to help you build easily a restfull api according to jsonapi reference. http://jsonapi.org/
+flask-rest-jsonapi is an implementation of jsonapi reference http://jsonapi.org with flask and marshmallow.
+You can interface any data provider like SQLAlchemy or MongoDB (already available) or create your custom data layer.
 
-## Stack
+## Documentation
 
-- flask
-- marshmallow_jsonapi
-- sqlalchemy
-- mongodb (coming soon)
-
-## Querystring options
-
-### Managed concepts
-
-- fields restrictions
-- pagination
-- sorting
-- filtering
-
+Documentation available here: http://flask-rest-jsonapi.readthedocs.io/en/latest/
 
 ### Fields restriction
 You can restrict fields returned by the view with url querystring parameter "fields".
