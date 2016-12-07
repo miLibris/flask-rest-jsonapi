@@ -35,7 +35,7 @@ class SqlalchemyDataLayer(BaseDataLayer):
         except Exception:
             raise Exception("Unable to find column name: %s on model: %s" % (self.id_field, self.model.__name__))
 
-        filter_value = str(view_kwargs[self.url_param_name])
+        filter_value = view_kwargs[self.url_param_name]
 
         try:
             item = self.session.query(self.model).filter(filter_field == filter_value).one()
