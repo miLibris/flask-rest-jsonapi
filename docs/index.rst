@@ -16,8 +16,8 @@ There are already lot of very good rest library based on flask like Flask-restfu
 to create an helper library as flexible as Flask-restfull (https://github.com/flask-restful/flask-restful) and as simple
 and fast to use as Flask-restless (https://github.com/jfinkels/flask-restless).
 
-So i have decided to create an helper library to merge the power of jsonapi, flask, marshmallow and SQLAlchemy or
-MongoDB or what ever data storage interface you want.
+Moreover you can use any data provider instead of other flask rest api library that only allow to you to use SQLAlchemy.
+You can use SQLAlchemy or MongoDB or create you own custom data layer to interact with the data provider of your choice.
 
 Here is a quick example:
 
