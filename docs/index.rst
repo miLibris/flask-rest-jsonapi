@@ -8,19 +8,19 @@ Welcome to flask-rest-jsonapi documentation!
 
 flask-rest-jsonapi is a library that help you build rest api.
 It is built around:
-    - jsonapi`http://jsonapi.org/`_: a specification for building apis in json
-    - flask`http://flask.pocoo.org/`_: a microframework for Python based on Werkzeug
-    - marshmallow-jsonapi`https://marshmallow-jsonapi.readthedocs.io/en/latest/`_: JSON API 1.0 formatting with
-      marshmallow`allow.readthedocs.io/en/latest/`_
-    - sqlalchemy`http://www.sqlalchemy.org/`_: SQLAlchemy is the Python SQL toolkit and Object Relational Mapper that
+    - `jsonapi <http://jsonapi.org/>`_: a specification for building apis in json
+    - `flask <http://flask.pocoo.org/>`_: a microframework for Python based on Werkzeug
+    - `marshmallow-jsonapi <https://marshmallow-jsonapi.readthedocs.io/en/latest/>`_: JSON API 1.0 formatting with
+      `marshmallow <https://marshmallow.readthedocs.io/en/latest/>`_
+    - `sqlalchemy <http://www.sqlalchemy.org/>`_: SQLAlchemy is the Python SQL toolkit and Object Relational Mapper that
       gives application developers the full power and flexibility of SQL.
-    - mongodb`https://www.mongodb.com/`_: a free and open-source cross-platform document-oriented database program
+    - `mongodb <https://www.mongodb.com/>`_: a free and open-source cross-platform document-oriented database program
 
 I have created this library because i was looking for the best way to implement rest api. The jsonapi specification is
 a very strong specification about interactions between the api and the caller and i think it is a very good one.
 
-There is lot of very good rest library based on flask like Flask-RESTful`https://github.com/flask-restful/flask-restful`_
-or Flask-Restless`https://github.com/jfinkels/flask-restless`_ but i would like to combine the flexibility of Flask-RESTful
+There is lot of very good rest library based on flask like `Flask-RESTful <https://github.com/flask-restful/flask-restful>`_
+or `Flask-Restless <https://github.com/jfinkels/flask-restless>`_ but i would like to combine the flexibility of Flask-RESTful
 with the simplicity of Flask-RESTfull and the power of marshmallow and SQLAlchemy around a strong and sharable communication
 protocol: jsonapi.
 
