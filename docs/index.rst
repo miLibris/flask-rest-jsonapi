@@ -6,18 +6,31 @@
 Welcome to flask-rest-jsonapi documentation!
 ============================================
 
-flask-rest-jsonapi is an implementation of jsonapi reference http://jsonapi.org with flask and marshmallow.
-You can interface any data provider like SQLAlchemy or MongoDB (already available) or create your custom data layer.
+flask-rest-jsonapi is a library that help you build rest api.
+It is built around:
+    - jsonapi`http://jsonapi.org/`_: a specification for building apis in json
+    - flask`http://flask.pocoo.org/`_: a microframework for Python based on Werkzeug
+    - marshmallow-jsonapi`https://marshmallow-jsonapi.readthedocs.io/en/latest/`_: JSON API 1.0 formatting with
+      marshmallow`allow.readthedocs.io/en/latest/`_
+    - sqlalchemy`http://www.sqlalchemy.org/`_: SQLAlchemy is the Python SQL toolkit and Object Relational Mapper that
+      gives application developers the full power and flexibility of SQL.
+    - mongodb`https://www.mongodb.com/`_: a free and open-source cross-platform document-oriented database program
 
 I have created this library because i was looking for the best way to implement rest api. The jsonapi specification is
 a very strong specification about interactions between the api and the caller and i think it is a very good one.
 
-There are already lot of very good rest library based on flask like Flask-restfull or Flask-restless, and i would like
-to create an helper library as flexible as Flask-restfull (https://github.com/flask-restful/flask-restful) and as simple
-and fast to use as Flask-restless (https://github.com/jfinkels/flask-restless).
+There is lot of very good rest library based on flask like Flask-RESTful`https://github.com/flask-restful/flask-restful`_
+or Flask-Restless`https://github.com/jfinkels/flask-restless`_ but i would like to combine the flexibility of Flask-RESTful
+with the simplicity of Flask-RESTfull and the power of marshmallow and SQLAlchemy around a strong and sharable communication
+protocol: jsonapi.
 
-Moreover you can use any data provider instead of other flask rest api library that only allow to you to use SQLAlchemy.
-You can use SQLAlchemy or MongoDB or create you own custom data layer to interact with the data provider of your choice.
+Moreover, in this previous flask frameworks, the only ORM supported is SQLAlchemy so i would like to create an generic
+abstraction to communicate with data provider: the data layer system.
+Availalbles data layers:
+    - SQLAlchemy
+    - MongoDB
+You can easily create and use your own data layer to communicate with the data provider of your choice. I will
+cover it in examples of data layer section.
 
 Here is a quick example:
 
@@ -27,6 +40,7 @@ Here is a quick example:
     from flask_rest_jsonapi import ResourceDetail
 
     app = Flask(__name__)
+
 
     class HelloWorld(ResourceDetail):
         def get(self):
@@ -44,16 +58,16 @@ Launch local server:
 .. code:: bash
 
     $ python api.py
-     * Running on http://127.0.0.1:5000/
-     * Restarting with reloader
+     * Running on http://127.0.0.1:5000/ (Press CTRL+C to quit)
+     * Restarting with stat
 
 
 Now you can try this:
 
 .. code:: bash
 
-    $ curl http://127.0.0.1:5000/
-    Hello world
+    $ curl -H 'Content-Type: application/vnd.api+json' -H 'Accept: application/vnd.api+json' http://127.0.0.1:5000/
+    "Hello world"
 
 Contents
 --------
