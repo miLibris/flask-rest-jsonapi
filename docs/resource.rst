@@ -40,8 +40,10 @@ Class attributs:
           405 status code
 
 Example:
+
 .. code:: python
-    from flask_rest_jsonapi import ResourceList
+
+    from flask_rest_jsonapi import ResourceList, SqlalchemyDataLayer
 
     from your_project.models import Post
     from your_project.schemas import PostSchema
@@ -95,8 +97,10 @@ Class attributs:
           405 status code
 
 Example:
+
 .. code:: python
-    from flask_rest_jsonapi import ResourceList
+
+    from flask_rest_jsonapi import ResourceList, SqlalchemyDataLayer
 
     from your_project.models import Post
     from your_project.schemas import PostSchema
@@ -129,6 +133,7 @@ If you want to rewrite the default implementation of a resource method you can r
 like in Flask-RESTful.
 
 Example:
+
 .. code:: python
 
     from flask import Flask
