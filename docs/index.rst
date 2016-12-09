@@ -21,7 +21,7 @@ a very strong specification about interactions between the api and the caller an
 
 There is lot of very good rest library based on flask like `Flask-RESTful <https://github.com/flask-restful/flask-restful>`_
 or `Flask-Restless <https://github.com/jfinkels/flask-restless>`_ but i would like to combine the flexibility of Flask-RESTful
-with the simplicity of Flask-RESTfull and the power of marshmallow and SQLAlchemy around a strong and sharable communication
+with the simplicity of Flask-Restless and the power of marshmallow and SQLAlchemy around a strong and sharable communication
 protocol: jsonapi.
 
 Moreover, in this previous flask frameworks, the only ORM supported is SQLAlchemy so i would like to create an generic
