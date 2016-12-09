@@ -69,6 +69,10 @@ Now you can try this:
     $ curl -H 'Content-Type: application/vnd.api+json' -H 'Accept: application/vnd.api+json' http://127.0.0.1:5000/
     "Hello world"
 
+.. Note::
+   All code examples in this tutorial are based on classic blog example with topic, post and comment.
+
+
 Contents
 --------
 
