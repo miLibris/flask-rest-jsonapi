@@ -26,7 +26,7 @@ protocol: jsonapi.
 
 Moreover, in this previous flask frameworks, the only ORM supported is SQLAlchemy so i would like to create an generic
 abstraction to communicate with data provider: the data layer system.
-Availalbles data layers:
+Availalble data layers:
     - SQLAlchemy
     - MongoDB
 You can easily create and use your own data layer to communicate with the data provider of your choice. I will
