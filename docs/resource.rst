@@ -64,7 +64,7 @@ Example:
 
         resource_type = 'post'
         schema = {'cls': PostSchema,
-                  'get_kwargs': {'only': ('title', 'content', 'created_at')},
+                  'get_kwargs': {'only': ('title', 'content', 'created')},
                   'post_kwargs': {'only': ('title', 'content')}}
         endpoint = {'alias': 'post_list',
                     'include_view_args': True}
@@ -122,7 +122,7 @@ Example:
 
         resource_type = 'provider'
         schema = {'cls': ProviderSchema,
-                  'get_kwargs': {'only': ('title', 'content', 'created_at', 'author')},
+                  'get_kwargs': {'only': ('title', 'content', 'created', 'author')},
                   'patch_kwargs': {'only': ('title', 'content')}}
 
 

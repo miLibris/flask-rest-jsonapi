@@ -66,7 +66,8 @@ Now you can try this:
 
 .. code:: bash
 
-    $ curl -H 'Content-Type: application/vnd.api+json' -H 'Accept: application/vnd.api+json' http://127.0.0.1:5000/
+    $ curl "http://127.0.0.1:5000/" -H "Content-Type: application/vnd.api+json"\
+      -H "Accept: application/vnd.api+json"
     "Hello world"
 
 .. Note::
@@ -84,6 +85,7 @@ Contents
    resource
    data_layer
    sorting
+   fields_restriction
    filtering
    pagination
    full_example
