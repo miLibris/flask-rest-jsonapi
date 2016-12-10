@@ -41,10 +41,12 @@ ResourceList
 ~~~~~~~~~~~~
 
 Instance attributs:
+
     - model (Model): an sqlalchemy model
     - session (Session): a sqlalchemy session instance
 
 Class attributs:
+
     - get_base_query (callable): a callable to retrieve the base data in get method
     - before_create_instance (callable) *Optional*: make additional work before to create an instance in the post method
 
@@ -99,12 +101,14 @@ ResourceDetail
 ~~~~~~~~~~~~~~
 
 Instance attributs:
+
     - model (Model): an sqlalchemy model
     - session (Session): a sqlalchemy session instance
     - id_field (str): the model identifier attribut name
     - url_param_name (str): the name of the url param in route to retrieve value from
 
 Class attributs:
+
     - before_update_instance (callable) *Optional*: make additional work before to update an instance in the patch method
     - before_delete_instance (callable) *Optional*: make additional work before to delete an instance in the delete method
 
@@ -166,11 +170,13 @@ ResourceList
 ~~~~~~~~~~~~
 
 Instance attributs:
+
     - collection (str): the mongodb collection name
     - mongo: the mongodb connector
     - model (type): the type of the document
 
 Class attributs:
+
     - get_base_query (callable): a callable to retrieve the base data in get method
 
 Example:
@@ -208,6 +214,7 @@ ResourceDetail
 ~~~~~~~~~~~~~~
 
 Instance attributs:
+
     - collection (str): the mongodb collection name
     - mongo: the mongodb connector
     - model (type): the type of the document

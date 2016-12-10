@@ -24,16 +24,16 @@ Example:
     app.add_url_rule('/posts/<int:post_id>',
                      view_func=PostDetail.as_view('post_detail'))
 
-This routing example will create this site map::
+This routing example will create this site map:
 
-    ============================  ================  ============
-    url                           method            endpoint
-    ============================  ================  ============
-    /topics                       GET,POST          topic_list
-    /topics/<int:topic_id>        GET,PATCH,DELETE  topic_detail
-    /topics/<int:topic_id>/posts  GET,POST          post_list
-    /posts/<int:post_id>          GET,PATCH,DELETE  post_detail
-    ============================  ================  ============
+============================  ================  ============
+url                           method            endpoint
+============================  ================  ============
+/topics                       GET,POST          topic_list
+/topics/<int:topic_id>        GET,PATCH,DELETE  topic_detail
+/topics/<int:topic_id>/posts  GET,POST          post_list
+/posts/<int:post_id>          GET,PATCH,DELETE  post_detail
+============================  ================  ============
 
 You can add mulitple url for the same resource like that:
 
@@ -47,8 +47,6 @@ You can add mulitple url for the same resource like that:
 
     topic_list_view = TopicList.as_view('topic_list')
 
-    app.add_url_rule('/topics',
-                     view_func=topic_list_view)
+    app.add_url_rule('/topics', view_func=topic_list_view)
 
-    app.add_url_rule('/topic_list',
-                     view_func=topic_list_view)
+    app.add_url_rule('/topic_list', view_func=topic_list_view)
