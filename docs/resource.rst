@@ -2,18 +2,20 @@ Resource
 ========
 
 flask-rest-jsonapi provides 2 helper classes:
+
     - ResourceList
     - ResourceDetail
 
 .. Note::
-    If you forget to set one of the required attributs of the resource class the library will raise an Exception that
-    will helps you to find which attribut is missing in which resource class.
+    If you forget to set one of the required attributs of a resource class the library will raise an Exception that will
+    helps you to find which attribut is missing in which resource class.
 
 
 ResourceList
 ------------
 
 This class provides a default implementation of get and post methods to:
+
     - get: retrieve a list of items with the GET request method
     - post: create an item with POST request method
 
@@ -22,18 +24,27 @@ But you can rewrite those methods to make custom work as you want.
 If you want to use one of those default method implementations, you have to configure your resource class.
 
 Class attributs:
+
     - resource_type (str): name of the resource type
+
     - schema (dict): schema information: 
+
         - cls (Schema): a marshmallow schema class
         - get_kwargs (dict) *Optional*: additional kwargs for instance schema in get method
         - post_kwargs (dict) *Optional*: additional kwargs for instance schema in post method
+
     - endpoint (dict): endpoint information:
+
         - alias (str): name of the endpoint
         - include_view_args (boolean) *Optional*: set it to True if you want to include view kwargs to the endpoint url
           build context
+
     - Meta (class):
+
         - data_layer (dict): data layer information:
+
             - cls (BaseDataLayer): a data layer class like SqlalchemyDataLayer, MongoDataLayer or your custom data layer
+
         - get_decorators (list) *Optional*: a list of decorators to plug to the get method
         - post_decorators (list) *Optional*: a list of decorators to plug to the post method
         - not_allowed_methods (list) *Optional*: a list of request method to disallow acces to. The method will return a
@@ -74,6 +85,7 @@ ResourceDetail
 --------------
 
 This class provides a default implementation of get, patch and delete methods to:
+
     - get: retrieve item details with the GET request method
     - patch: update an item with the PATCH request method
     - delete: delete an item with the DELETE request method
@@ -83,14 +95,21 @@ But you can rewrite those methods to make custom work as you want.
 If you want to use one of those default method implementations, you have to configure your resource class.
 
 Class attributs:
+
     - resource_type (str): name of the resource type
+
     - schema (dict): schema information: 
+
         - cls (Schema): a marshmallow schema class
         - get_kwargs (dict) *Optional*: additional kwargs for instance schema in get method
         - patch_kwargs (dict) *Optional*: additional kwargs for instance schema in patch method
+
     - Meta (class):
+
         - data_layer (dict): data layer information:
+
             - cls (BaseDataLayer): a data layer class like SqlalchemyDataLayer, MongoDataLayer or your custom data layer
+
         - get_decorators (list) *Optional*: a list of decorators to plug to the get method
         - post_decorators (list) *Optional*: a list of decorators to plug to the post method
         - not_allowed_methods (list) *Optional*: a list of request method to disallow acces to. The method will return a

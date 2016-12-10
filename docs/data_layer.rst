@@ -80,7 +80,7 @@ Example:
             abort(404)
 
         data['topic'] = topic
-        data['created_at'] = datetime.datetime.utcnow()
+        data['created'] = datetime.datetime.utcnow()
 
 
     class PostList(ResourceList):
