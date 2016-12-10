@@ -11,7 +11,7 @@ from marshmallow_jsonapi.exceptions import IncorrectTypeError
 
 from flask_rest_jsonapi.errors import ErrorFormatter
 from flask_rest_jsonapi.querystring import QueryStringManager as QSManager
-from flask_rest_jsonapi.pagination import paginate_result
+from flask_rest_jsonapi.pagination import add_pagination_links
 from flask_rest_jsonapi.exceptions import EntityNotFound
 from flask_rest_jsonapi.decorators import disable_method, check_headers, check_requirements, add_headers
 
@@ -148,10 +148,10 @@ class ResourceList(with_metaclass(ResourceListMeta, Resource)):
         result = schema.dump(items)
 
         endpoint_kwargs = request.view_args if self.endpoint.get('include_view_args') is True else {}
-        paginate_result(result.data,
-                        item_count,
-                        qs,
-                        url_for(self.endpoint['alias'], **endpoint_kwargs))
+        add_pagination_links(result.data,
+                             item_count,
+                             qs,
+                             url_for(self.endpoint['alias'], **endpoint_kwargs))
 
         return result.data
 

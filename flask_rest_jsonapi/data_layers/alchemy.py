@@ -162,6 +162,9 @@ class SqlalchemyDataLayer(BaseDataLayer):
         :param dict paginate_info: pagination information
         :return Query: the paginated query
         """
+        if int(paginate_info.get('size', 1)) == 0:
+            return query
+
         page_size = int(paginate_info.get('size', 0)) or DEFAULT_PAGE_SIZE
         query = query.limit(page_size)
         if paginate_info.get('number'):

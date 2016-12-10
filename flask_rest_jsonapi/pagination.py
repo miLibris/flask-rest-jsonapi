@@ -7,7 +7,7 @@ from copy import copy
 from flask_rest_jsonapi.constants import DEFAULT_PAGE_SIZE
 
 
-def paginate_result(data, item_count, querystring, base_url):
+def add_pagination_links(data, item_count, querystring, base_url):
     """Add pagination links to result
 
     :param dict data: the result of the view
