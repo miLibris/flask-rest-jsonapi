@@ -1,4 +1,4 @@
-Installation
+Installation::
 ============
 
-coming soon
+    $ pip install flask-rest-jsonapi
