@@ -24,7 +24,7 @@ setup(
     packages=find_packages(),
     install_requires=['Flask',
                       'marshmallow_jsonapi',
-                      'sqlalchemy'
+                      'sqlalchemy',
                       'pymongo',
                       'pytest',
                       'sphinx'],
