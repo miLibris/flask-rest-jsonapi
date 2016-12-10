@@ -14,15 +14,11 @@ Example:
 
     app = Flask(__name__)
 
-    app.add_url_rule('/topics',
-                     view_func=TopicList.as_view('topic_list'))
-    app.add_url_rule('/topics/<int:topic_id>',
-                     view_func=TopicDetail.as_view('topic_detail'))
+    app.add_url_rule('/topics', view_func=TopicList.as_view('topic_list'))
+    app.add_url_rule('/topics/<int:topic_id>', view_func=TopicDetail.as_view('topic_detail'))
 
-    app.add_url_rule('/topics/<int:topic_id>/posts',
-                     view_func=PostList.as_view('post_list'))
-    app.add_url_rule('/posts/<int:post_id>',
-                     view_func=PostDetail.as_view('post_detail'))
+    app.add_url_rule('/topics/<int:topic_id>/posts', view_func=PostList.as_view('post_list'))
+    app.add_url_rule('/posts/<int:post_id>', view_func=PostDetail.as_view('post_detail'))
 
 This routing example will create this site map:
 
