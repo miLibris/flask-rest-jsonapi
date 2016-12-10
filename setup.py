@@ -1,20 +1,21 @@
 from setuptools import setup, find_packages
 
 
-__version__ = '0.1'
+__version__ = '0.2'
 
 
 setup(
     name="flask-rest-jsonapi",
     version=__version__,
-    description='flask-rest-jsonapi is a library that help you build rest api',
+    description='Create web api according to jsonapi specification with Flask, Marshmallow and data provider of your choice (SQLAlchemy, MongoDB, ...)',
     url='https://github.com/miLibris/flask-rest-jsonapi',
     author='miLibris',
     licence='MIT',
     classifiers=[
-        'Development Status :: 5 - Production/Stable',
+        'Development Status :: 3 - Alpha',
         'Intended Audience :: Developers',
         'Topic :: Software Development :: Build Tools',
+        'License :: OSI Approved :: MIT License',
         'Programming Language :: Python :: 2.7',
         'Programming Language :: Python :: 3.3',
         'Programming Language :: Python :: 3.4',
