@@ -150,6 +150,12 @@ Example:
         resource_type = 'post'
         schema = {'cls': PostSchema}
 
+Available opertations
+~~~~~~~~~~~~~~~~~~~~
+
+All available operations on sqlalchemy model field (depends on the field type) could be used for filtering. See the
+SQLAlchemy documentation to learn more.
+
 
 Mongo
 -----
@@ -231,3 +237,9 @@ Example:
 
         resource_type = 'post'
         schema = {'cls': PostSchema}
+
+Available opertations
+~~~~~~~~~~~~~~~~~~~~
+
+All available operations on mongodb field (depends on the field type) could be used for filtering. See the MongoDB
+documentation to learn more.

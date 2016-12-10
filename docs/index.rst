@@ -71,7 +71,7 @@ Now you can try this:
     "Hello world"
 
 .. Note::
-   All code examples in this tutorial are based on classic blog example with topic, post and comment.
+   All code examples in this tutorial are based on classic blog example with topic and post.
 
 
 Contents
@@ -88,6 +88,7 @@ Contents
    fields_restriction
    filtering
    pagination
+   routing
    full_example
 
 
