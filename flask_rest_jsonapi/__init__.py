@@ -5,6 +5,7 @@ from flask_rest_jsonapi.exceptions import EntityNotFound
 from flask_rest_jsonapi.errors import ErrorFormatter
 from flask_rest_jsonapi.querystring import QueryStringManager
 from flask_rest_jsonapi.data_layers import SqlalchemyDataLayer, MongoDataLayer
+from flask_rest_jsonapi.api import Api
 
 __all__ = [
     'ResourceList',
@@ -13,5 +14,6 @@ __all__ = [
     'ErrorFormatter',
     'QueryStringManager',
     'SqlalchemyDataLayer',
-    'MongoDataLayer'
+    'MongoDataLayer',
+    'Api'
 ]

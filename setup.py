@@ -5,9 +5,9 @@ __version__ = '0.2'
 
 
 setup(
-    name="flask-rest-jsonapi",
+    name="Flask-Rest-JSONAPI",
     version=__version__,
-    description='Create web api according to jsonapi specification with Flask, Marshmallow and data provider of your choice (SQLAlchemy, MongoDB, ...)',
+    description='Flask extension to create web api according to jsonapi specification with Flask, Marshmallow and data provider of your choice (SQLAlchemy, MongoDB, ...)',
     url='https://github.com/miLibris/flask-rest-jsonapi',
     author='miLibris',
     licence='MIT',

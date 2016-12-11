@@ -151,7 +151,7 @@ class ResourceList(with_metaclass(ResourceListMeta, Resource)):
         add_pagination_links(result.data,
                              item_count,
                              qs,
-                             url_for(self.endpoint['alias'], **endpoint_kwargs))
+                             url_for(self.endpoint.get('full_endpoint'), **endpoint_kwargs))
 
         return result.data
 
