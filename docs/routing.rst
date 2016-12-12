@@ -41,7 +41,7 @@ You can add mulitple urls for the same resource like that:
 
     api.list_route('topic_list', /topics', '/topic_list', resource_cls=TopicList)
 
-You can add use Blueprint like that:
+You can use Blueprint like that:
 
 your_project.views.py
 
