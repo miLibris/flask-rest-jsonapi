@@ -1,4 +1,4 @@
-Full example
-============
+Tutorial
+========
 
 coming soon

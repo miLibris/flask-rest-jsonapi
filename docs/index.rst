@@ -90,7 +90,7 @@ Contents
    filtering
    pagination
    routing
-   full_example
+   tutorial
 
 
 

@@ -1,5 +1,5 @@
 flask-rest-jsonapi
-=============
+==================
 
 .. toctree::
    :maxdepth: 4
