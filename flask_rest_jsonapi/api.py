@@ -131,7 +131,7 @@ class Api(object):
 
         if kwargs.get('data_layer') is not None:
             meta = meta or type('Meta', (), {})
-            data_layer = {'data_layer': kwargs['data_layer']}
+            data_layer = {'cls': kwargs['data_layer']}
             if kwargs.get('data_layer_kwargs') is not None:
                 data_layer.update({'kwargs': kwargs['data_layer_kwargs']})
             if kwargs.get('data_layer_additional_functions') is not None:
