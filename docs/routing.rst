@@ -27,7 +27,7 @@ url                           method            endpoint
 /topics/<int:topic_id>        GET,PATCH,DELETE  topic_detail
 ============================  ================  ============
 
-You can add mulitple urls for the same resource like that:
+You can add multiple urls for the same resource:
 
 .. code:: python
 
