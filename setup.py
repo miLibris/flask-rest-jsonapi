@@ -4,20 +4,26 @@ from setuptools import setup, find_packages
 __version__ = '0.2'
 
 
+def read(fname):
+    with open(fname) as fp:
+        content = fp.read()
+    return content
+
 setup(
     name="Flask-Rest-JSONAPI",
     version=__version__,
     description='Flask extension to create web api according to jsonapi specification with Flask, Marshmallow and data \
                  provider of your choice (SQLAlchemy, MongoDB, ...)',
+    long_description=read('README.md'),
     url='https://github.com/miLibris/flask-rest-jsonapi',
     author='miLibris API Team',
     author_email='pf@milibris.net',
     license='MIT',
     classifiers=[
         'Framework :: Flask',
-        'Programming Language :: Python :: 2.6',
+        'Programming Language :: Python :: 2',
         'Programming Language :: Python :: 2.7',
-        'Programming Language :: Python :: 3.3',
+        'Programming Language :: Python :: 3',
         'Programming Language :: Python :: 3.4',
         'Programming Language :: Python :: 3.5',
         'License :: OSI Approved :: MIT License',
