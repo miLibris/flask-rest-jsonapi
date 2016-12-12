@@ -41,7 +41,8 @@ You can add mulitple urls for the same resource like that:
 
     api.list_route('topic_list', /topics', '/topic_list', resource_cls=TopicList)
 
-You can use Blueprint like that:
+Blueprint
+---------
 
 your_project.views.py
 
@@ -67,7 +68,9 @@ your_project.app.py
     app = Flask(__name__)
     api.init_app(app)
 
-Or you can use Api like an extension:
+
+Flask extension
+---------------
 
 your_project.extensions.py
 
