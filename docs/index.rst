@@ -3,8 +3,8 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-Welcome to Flask-Rest-JSONAPI documentation!
-============================================
+Welcome to Flask-Rest-JSONAPI documentation !
+=============================================
 
 Flask-Rest-JSONAPI is a library that help you build rest api.
 It is built around:
