@@ -37,19 +37,20 @@ Here is a quick example:
 .. code:: python
 
     from flask import Flask
-    from flask_rest_jsonapi import ResourceDetail
+    from flask_rest_jsonapi import Api, ResourceDetail
 
     app = Flask(__name__)
+    api = Api(app)
 
 
     class HelloWorld(ResourceDetail):
         def get(self):
             return "Hello world"
 
-    app.add_url_rule('/', view_func=HelloWorld.as_view('index'))
+    api.detail_route('index', '/', resource_cls=HelloWorld)
 
     if __name__ == '__main__':
-        app.run(debug=True)
+      app.run(debug=True)
 
 Save this file as api.py
 

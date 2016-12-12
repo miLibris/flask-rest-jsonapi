@@ -1,24 +1,22 @@
 Routing
 =======
 
-The routing system is the default flask MethodView one.
+The routing system is like that:
 
 Example:
 
 .. code:: python
 
     from flask import Flask
+    from flask_rest_jsonapi import Api
 
-    from your_project.resources import TopicList, TopicDetail,\
-        PostList, PostDetail
+    from your_project.resources import TopicList, TopicDetail
 
     app = Flask(__name__)
+    api = Api(app)
 
-    app.add_url_rule('/topics', view_func=TopicList.as_view('topic_list'))
-    app.add_url_rule('/topics/<int:topic_id>', view_func=TopicDetail.as_view('topic_detail'))
-
-    app.add_url_rule('/topics/<int:topic_id>/posts', view_func=PostList.as_view('post_list'))
-    app.add_url_rule('/posts/<int:post_id>', view_func=PostDetail.as_view('post_detail'))
+    api.list_route('topic_list', /topics', resource_cls=TopicList)
+    api.detail_route('topic_detail', '/topics/<int:topic_id>', resource_cls=TopicDetail)
 
 This routing example will create this site map:
 
@@ -27,22 +25,75 @@ url                           method            endpoint
 ============================  ================  ============
 /topics                       GET,POST          topic_list
 /topics/<int:topic_id>        GET,PATCH,DELETE  topic_detail
-/topics/<int:topic_id>/posts  GET,POST          post_list
-/posts/<int:post_id>          GET,PATCH,DELETE  post_detail
 ============================  ================  ============
 
-You can add mulitple url for the same resource like that:
+You can add mulitple urls for the same resource like that:
 
 .. code:: python
 
     from flask import Flask
+    from flask_rest_jsonapi import Api
 
     from your_project.resources import TopicList
 
     app = Flask(__name__)
+    api = Api(app)
 
-    topic_list_view = TopicList.as_view('topic_list')
+    api.list_route('topic_list', /topics', '/topic_list', resource_cls=TopicList)
 
-    app.add_url_rule('/topics', view_func=topic_list_view)
+You can add use Blueprint like that:
 
-    app.add_url_rule('/topic_list', view_func=topic_list_view)
+your_project.views.py
+
+.. code:: python
+
+    from flask import Blueprint
+    from flask_rest_jsonapi import Api
+
+    from your_project.resources import TopicList
+
+    rest_api_bp = Blueprint('rest_api', __name__)
+    api = Api(rest_api_bp)
+
+    api.list_route('topic_list', /topics', resource_cls=TopicList)
+
+your_project.app.py
+
+.. code:: python
+
+    from flask import Flask
+    from your_project.views import api
+
+    app = Flask(__name__)
+    api.init_app(app)
+
+Or you can use Api like an extension:
+
+your_project.extensions.py
+
+.. code:: python
+
+    from flask_rest_jsonapi import Api
+
+    api = Api()
+
+
+your_project.views.py
+
+.. code:: python
+
+    from your_project.resources import TopicList
+    from your_project.extensions import api
+
+    api.list_route('topic_list', /topics', resource_cls=TopicList)
+
+
+your_project.app.py
+
+.. code:: python
+
+    from flask import Flask
+    from your_project.extensions import api
+
+    app = Flask(__name__)
+    api.init_app(app)

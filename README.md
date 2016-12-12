@@ -5,7 +5,8 @@
 Flask-Rest-JSONAPI is an implementation of jsonapi reference http://jsonapi.org around flask and marshmallow.
 It combines a strong specification about client server interactions (jsonapi reference) and a powerfull library
 that helps you to quickly create rest api with hudge flexibility.
-You can use any data provider like SQLAlchemy or MongoDB (already available) or create your own custom data layer.
+You can use any data provider like SQLAlchemy or MongoDB (already available) or create your own data layer without to
+make pull request.
 
 ## Documentation
 
