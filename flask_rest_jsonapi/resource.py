@@ -147,11 +147,11 @@ class ResourceList(with_metaclass(ResourceListMeta, Resource)):
 
         result = schema.dump(items)
 
-        endpoint_kwargs = request.view_args if self.endpoint.get('include_view_args') is True else {}
+        endpoint_kwargs = request.view_args if self.endpoint.get('include_view_kwargs') is True else {}
         add_pagination_links(result.data,
                              item_count,
                              qs,
-                             url_for(self.endpoint.get('full_endpoint'), **endpoint_kwargs))
+                             url_for(self.endpoint.get('name'), **endpoint_kwargs))
 
         return result.data
 

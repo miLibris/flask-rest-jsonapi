@@ -51,7 +51,7 @@ def check_requirements(f):
                     raise Exception("You must provide resource type in %s to get access to the default %s method"
                                     % (cls.__name__, f.__name__.upper()))
                 if not hasattr(self, 'endpoint') or not isinstance(self.endpoint, dict) \
-                        or self.endpoint.get('alias') is None:
+                        or self.endpoint.get('name') is None:
                     raise Exception("You must provide schema information in %s to get access to the default %s method"
                                     % (cls.__name__, f.__name__.upper()))
         if 'ResourceDetail' in [cls_.__name__ for cls_ in cls.__bases__]:

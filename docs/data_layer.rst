@@ -29,7 +29,7 @@ Usage example:
 
         resource_type = 'post'
         schema = {'cls': PostSchema}
-        endpoint = {'alias': 'post_list'}
+        endpoint = {'name': 'post_list'}
 
 
 Sqlalchemy
@@ -94,7 +94,7 @@ Example:
 
         resource_type = 'post'
         schema = {'cls': PostSchema}
-        endpoint = {'alias': 'post_list'}
+        endpoint = {'name': 'post_list'}
 
 
 ResourceDetail
@@ -207,7 +207,7 @@ Example:
 
         resource_type = 'post'
         schema = {'cls': PostSchema}
-        endpoint = {'alias': 'post_list'}
+        endpoint = {'name': 'post_list'}
 
 
 ResourceDetail

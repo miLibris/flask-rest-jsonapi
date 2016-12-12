@@ -35,9 +35,9 @@ Class attributs:
 
     - endpoint (dict): endpoint information:
 
-        - alias (str): name of the endpoint
-        - include_view_args (boolean) *Optional*: set it to True if you want to include view kwargs to the endpoint url
-          build context
+        - name (str): name of the endpoint
+        - include_view_kwargs (boolean) *Optional*: set it to True if you want to include view kwargs to the endpoint
+          url build context
 
     - Meta (class):
 
@@ -77,8 +77,8 @@ Example:
         schema = {'cls': PostSchema,
                   'get_kwargs': {'only': ('title', 'content', 'created')},
                   'post_kwargs': {'only': ('title', 'content')}}
-        endpoint = {'alias': 'post_list',
-                    'include_view_args': True}
+        endpoint = {'name': 'post_list',
+                    'include_view_kwargs': True}
 
 
 ResourceDetail

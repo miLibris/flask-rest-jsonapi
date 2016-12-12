@@ -88,7 +88,7 @@ def item_list_resource(session, item_cls, base_query, dummy_decorator, item_sche
             post_decorators = [dummy_decorator]
         resource_type = 'item'
         schema = {'cls': item_schema}
-        endpoint = {'alias': 'rest_api.item_list'}
+        endpoint = {'name': 'rest_api.item_list'}
     yield ItemList
 
 
