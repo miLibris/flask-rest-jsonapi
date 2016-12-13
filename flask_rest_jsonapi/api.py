@@ -49,7 +49,7 @@ class Api(object):
         :param resource_type (str): the name of the collection
         :param schema (Schema): a marshallow schema class
         :param schema_get_kwargs (dict): schema kwargs for get method
-        :param schema_post_kwargs (dict): schema kwargs for post method
+        :param schema_patch_kwargs (dict): schema kwargs for post method
         :param data_layer (BaseDataLayer): a the data layer class
         :param data_layer_kwargs (dict): the data layer kwargs
         :param data_layer_additional_functions (dict): the data layer additional functions
