@@ -166,5 +166,5 @@ Example:
             return "Hello world", 202, {'custom_header':'custom_header_value'}
 
 Keep in mind that if you want to stay compliant with jsonapi specification you have to return well formatted json
-responses and status code. For example if you rewrite le post method to distribute the creation of an item you have to
+responses and status code. For example if you rewrite the post method to distribute the creation of an item you have to
 return a 202 (Accepted) status code.
