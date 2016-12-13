@@ -36,8 +36,9 @@ def add_pagination_links(data, item_count, querystring, base_url):
     # compute last link
     page_size = int(querystring.pagination.get('size', 0)) or DEFAULT_PAGE_SIZE
     last_page = int(ceil(item_count / page_size))
-    all_qs_args.update({'page[number]': last_page})
-    links['last'] += '?' + urlencode(all_qs_args)
+    if last_page > 0:
+        all_qs_args.update({'page[number]': last_page})
+        links['last'] += '?' + urlencode(all_qs_args)
 
     # compute previous and next link
     current_page = int(querystring.pagination.get('number', 0)) or 1
