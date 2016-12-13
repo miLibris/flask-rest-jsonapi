@@ -217,8 +217,12 @@ class ResourceDetail(with_metaclass(ResourceDetailMeta, Resource)):
         try:
             if json_data['data']['id'] is None:
                 raise KeyError
+            elif json_data['data']['id'] != str(kwargs[self.data_layer.url_param_name]):
+                return ErrorFormatter.format_error(["The id field does not match this one in the url"]), 409
+            elif json_data['data']['type'] != self.resource_type:
+                return ErrorFormatter.format_error(["The type field does not match with resource type"]), 409
         except KeyError:
-            return ErrorFormatter.format_error(["You must provide id of the entity"]), 422
+            return ErrorFormatter.format_error(["You must provide id and type of the entity"]), 422
 
         schema_kwargs = self.schema.get('patch_kwargs', {})
         schema_kwargs.pop('partial', None)
