@@ -118,7 +118,7 @@ def item_list_resource_not_allowed(session, item_cls, base_query, dummy_decorato
                           'kwargs': {'model': item_cls, 'session': session},
                           'get_base_query': base_query}
             get_decorators = [dummy_decorator]
-            not_allowed_methods = ['POST']
+            disabled_methods = ['POST']
         resource_type = 'item'
         schema_cls = item_schema
         collection_endpoint = 'rest_api.item_list'
