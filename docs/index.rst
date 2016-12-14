@@ -19,18 +19,17 @@ It is built around:
 I have created this library because i was looking for the best way to implement rest api. The jsonapi specification is
 a very strong specification about interactions between the api and the caller and i think it is a very good one.
 
-There is lot of very good rest library based on flask like `Flask-RESTful <https://github.com/flask-restful/flask-restful>`_
+There is a lot of very good rest library based on flask like `Flask-RESTful <https://github.com/flask-restful/flask-restful>`_
 or `Flask-Restless <https://github.com/jfinkels/flask-restless>`_ but i would like to combine the flexibility of Flask-RESTful
 with the simplicity of Flask-Restless and the power of marshmallow and SQLAlchemy around a strong and sharable communication
 protocol: jsonapi.
 
-Moreover, in this previous flask frameworks, the only ORM supported is SQLAlchemy so i would like to create an generic
+Moreover, in most flask frameworks, the only ORM supported is SQLAlchemy so i would like to create an generic
 abstraction to communicate with data provider: the data layer system.
 Availalble data layers:
     - SQLAlchemy
     - MongoDB
-You can easily create and use your own data layer to communicate with the data provider of your choice. I will
-cover it in examples of data layer section.
+You can easily create and use your own data layer to communicate with the data provider of your choice. Read the data layer section to lean more.
 
 Here is a quick example:
 
