@@ -1,8 +1,6 @@
 Routing
 =======
 
-The routing system is like that:
-
 Example:
 
 .. code:: python
@@ -100,3 +98,43 @@ your_project.app.py
 
     app = Flask(__name__)
     api.init_app(app)
+
+
+Resource configuration
+----------------------
+
+You can directly configure your resource from the routing system. But a don't recommand to do that.
+I think it is better to organize your project with a strong separation between resource definition and routing.
+
+Example:
+
+.. code:: python
+
+    api.list_route('topic_list',
+                   '/topics',
+                   resource_type='topic',
+                   schema=TopicSchema,
+                   data_layer=SqlalchemyDataLayer,
+                   data_layer_kwargs={'model': Topic, 'session': session},
+                   data_layer_additional_functions={'get_base_query': topic_get_base_query})
+
+ But I think that it is better to write code like that:
+
+.. code:: python
+
+    def get_base_query(self, **view_kwargs):
+        return self.session.query(Topic)
+
+
+    class TopicResourceList(ResourceList):
+
+        class Meta:
+            data_layer = {'cls': SqlalchemyDataLayer,
+                          'kwargs': {'model': Topic, 'session': sql_db.session},
+                          'get_base_query': get_base_query}
+
+        resource_type = 'topic'
+        schema = {'cls': TopicSchema}
+        endpoint = {'name': 'topic_list'}
+
+    api.list_route('topic_list', '/topics', resource_cls=TopicResourceList)

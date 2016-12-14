@@ -47,8 +47,8 @@ Class attributs:
 
         - get_decorators (list) *Optional*: a list of decorators to plug to the get method
         - post_decorators (list) *Optional*: a list of decorators to plug to the post method
-        - not_allowed_methods (list) *Optional*: a list of request method to disallow acces to. The method will return a
-          405 status code
+        - disabled_methods (list) *Optional*: a list of request method to disallow acces to. The method will return a
+          405 (Method Not Allowed) status code
 
 Example:
 
@@ -112,8 +112,8 @@ Class attributs:
 
         - get_decorators (list) *Optional*: a list of decorators to plug to the get method
         - post_decorators (list) *Optional*: a list of decorators to plug to the post method
-        - not_allowed_methods (list) *Optional*: a list of request method to disallow acces to. The method will return a
-          405 status code
+        - disabled_methods (list) *Optional*: a list of request method to disallow acces to. The method will return a
+          405 (Method Not Allowed) status code
 
 Example:
 
@@ -137,7 +137,7 @@ Example:
             get_decorators = [oauth2.require_oauth('provider_detail')]
             patch_decorators = [oauth2.require_oauth('provider_update')]
 
-            not_allowed_methods = ['DELETE']
+            disabled_methods = ['DELETE']
 
         resource_type = 'provider'
         schema = {'cls': ProviderSchema,
