@@ -29,7 +29,8 @@ abstraction to communicate with data provider: the data layer system.
 Availalble data layers:
     - SQLAlchemy
     - MongoDB
-You can easily create and use your own data layer to communicate with the data provider of your choice. Read the data layer section to lean more.
+You can easily create and use your own data layer to communicate with the data provider of your choice. Read the data
+layer section to learn more.
 
 Here is a quick example:
 

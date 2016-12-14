@@ -19,4 +19,4 @@ Multiple filter example::
     Accept: application/vnd.api+json
 
 Available operations depend on the data layer chosen. Read the "Available operations" section of your data layer documentation
-to lean more.
+to learn more.

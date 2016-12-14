@@ -1,7 +1,7 @@
 Resource
 ========
 
-flask-rest-jsonapi provides 2 helper classes:
+Flask-Rest-JSONAPI provides 2 resource class helper:
 
     - ResourceList
     - ResourceDetail

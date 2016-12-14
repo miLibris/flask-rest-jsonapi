@@ -42,8 +42,8 @@ ResourceList
 
 Instance attributs:
 
-    - model (Model): an sqlalchemy model
-    - session (Session): a sqlalchemy session instance
+    - model (Model): sqlalchemy model
+    - session (Session): sqlalchemy session instance
 
 Class attributs:
 
@@ -102,8 +102,8 @@ ResourceDetail
 
 Instance attributs:
 
-    - model (Model): an sqlalchemy model
-    - session (Session): a sqlalchemy session instance
+    - model (Model): sqlalchemy model
+    - session (Session): sqlalchemy session instance
     - id_field (str): the model identifier attribut name
     - url_param_name (str): the name of the url param in route to retrieve value from
 
