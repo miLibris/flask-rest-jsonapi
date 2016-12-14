@@ -40,10 +40,10 @@ class ResourceMeta(MethodViewType):
                 cls.data_layer = type('DataLayer', (data_layer['cls'], ), {})(**data_layer_kwargs)
                 cls.data_layer.configure(data_layer)
 
-            not_allowed_methods = getattr(meta, 'not_allowed_methods', [])
-            for not_allowed_method in not_allowed_methods:
-                if hasattr(cls, not_allowed_method.lower()):
-                    setattr(cls, not_allowed_method.lower(), disable_method(getattr(cls, not_allowed_method.lower())))
+            disabled_methods = getattr(meta, 'disabled_methods', [])
+            for method in disabled_methods:
+                if hasattr(cls, method.lower()):
+                    setattr(cls, method.lower(), disable_method(getattr(cls, method.lower())))
 
 
 class ResourceListMeta(ResourceMeta):
