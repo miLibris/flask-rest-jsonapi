@@ -1,7 +1,7 @@
 Sorting
 =======
 
-You can sort result with "sort" querystring url parameter.
+You can sort results with the "sort" querystring URL parameter.
 
 Example (not urlencoded for readability)::
 

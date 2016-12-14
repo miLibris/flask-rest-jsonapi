@@ -1,7 +1,7 @@
 Fields restriction
 ==================
 
-You can retrieve only requested fields with querystring url parameter "fields"
+You can retrieve only requested fields with the querystring URL parameter "fields"
 
 Example (not urlencoded for readability)::
 

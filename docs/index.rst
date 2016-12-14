@@ -6,7 +6,7 @@
 Welcome to Flask-Rest-JSONAPI documentation !
 =============================================
 
-Flask-Rest-JSONAPI is a library that help you build rest api.
+Flask-Rest-JSONAPI is a library to help you build REST apis.
 It is built around:
     - `jsonapi <http://jsonapi.org/>`_: a specification for building apis in json
     - `flask <http://flask.pocoo.org/>`_: a microframework for Python based on Werkzeug
@@ -16,17 +16,17 @@ It is built around:
       gives application developers the full power and flexibility of SQL.
     - `mongodb <https://www.mongodb.com/>`_: a free and open-source cross-platform document-oriented database program
 
-I have created this library because i was looking for the best way to implement rest api. The jsonapi specification is
-a very strong specification about interactions between the api and the caller and i think it is a very good one.
+I have created this library because I was looking for the best way to implement a REST api. The jsonapi specification is
+a very strong specification about interactions between the api and the caller and I think it is a very good one.
 
-There is a lot of very good rest library based on flask like `Flask-RESTful <https://github.com/flask-restful/flask-restful>`_
-or `Flask-Restless <https://github.com/jfinkels/flask-restless>`_ but i would like to combine the flexibility of Flask-RESTful
-with the simplicity of Flask-Restless and the power of marshmallow and SQLAlchemy around a strong and sharable communication
+There is a lot of very good REST libraries based on Flask like `Flask-RESTful <https://github.com/flask-restful/flask-restful>`_
+or `Flask-Restless <https://github.com/jfinkels/flask-restless>`_ but I would like to combine the flexibility of Flask-RESTful
+with the simplicity of Flask-Restless and the power of Marshmallow and SQLAlchemy around a strong and shareable communication
 protocol: jsonapi.
 
-Moreover, in most flask frameworks, the only ORM supported is SQLAlchemy so i would like to create an generic
-abstraction to communicate with data provider: the data layer system.
-Availalble data layers:
+Moreover, most Flask frameworks only support SQLAlchemy so I would like to create an generic
+abstraction to communicate with any data provider: the data layer system.
+Current available data layers are:
     - SQLAlchemy
     - MongoDB
 You can easily create and use your own data layer to communicate with the data provider of your choice. Read the data
@@ -72,7 +72,7 @@ Now you can try this:
     "Hello world"
 
 .. Note::
-   All code examples in this tutorial are based on classic blog example with topic and post.
+   All code examples in this tutorial are based on a classic blog example with topic and post.
 
 
 Contents

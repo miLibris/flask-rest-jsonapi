@@ -1,15 +1,15 @@
 Tutorial
 ========
 
-In this tutorial we will cover a simple blog example with topic, post and author entites.
+In this tutorial, we will cover a simple blog example with topic, post and author entities.
 
 .. Note::
     I don't include imports on this tutorial for readability but you can see them in examples/full_example.py.
 
 .. Note::
-    All requests and responses are well formatted for a better readability.
+    All requests and responses are well formatted for better readability.
 
-Initialize flask application, Api and database
+Initialize flask application, API and database
 ----------------------------------------------
 
 .. code:: python
@@ -439,7 +439,7 @@ Response::
 Create post with an author in a topic
 -------------------------------------
 
-Before to create a post, we have to create a topic (because we have deleted the only one previously)
+Before creating a post, we have to create a topic (because we have deleted the only one previously)
 
 Request:
 

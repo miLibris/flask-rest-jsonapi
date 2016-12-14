@@ -1,7 +1,7 @@
 Filtering
 =========
 
-You can filter result with querystring url parameter "filter"
+You can filter results with the querystring url parameter "filter"
 
 Example (not urlencoded for readability)::
 
@@ -9,7 +9,7 @@ Example (not urlencoded for readability)::
     Content-Type: application/vnd.api+json
     Accept: application/vnd.api+json
 
-You can add mulitple filters but not use "or" expression yet. I will create a filtering system like Flask-Restless as soon
+You can add multiple filters but "or" expressions are not implemented yet. I will create a filtering system like Flask-Restless as soon
 as possible.
 
 Multiple filter example::

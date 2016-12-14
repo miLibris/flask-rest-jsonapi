@@ -1,7 +1,7 @@
 Pagination
 ==========
 
-You can control the pagination with querystring url parameter "page"
+You can control the pagination with the querystring url parameter "page"
 
 Example (not urlencoded for readability)::
 

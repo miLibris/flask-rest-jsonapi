@@ -2,10 +2,10 @@ Data layer
 ==========
 
 A data layer is a CRUD interface between resource methods and data providers or ORMs. The data layer class must
-implement the BaseDataLayer class. You can use one of the default:
+implement the BaseDataLayer class. You can use one of the provided default classes:
     - Sqlalchemy
     - Mongodb
-data layer or create a custom one that better fit to your needs.
+But you can also create a custom one that better fits your needs.
 
 Usage example:
 
@@ -40,15 +40,15 @@ A data layer around SQLAlchemy
 ResourceList
 ~~~~~~~~~~~~
 
-Instance attributs:
+Instance attributes:
 
     - model (Model): sqlalchemy model
     - session (Session): sqlalchemy session instance
 
-Class attributs:
+Class attributes:
 
-    - get_base_query (callable): a callable to retrieve the base data in get method
-    - before_create_instance (callable) *Optional*: make additional work before to create an instance in the post method
+    - get_base_query (callable): a callable to retrieve the base data in GET method
+    - before_create_instance (callable) *Optional*: additional operations before creating an instance in the POST method
 
 Example:
 
@@ -100,17 +100,17 @@ Example:
 ResourceDetail
 ~~~~~~~~~~~~~~
 
-Instance attributs:
+Instance attributes:
 
     - model (Model): sqlalchemy model
     - session (Session): sqlalchemy session instance
-    - id_field (str): the model identifier attribut name
-    - url_param_name (str): the name of the url param in route to retrieve value from
+    - id_field (str): the model identifier attribute name
+    - url_param_name (str): the name of the URL param in the route to retrieve value from
 
 Class attributs:
 
-    - before_update_instance (callable) *Optional*: make additional work before to update an instance in the patch method
-    - before_delete_instance (callable) *Optional*: make additional work before to delete an instance in the delete method
+    - before_update_instance (callable) *Optional*: additional operations to run before updating an instance in the patch method
+    - before_delete_instance (callable) *Optional*: additional operations to run before deleting an instance in the delete method
 
 Example:
 
@@ -157,7 +157,7 @@ Example:
 Available opertations
 ~~~~~~~~~~~~~~~~~~~~
 
-All available operations on sqlalchemy model field (depends on the field type) could be used for filtering. See the
+All available operations on SQLAlchemy model fields (depending on the field type) can be used for filtering. See the
 SQLAlchemy documentation to learn more.
 
 
@@ -169,7 +169,7 @@ A data layer around MongoDB
 ResourceList
 ~~~~~~~~~~~~
 
-Instance attributs:
+Instance attributes:
 
     - collection (str): the mongodb collection name
     - mongo: the mongodb connector
@@ -213,13 +213,13 @@ Example:
 ResourceDetail
 ~~~~~~~~~~~~~~
 
-Instance attributs:
+Instance attributes:
 
     - collection (str): the mongodb collection name
     - mongo: the mongodb connector
     - model (type): the type of the document
-    - id_field (str): the model identifier attribut name
-    - url_param_name (str): the name of the url param in route to retrieve value from
+    - id_field (str): the model identifier attribute name
+    - url_param_name (str): the name of the URL param in the route to retrieve value from
 
 Example:
 
@@ -248,5 +248,5 @@ Example:
 Available opertations
 ~~~~~~~~~~~~~~~~~~~~
 
-All available operations on mongodb field (depends on the field type) could be used for filtering. See the MongoDB
+All available operations on mongodb fields (depending on the field type) can be used for filtering. See the MongoDB
 documentation to learn more.

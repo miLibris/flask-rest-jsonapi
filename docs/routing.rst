@@ -25,7 +25,7 @@ url                           method            endpoint
 /topics/<int:topic_id>        GET,PATCH,DELETE  topic_detail
 ============================  ================  ============
 
-You can add multiple urls for the same resource:
+You can add multiple URLs for the same resource:
 
 .. code:: python
 
@@ -103,8 +103,8 @@ your_project.app.py
 Resource configuration
 ----------------------
 
-You can directly configure your resource from the routing system. But a don't recommand to do that.
-I think it is better to organize your project with a strong separation between resource definition and routing.
+You can directly configure your resources from the routing system. But I don't recommand to do that.
+I think it is better to organize your project with a strong separation between resources definitions and routing.
 
 Example:
 
@@ -118,7 +118,7 @@ Example:
                    data_layer_kwargs={'model': Topic, 'session': session},
                    data_layer_additional_functions={'get_base_query': topic_get_base_query})
 
- But I think that it is better to write code like that:
+ But I think it is better to write code like that:
 
 .. code:: python
 

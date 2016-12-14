@@ -1,29 +1,29 @@
 Resource
 ========
 
-Flask-Rest-JSONAPI provides 2 resource class helper:
+Flask-Rest-JSONAPI provides 2 resource class helpers:
 
     - ResourceList
     - ResourceDetail
 
 .. Note::
-    If you forget to set one of the required attributs of a resource class the library will raise an Exception that will
-    helps you to find which attribut is missing in which resource class.
+    If you forget to set one of the required attributes of a resource class, the library will raise an Exception to
+    help you find which attribute is missing in which resource class.
 
 
 ResourceList
 ------------
 
-This class provides a default implementation of get and post methods to:
+This class provides a default implementation of GET and POST methods to:
 
-    - get: retrieve a list of items with the GET request method
-    - post: create an item with POST request method
+    - GET: retrieve a list of items with the GET request method
+    - POST: create an item with POST request method
 
-But you can rewrite those methods to make custom work as you want.
+You can rewrite those methods if the default behaviour is not enough for you.
 
 If you want to use one of those default method implementations, you have to configure your resource class.
 
-Class attributs:
+Class attributes:
 
     - resource_type (str): name of the resource type
 
@@ -47,7 +47,7 @@ Class attributs:
 
         - get_decorators (list) *Optional*: a list of decorators to plug to the get method
         - post_decorators (list) *Optional*: a list of decorators to plug to the post method
-        - disabled_methods (list) *Optional*: a list of request method to disallow acces to. The method will return a
+        - disabled_methods (list) *Optional*: a list of request methods to disallow access to. Those methods will return a
           405 (Method Not Allowed) status code
 
 Example:
@@ -84,23 +84,23 @@ Example:
 ResourceDetail
 --------------
 
-This class provides a default implementation of get, patch and delete methods to:
+This class provides a default implementation of GET, PATCH and DELETE methods to:
 
-    - get: retrieve item details with the GET request method
-    - patch: update an item with the PATCH request method
-    - delete: delete an item with the DELETE request method
+    - GET: retrieve item details with the GET request method
+    - POST: update an item with the PATCH request method
+    - DELETE: delete an item with the DELETE request method
 
-But you can rewrite those methods to make custom work as you want.
+You can rewrite those methods if the default behaviour is not enough for you.
 
 If you want to use one of those default method implementations, you have to configure your resource class.
 
-Class attributs:
+Class attributes:
 
     - resource_type (str): name of the resource type
 
     - schema (dict): schema information: 
 
-        - cls (Schema): a marshmallow schema class
+        - cls (Schema): a Marshmallow schema class
         - get_kwargs (dict) *Optional*: additional kwargs for instance schema in get method
         - patch_kwargs (dict) *Optional*: additional kwargs for instance schema in patch method
 
@@ -112,7 +112,7 @@ Class attributs:
 
         - get_decorators (list) *Optional*: a list of decorators to plug to the get method
         - post_decorators (list) *Optional*: a list of decorators to plug to the post method
-        - disabled_methods (list) *Optional*: a list of request method to disallow acces to. The method will return a
+        - disabled_methods (list) *Optional*: a list of request methods to disallow acces to. Those methods will return a
           405 (Method Not Allowed) status code
 
 Example:
@@ -148,8 +148,8 @@ Example:
 Method rewrite
 --------------
 
-If you want to rewrite the default implementation of a resource method you can return tuple instead of flask BaseReponse
-like in Flask-RESTful.
+If you want to rewrite the default implementation of a resource method you can
+return a tuple instead of flask BaseReponse, like in Flask-RESTful.
 
 Example:
 
@@ -165,6 +165,6 @@ Example:
         def get(self):
             return "Hello world", 202, {'custom_header':'custom_header_value'}
 
-Keep in mind that if you want to stay compliant with jsonapi specification you have to return well formatted json
-responses and status code. For example if you rewrite the post method to distribute the creation of an item you have to
+Keep in mind that if you want to stay compliant with jsonapi specifications you have to return well formatted json
+responses and status code. For example if you rewrite the POST method to distribute the creation of an item you have to
 return a 202 (Accepted) status code.
