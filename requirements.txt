@@ -3,4 +3,5 @@ marshmallow_jsonapi
 sqlalchemy
 pymongo
 pytest
+six
 sphinx
