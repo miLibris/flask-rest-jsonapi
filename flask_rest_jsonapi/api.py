@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 from flask import Blueprint
-from flask_rest_jsonapi.resource import ResourceList, ResourceDetail
+from flask_rest_jsonapi.resource import ResourceList, ResourceDetail, Relationship
 
 
 class Api(object):
@@ -60,6 +60,22 @@ class Api(object):
         :param url_rule_options (dict): additional parameters for flask.Flask.add_url_rule
         """
         self.register_resource('detail', endpoint, urls, kwargs)
+
+    def relationship(self, endpoint, url, **kwargs):
+        """Create an endpoint to manage a relationship
+
+        :param endpoint (str): the relationship endpoint name
+        :param url (str): the url of the relationship endpoint
+        :param related_resource_type (str): the name of the related collection
+        :param related_endpoint (str): the related endpoint name
+        :param data_layer (BaseDataLayer): a the data layer class
+        :param data_layer_kwargs (dict): the data layer kwargs
+        :param url_rule_options (dict): additional parameters for flask.Flask.add_url_rule
+        """
+        relationship_cls = self.build_relationship_cls(endpoint, kwargs)
+
+        options = kwargs.get('url_rule_options') or dict()
+        self.register_route(relationship_cls, endpoint, options, [url])
 
     def init_app(self, app):
         """Update flask application with our api
@@ -162,6 +178,52 @@ class Api(object):
             resource_kwargs['Meta'] = meta
 
         return resource_kwargs
+
+    def build_relationship_cls(self, endpoint, kwargs):
+        """Build a relationship class
+
+        :param endpoint (str): the relationship endpoint name
+        """
+        relationship_kwargs = self.get_relationship_kwargs(endpoint, kwargs)
+
+        relationship_cls_name = "".join(["".join([item.capitalize() for item in endpoint.split('_')]), 'Relationship'])
+
+        relationship_cls = kwargs.get('relationship_cls') or type(relationship_cls_name,
+                                                                  (Relationship, ),
+                                                                  relationship_kwargs)
+
+        return relationship_cls
+
+    def get_relationship_kwargs(self, endpoint, kwargs):
+        """Get kwargs from route kwargs
+
+        :param endpoint (str): the endpoint name
+        :param kwargs (dict): route kwargs
+        """
+        relationship_kwargs = {}
+
+        if kwargs.get('endpoint') is not None:
+            relationship_kwargs['endpoint'] = kwargs['endpoint']
+
+        if kwargs.get('related_resource_type') is not None:
+            relationship_kwargs['resource_type'] = kwargs['resource_type']
+
+        if kwargs.get('related_endpoint') is not None:
+            relationship_kwargs['target_endpoint'] = kwargs['target_endpoint']
+
+        meta = None
+
+        if kwargs.get('data_layer') is not None:
+            meta = meta or type('Meta', (), {})
+            data_layer = {'cls': kwargs['data_layer']}
+            if kwargs.get('data_layer_kwargs') is not None:
+                data_layer.update({'kwargs': kwargs['data_layer_kwargs']})
+            setattr(meta, 'data_layer', data_layer)
+
+        if meta is not None:
+            relationship_kwargs['Meta'] = meta
+
+        return relationship_kwargs
 
     def register_route(self, resource_cls, endpoint, options, urls):
         """Register url

@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 from sqlalchemy.orm.exc import NoResultFound
+from sqlalchemy.orm.collections import InstrumentedList
 from sqlalchemy.sql.expression import desc, asc, text
 
 from flask_rest_jsonapi.constants import DEFAULT_PAGE_SIZE
@@ -111,6 +112,24 @@ class SqlalchemyDataLayer(BaseDataLayer):
 
         self.session.delete(item)
         self.session.commit()
+
+    def get_related_data(self, related_resource_type, related_id_field, **view_kwargs):
+        """Get related data of a relationship
+        """
+        item = self.get_item(**view_kwargs)
+
+        if not hasattr(item, self.relationship_attribut):
+            raise AttributeError
+
+        related_data = getattr(item, self.relationship_attribut)
+
+        if related_data is None:
+            return related_data
+
+        if isinstance(related_data, InstrumentedList):
+            return [{'type': related_resource_type, 'id': getattr(item_, related_id_field)} for item_ in related_data]
+        else:
+            return {'type': related_resource_type, 'id': getattr(related_data, related_id_field)}
 
     def filter_query(self, query, filter_info, model):
         """Filter query according to jsonapi rfc
