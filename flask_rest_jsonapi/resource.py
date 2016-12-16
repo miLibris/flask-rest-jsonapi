@@ -85,9 +85,7 @@ class ResourceDetailMeta(ResourceMeta):
 
 
 class Resource(MethodView):
-    """Base Resource class to serialize the response of the resource internal methods (get, post, patch, delete).
-    According to jsonapi reference, returns a json string and the right status code.
-    """
+
     decorators = (check_headers, add_headers)
 
     def dispatch_request(self, *args, **kwargs):
@@ -258,3 +256,21 @@ class ResourceDetail(with_metaclass(ResourceDetailMeta, Resource)):
         self.data_layer.delete_item(item, **kwargs)
 
         return '', 204
+
+
+class Relationship(with_metaclass(ResourceMeta, Resource)):
+
+    def get(self, *args, **kwargs):
+        """Get relations details
+
+        """
+        try:
+            data = self.data_layer.get_related_data(self.related_resource_type, self.related_id_field, **kwargs)
+        except AttributeError:
+            return ErrorFormatter.format_error(["Relationship %s not found on model %s"
+                                                % (self.data_layer.relationship_attribut,
+                                                   self.data_layer.model.__name__)]), 404
+
+        return {'links': {'self': url_for(self.endpoint, **kwargs),
+                          'related': url_for(self.related_endpoint, **kwargs)},
+                'data': data}
