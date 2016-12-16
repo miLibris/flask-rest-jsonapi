@@ -38,7 +38,7 @@ class Api(object):
         :param endpoint_include_view_kwargs (boolean): a flag that indicate to include view kwargs to the context of
                                                        flask.url_for
         """
-        self._register_resource('list', endpoint, urls, kwargs)
+        self.register_resource('list', endpoint, urls, kwargs)
 
     def detail_route(self, endpoint, *urls, **kwargs):
         """Create endpoint to retrieve a list of item or to create one.
@@ -59,7 +59,7 @@ class Api(object):
         :param disabled_methods (list): list of methods to disable
         :param url_rule_options (dict): additional parameters for flask.Flask.add_url_rule
         """
-        self._register_resource('detail', endpoint, urls, kwargs)
+        self.register_resource('detail', endpoint, urls, kwargs)
 
     def init_app(self, app):
         """Update flask application with our api
@@ -71,9 +71,9 @@ class Api(object):
         else:
             self.app = app
             for resource in self.resources:
-                self._register_route(**resource)
+                self.register_route(**resource)
 
-    def _register_resource(self, kind, endpoint, urls, kwargs):
+    def register_resource(self, kind, endpoint, urls, kwargs):
         """Register a resource in api
 
         :param kind (str): the kind of the resource (list or detail)
@@ -81,19 +81,19 @@ class Api(object):
         :param urls (list): the urls of the endpoint
         :param kwargs (dict): route kwargs
         """
-        resource_cls = self._build_resource_cls(kind, endpoint, kwargs)
+        resource_cls = self.build_resource_cls(kind, endpoint, kwargs)
 
         options = kwargs.get('url_rule_options') or dict()
-        self._register_route(resource_cls, endpoint, options, urls)
+        self.register_route(resource_cls, endpoint, options, urls)
 
-    def _build_resource_cls(self, kind, endpoint, kwargs):
+    def build_resource_cls(self, kind, endpoint, kwargs):
         """Build a resource class
 
         :param kind (str): the kind of the resource (list or detail)
         :param endpoint (str): the endpoint name
         :param kwargs (dict): route kwargs
         """
-        resource_kwargs = self._get_resource_kwargs(endpoint, kwargs)
+        resource_kwargs = self.get_resource_kwargs(endpoint, kwargs)
 
         default_resource_cls = {'list': ResourceList, 'detail': ResourceDetail}[kind]
 
@@ -103,7 +103,7 @@ class Api(object):
 
         return resource_cls
 
-    def _get_resource_kwargs(self, endpoint, kwargs):
+    def get_resource_kwargs(self, endpoint, kwargs):
         """Get kwargs from route kwargs
 
         :param endpoint (str): the endpoint name
@@ -163,7 +163,7 @@ class Api(object):
 
         return resource_kwargs
 
-    def _register_route(self, resource_cls, endpoint, options, urls):
+    def register_route(self, resource_cls, endpoint, options, urls):
         """Register url
 
         :param resource_cls (Resource): a resource class
