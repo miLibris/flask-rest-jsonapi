@@ -28,9 +28,8 @@ setup(
     platforms='any',
     install_requires=['Flask',
                       'marshmallow_jsonapi',
-                      'sqlalchemy',
-                      'pymongo'],
+                      'sqlalchemy'],
     setup_requires=['pytest-runner'],
     tests_require=['pytest'],
-    extras_require={'tests': 'pytest', 'docs': 'sphinx'}
+    extras_require={'tests': 'pytest', 'docs': 'sphinx', 'mongo_data_layer': 'pymongo'}
 )
