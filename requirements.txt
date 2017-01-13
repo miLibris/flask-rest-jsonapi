@@ -1,6 +1,4 @@
 Flask
 marshmallow_jsonapi
+six
 sqlalchemy
-pymongo
-pytest
-sphinx
