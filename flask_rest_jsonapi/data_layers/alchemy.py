@@ -6,7 +6,7 @@ from sqlalchemy.sql.expression import desc, asc, text
 
 from flask_rest_jsonapi.constants import DEFAULT_PAGE_SIZE
 from flask_rest_jsonapi.data_layers.base import BaseDataLayer
-from flask_rest_jsonapi.exceptions import EntityNotFound
+from flask_rest_jsonapi.exceptions import EntityNotFound, RelationNotFound, RelatedItemNotFound
 
 
 class SqlalchemyDataLayer(BaseDataLayer):
@@ -113,23 +113,65 @@ class SqlalchemyDataLayer(BaseDataLayer):
         self.session.delete(item)
         self.session.commit()
 
-    def get_related_data(self, related_resource_type, related_id_field, **view_kwargs):
+    def get_relationship(self, related_resource_type, related_id_field, **view_kwargs):
         """Get related data of a relationship
+
+        :param 
         """
         item = self.get_item(**view_kwargs)
 
         if not hasattr(item, self.relationship_attribut):
-            raise AttributeError
+            raise RelationNotFound
 
         related_data = getattr(item, self.relationship_attribut)
 
         if related_data is None:
-            return related_data
+            return item, related_data
 
         if isinstance(related_data, InstrumentedList):
-            return [{'type': related_resource_type, 'id': getattr(item_, related_id_field)} for item_ in related_data]
+            return item,\
+                [{'type': related_resource_type, 'id': getattr(item_, related_id_field)} for item_ in related_data]
         else:
-            return {'type': related_resource_type, 'id': getattr(related_data, related_id_field)}
+            return item, {'type': related_resource_type, 'id': getattr(related_data, related_id_field)}
+
+    def update_relationship(self, json_data, related_id_field, **view_kwargs):
+        """Update a relationship
+        """
+        item = self.get_item(**view_kwargs)
+
+        if not hasattr(item, self.relationship_attribut):
+            raise RelationNotFound
+
+        related_model = getattr(item.__class__, self.relationship_attribut).property.mapper.class_
+
+        if not isinstance(json_data['data'], list):
+            related_item = None
+
+            if json_data['data'] is not None:
+                related_item = self.get_related_item(related_model, related_id_field, json_data['data'])
+
+            setattr(item, self.relationship_attribut, related_item)
+        else:
+            related_items = []
+
+            for item_ in json_data['data']:
+                related_item = self.get_related_item(related_model, related_id_field, item_)
+
+            setattr(item, self.relationship_attribut, related_items)
+
+        self.session.commit()
+
+    def get_related_item(self, related_model, related_id_field, item):
+        """Get a related item
+        """
+        try:
+            related_item = self.session.query(related_model)\
+                                       .filter(getattr(related_model, related_id_field) == item['id'])\
+                                       .one()
+        except NoResultFound:
+            raise RelatedItemNotFound(item['id'])
+
+        return related_item
 
     def filter_query(self, query, filter_info, model):
         """Filter query according to jsonapi rfc

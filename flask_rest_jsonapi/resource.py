@@ -3,6 +3,7 @@
 import inspect
 from six import with_metaclass
 import json
+from copy import copy
 
 from werkzeug.wrappers import Response
 from flask import request, url_for, make_response
@@ -12,7 +13,7 @@ from marshmallow_jsonapi.exceptions import IncorrectTypeError
 from flask_rest_jsonapi.errors import ErrorFormatter
 from flask_rest_jsonapi.querystring import QueryStringManager as QSManager
 from flask_rest_jsonapi.pagination import add_pagination_links
-from flask_rest_jsonapi.exceptions import EntityNotFound
+from flask_rest_jsonapi.exceptions import EntityNotFound, RelationNotFound
 from flask_rest_jsonapi.decorators import disable_method, check_headers, check_requirements, add_headers
 
 
@@ -261,16 +262,59 @@ class ResourceDetail(with_metaclass(ResourceDetailMeta, Resource)):
 class Relationship(with_metaclass(ResourceMeta, Resource)):
 
     def get(self, *args, **kwargs):
-        """Get relations details
-
+        """Get a relationship details
         """
         try:
-            data = self.data_layer.get_related_data(self.related_resource_type, self.related_id_field, **kwargs)
-        except AttributeError:
+            item, data = self.data_layer.get_relationship(self.related_resource_type, self.related_id_field, **kwargs)
+        except RelationNotFound:
             return ErrorFormatter.format_error(["Relationship %s not found on model %s"
                                                 % (self.data_layer.relationship_attribut,
                                                    self.data_layer.model.__name__)]), 404
+        except EntityNotFound as e:
+            return ErrorFormatter.format_error([e.message]), e.status_code
+
+        related_endpoint_kwargs = kwargs
+        if hasattr(self, 'endpoint_kwargs'):
+            for key, value in copy(self.endpoint_kwargs).items():
+                tmp_endpoint_kwargs_value = item
+                for attr in value.split('.'):
+                    tmp_endpoint_kwargs_value = getattr(tmp_endpoint_kwargs_value, attr)
+                endpoint_kwargs_value = tmp_endpoint_kwargs_value
+                self.endpoint_kwargs[key] = endpoint_kwargs_value
+            related_endpoint_kwargs = self.endpoint_kwargs
 
         return {'links': {'self': url_for(self.endpoint, **kwargs),
-                          'related': url_for(self.related_endpoint, **kwargs)},
+                          'related': url_for(self.related_endpoint, **related_endpoint_kwargs)},
                 'data': data}
+
+    def patch(self, *args, **kwargs):
+        """Update a relationship
+        """
+        json_data = request.get_json()
+
+        if 'data' not in json_data:
+            return ErrorFormatter.format_error(["You must provide a dictionary with a data key in params"]), 400
+
+        if isinstance(json_data['data'], dict):
+            if 'type' not in json_data['data'] or 'id' not in json_data['data']:
+                return ErrorFormatter.format_error(["You must provide a type and an id in data params"]), 400
+            if json_data['data']['type'] != self.related_resource_type:
+                return ErrorFormatter.format_error([""]), 400
+
+        if isinstance(json_data['data'], list):
+            for item in json_data['data']:
+                if 'type' not in item or 'id' not in item:
+                    return ErrorFormatter.format_error(["You must provide a type and an id in data params"]), 400
+
+        try:
+            self.data_layer.update_relationship(json_data, self.related_id_field, **kwargs)
+        except RelationNotFound:
+            return ErrorFormatter.format_error(["Relationship %s not found on model %s"
+                                                % (self.data_layer.relationship_attribut,
+                                                   self.data_layer.model.__name__)]), 404
+        except EntityNotFound as e:
+            return ErrorFormatter.format_error([e.message]), e.status_code
+        # except Exception as e:
+        #     return ErrorFormatter.format_error([str(e)]), 500
+
+        return ''
