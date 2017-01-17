@@ -1,11 +1,12 @@
 # -*- coding: utf-8 -*-
 
 from sqlalchemy.orm.exc import NoResultFound
+from sqlalchemy.orm.collections import InstrumentedList
 from sqlalchemy.sql.expression import desc, asc, text
 
 from flask_rest_jsonapi.constants import DEFAULT_PAGE_SIZE
 from flask_rest_jsonapi.data_layers.base import BaseDataLayer
-from flask_rest_jsonapi.exceptions import EntityNotFound
+from flask_rest_jsonapi.exceptions import EntityNotFound, RelationNotFound, RelatedItemNotFound
 
 
 class SqlalchemyDataLayer(BaseDataLayer):
@@ -50,7 +51,7 @@ class SqlalchemyDataLayer(BaseDataLayer):
         :param QueryStringManager qs: a querystring manager to retrieve information from url
         :param dict view_kwargs: kwargs from the resource view
         :return int item_count: the number of items in the collection
-        :return list query.all(): the list of items
+        :return tuple: the number of item and the list of items
         """
         if not hasattr(self, 'get_base_query'):
             raise Exception("You must provide an get_base_query in data layer kwargs in %s"
@@ -111,6 +112,118 @@ class SqlalchemyDataLayer(BaseDataLayer):
 
         self.session.delete(item)
         self.session.commit()
+
+    def get_relationship(self, related_resource_type, related_id_field, **view_kwargs):
+        """Get related data of a relationship
+
+        :param str related_resource_type: the related resource type name
+        :param str related_id_field: the identifier field of the related model
+        :param dict view_kwargs: kwargs from the resource view
+        :return tuple: the item and related resource(s)
+        """
+        item = self.get_item(**view_kwargs)
+
+        if not hasattr(item, self.relationship_attribut):
+            raise RelationNotFound
+
+        related_data = getattr(item, self.relationship_attribut)
+
+        if related_data is None:
+            return item, related_data
+
+        if isinstance(related_data, InstrumentedList):
+            return item,\
+                [{'type': related_resource_type, 'id': getattr(item_, related_id_field)} for item_ in related_data]
+        else:
+            return item, {'type': related_resource_type, 'id': getattr(related_data, related_id_field)}
+
+    def update_relationship(self, json_data, related_id_field, **view_kwargs):
+        """Update a relationship
+
+        :param dict json_data: the request params
+        :param str related_id_field: the identifier field of the related model
+        :param dict view_kwargs: kwargs from the resource view
+        """
+        item = self.get_item(**view_kwargs)
+
+        if not hasattr(item, self.relationship_attribut):
+            raise RelationNotFound
+
+        related_model = getattr(item.__class__, self.relationship_attribut).property.mapper.class_
+
+        if not isinstance(json_data['data'], list):
+            related_item = None
+
+            if json_data['data'] is not None:
+                related_item = self.get_related_item(related_model, related_id_field, json_data['data'])
+
+            setattr(item, self.relationship_attribut, related_item)
+        else:
+            related_items = []
+
+            for item_ in json_data['data']:
+                related_item = self.get_related_item(related_model, related_id_field, item_)
+
+            setattr(item, self.relationship_attribut, related_items)
+
+        self.session.commit()
+
+    def add_relationship(self, json_data, related_id_field, **view_kwargs):
+        """Add / create a relationship
+
+        :param dict json_data: the request params
+        :param str related_id_field: the identifier field of the related model
+        :param dict view_kwargs: kwargs from the resource view
+        """
+        item = self.get_item(**view_kwargs)
+
+        if not hasattr(item, self.relationship_attribut):
+            raise RelationNotFound
+
+        related_model = getattr(item.__class__, self.relationship_attribut).property.mapper.class_
+
+        for item_ in json_data['data']:
+            related_item = self.get_related_item(related_model, related_id_field, item_)
+            getattr(item, self.relationship_attribut).append(related_item)
+
+        self.session.commit()
+
+    def remove_relationship(self, json_data, related_id_field, **view_kwargs):
+        """Remove a relationship
+
+        :param dict json_data: the request params
+        :param str related_id_field: the identifier field of the related model
+        :param dict view_kwargs: kwargs from the resource view
+        """
+        item = self.get_item(**view_kwargs)
+
+        if not hasattr(item, self.relationship_attribut):
+            raise RelationNotFound
+
+        related_model = getattr(item.__class__, self.relationship_attribut).property.mapper.class_
+
+        for item_ in json_data['data']:
+            related_item = self.get_related_item(related_model, related_id_field, item_)
+            getattr(item, self.relationship_attribut).remove(related_item)
+
+        self.session.commit()
+
+    def get_related_item(self, related_model, related_id_field, item):
+        """Get a related item
+
+        :param Model related_model: an sqlalchemy model
+        :param str related_id_field: the identifier field of the related model
+        :param DeclarativeMeta item: the sqlalchemy item instance to retrieve related items from
+        :return DeclarativeMeta: a related item
+        """
+        try:
+            related_item = self.session.query(related_model)\
+                                       .filter(getattr(related_model, related_id_field) == item['id'])\
+                                       .one()
+        except NoResultFound:
+            raise RelatedItemNotFound(item['id'])
+
+        return related_item
 
     def filter_query(self, query, filter_info, model):
         """Filter query according to jsonapi rfc
