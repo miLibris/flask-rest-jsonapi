@@ -6,8 +6,7 @@ python:
   - 'pypy'
 install:
   - pip install -r requirements.txt --upgrade
-  - pip install coveralls coverage
-  - pip install Flask-Rest-JSONAPI[extra]
+  - pip install coveralls coverage pytest pymongo sphinx
 script:
   - python setup.py install
   - coverage run --source flask_rest_jsonapi -m pytest -v
