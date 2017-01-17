@@ -85,6 +85,31 @@ class ResourceDetailMeta(ResourceMeta):
                 cls.delete = delete_decorator(cls.delete)
 
 
+class ResourceRelationshipMeta(ResourceMeta):
+
+    def __init__(cls, name, bases, nmspc):
+        super(ResourceRelationshipMeta, cls).__init__(name, bases, nmspc)
+        meta = nmspc.get('Meta')
+
+        if meta is not None:
+            get_decorators = getattr(meta, 'get_decorators', [])
+            post_decorators = getattr(meta, 'post_decorators', [])
+            patch_decorators = getattr(meta, 'patch_decorators', [])
+            delete_decorators = getattr(meta, 'delete_decorators', [])
+
+            for get_decorator in get_decorators:
+                cls.get = get_decorator(cls.get)
+
+            for post_decorator in post_decorators:
+                cls.post = post_decorator(cls.post)
+
+            for patch_decorator in patch_decorators:
+                cls.patch = patch_decorator(cls.patch)
+
+            for delete_decorator in delete_decorators:
+                cls.delete = delete_decorator(cls.delete)
+
+
 class Resource(MethodView):
 
     decorators = (check_headers, add_headers)
@@ -259,8 +284,9 @@ class ResourceDetail(with_metaclass(ResourceDetailMeta, Resource)):
         return '', 204
 
 
-class Relationship(with_metaclass(ResourceMeta, Resource)):
+class Relationship(with_metaclass(ResourceRelationshipMeta, Resource)):
 
+    @check_requirements
     def get(self, *args, **kwargs):
         """Get a relationship details
         """
@@ -287,6 +313,32 @@ class Relationship(with_metaclass(ResourceMeta, Resource)):
                           'related': url_for(self.related_endpoint, **related_endpoint_kwargs)},
                 'data': data}
 
+    @check_requirements
+    def post(self, *args, **kwargs):
+        """Add / create relationship(s)
+        """
+        json_data = request.get_json()
+
+        if 'data' not in json_data or not isinstance(json_data.get('data'), list):
+            return ErrorFormatter.format_error(["You must provide a dictionary with a data key in params"]), 400
+
+        for item in json_data['data']:
+            if 'type' not in item or 'id' not in item:
+                return ErrorFormatter.format_error(["You must provide a type and an id in data params"]), 400
+            if item['type'] != self.related_resource_type:
+                return ErrorFormatter.format_error(["The resource type provided in params does not match the resource \
+                                                    type declared in the relationship resource"]), 400
+
+        try:
+            self.data_layer.add_relationship(json_data, self.related_id_field, **kwargs)
+        except RelationNotFound:
+            return ErrorFormatter.format_error(["Relationship %s not found on model %s"
+                                                % (self.data_layer.relationship_attribut,
+                                                   self.data_layer.model.__name__)]), 404
+        except EntityNotFound as e:
+            return ErrorFormatter.format_error([e.message]), e.status_code
+
+    @check_requirements
     def patch(self, *args, **kwargs):
         """Update a relationship
         """
@@ -305,6 +357,9 @@ class Relationship(with_metaclass(ResourceMeta, Resource)):
             for item in json_data['data']:
                 if 'type' not in item or 'id' not in item:
                     return ErrorFormatter.format_error(["You must provide a type and an id in data params"]), 400
+                if item['type'] != self.related_resource_type:
+                    return ErrorFormatter.format_error(["The resource type provided in params does not match the resource \
+                                                        type declared in the relationship resource"]), 400
 
         try:
             self.data_layer.update_relationship(json_data, self.related_id_field, **kwargs)
@@ -314,7 +369,30 @@ class Relationship(with_metaclass(ResourceMeta, Resource)):
                                                    self.data_layer.model.__name__)]), 404
         except EntityNotFound as e:
             return ErrorFormatter.format_error([e.message]), e.status_code
-        # except Exception as e:
-        #     return ErrorFormatter.format_error([str(e)]), 500
 
         return ''
+
+    @check_requirements
+    def delete(self, *args, **kwargs):
+        """Delete relationship(s)
+        """
+        json_data = request.get_json()
+
+        if 'data' not in json_data or not isinstance(json_data.get('data'), list):
+            return ErrorFormatter.format_error(["You must provide a dictionary with a data key in params"]), 400
+
+        for item in json_data['data']:
+            if 'type' not in item or 'id' not in item:
+                return ErrorFormatter.format_error(["You must provide a type and an id in data params"]), 400
+            if item['type'] != self.related_resource_type:
+                return ErrorFormatter.format_error(["The resource type provided in params does not match the resource \
+                                                    type declared in the relationship resource"]), 400
+
+        try:
+            self.data_layer.remove_relationship(json_data, self.related_id_field, **kwargs)
+        except RelationNotFound:
+            return ErrorFormatter.format_error(["Relationship %s not found on model %s"
+                                                % (self.data_layer.relationship_attribut,
+                                                   self.data_layer.model.__name__)]), 404
+        except EntityNotFound as e:
+            return ErrorFormatter.format_error([e.message]), e.status_code
