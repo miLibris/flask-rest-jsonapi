@@ -1,7 +1,7 @@
 from setuptools import setup, find_packages
 
 
-__version__ = '0.3.1'
+__version__ = '0.4.0'
 
 
 setup(
@@ -28,9 +28,9 @@ setup(
     platforms='any',
     install_requires=['Flask',
                       'marshmallow_jsonapi',
-                      'sqlalchemy',
-                      'pymongo'],
+                      'six',
+                      'sqlalchemy'],
     setup_requires=['pytest-runner'],
     tests_require=['pytest'],
-    extras_require={'tests': 'pytest', 'docs': 'sphinx'}
+    extras_require={'tests': 'pytest', 'docs': 'sphinx', 'mongo_data_layer': 'pymongo'}
 )
