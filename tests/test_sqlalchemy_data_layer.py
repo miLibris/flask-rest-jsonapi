@@ -128,7 +128,7 @@ def item_list_resource_not_allowed(session, item_cls, base_query, dummy_decorato
 @pytest.fixture(scope="session")
 def rest_api_blueprint(client):
     bp = Blueprint('rest_api', __name__)
-    yield bp
+    return bp
 
 
 @pytest.fixture(scope="session")
