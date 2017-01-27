@@ -13,8 +13,9 @@ from marshmallow_jsonapi.exceptions import IncorrectTypeError
 from flask_rest_jsonapi.errors import ErrorFormatter
 from flask_rest_jsonapi.querystring import QueryStringManager as QSManager
 from flask_rest_jsonapi.pagination import add_pagination_links
-from flask_rest_jsonapi.exceptions import EntityNotFound, RelationNotFound
+from flask_rest_jsonapi.exceptions import EntityNotFound, RelationNotFound, InvalidField, InvalidInclude
 from flask_rest_jsonapi.decorators import disable_method, check_headers, check_requirements, add_headers
+from flask_rest_jsonapi.schema import compute_schema
 
 
 class ResourceMeta(MethodViewType):
@@ -214,22 +215,12 @@ class ResourceDetail(with_metaclass(ResourceDetailMeta, Resource)):
             return ErrorFormatter.format_error([e.message]), e.status_code
 
         qs = QSManager(request.args)
-
-        schema_kwargs = self.schema.get('get_kwargs', {})
-        if qs.fields.get(self.resource_type):
-            if schema_kwargs.get('only'):
-                schema_kwargs['only'] = tuple(set(schema_kwargs['only']) &
-                                              set(self.schema['cls']._declared_fields.keys()) &
-                                              set(qs.fields[self.resource_type]))
-            else:
-                schema_kwargs['only'] = tuple(set(self.schema['cls']._declared_fields.keys()) &
-                                              set(qs.fields[self.resource_type]))
-        if schema_kwargs.get('only') and 'id' not in schema_kwargs['only']:
-            schema_kwargs['only'] += ('id',)
-        schema = self.schema['cls'](**schema_kwargs)
+        try:
+            schema = compute_schema(self.schema['cls'], self.schema.get('get_kwargs', {}), qs, qs.include)
+        except (InvalidField, InvalidInclude) as e:
+            return ErrorFormatter.format_error([e.message]), 400
 
         result = schema.dump(item)
-
         return result.data
 
     @check_requirements
@@ -309,9 +300,21 @@ class Relationship(with_metaclass(ResourceRelationshipMeta, Resource)):
                 self.endpoint_kwargs[key] = endpoint_kwargs_value
             related_endpoint_kwargs = self.endpoint_kwargs
 
-        return {'links': {'self': url_for(self.endpoint, **kwargs),
-                          'related': url_for(self.related_endpoint, **related_endpoint_kwargs)},
-                'data': data}
+        result = {'links': {'self': url_for(self.endpoint, **kwargs),
+                            'related': url_for(self.related_endpoint, **related_endpoint_kwargs)},
+                  'data': data}
+
+        qs = QSManager(request.args)
+        if qs.include:
+            try:
+                schema = compute_schema(self.schema, dict(), qs, qs.include)
+            except (InvalidField, InvalidInclude) as e:
+                return ErrorFormatter.format_error([e.message]), 400
+
+            serialized_item = schema.dump(item)
+            result['included'] = serialized_item.data['included']
+
+        return result
 
     @check_requirements
     def post(self, *args, **kwargs):
@@ -358,8 +361,8 @@ class Relationship(with_metaclass(ResourceRelationshipMeta, Resource)):
                 if 'type' not in item or 'id' not in item:
                     return ErrorFormatter.format_error(["You must provide a type and an id in data params"]), 400
                 if item['type'] != self.related_resource_type:
-                    return ErrorFormatter.format_error(["The resource type provided in params does not match the resource \
-                                                        type declared in the relationship resource"]), 400
+                    return ErrorFormatter.format_error(["The resource type provided in params does not match the \
+                                                        resource type declared in the relationship resource"]), 400
 
         try:
             self.data_layer.update_relationship(json_data, self.related_id_field, **kwargs)
