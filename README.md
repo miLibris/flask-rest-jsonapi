@@ -1,5 +1,7 @@
+[![PyPI version](https://badge.fury.io/py/Flask-Rest-JSONAPI.svg)](https://badge.fury.io/py/Flask-Rest-JSONAPI)
 [![Build Status](https://travis-ci.org/miLibris/flask-rest-jsonapi.svg?branch=master)](https://travis-ci.org/miLibris/flask-rest-jsonapi)
 [![Coverage Status](https://coveralls.io/repos/github/miLibris/flask-rest-jsonapi/badge.svg?branch=master)](https://coveralls.io/github/miLibris/flask-rest-jsonapi?branch=master)
+[![Documentation Status](https://readthedocs.org/projects/docs/badge/?version=latest)](http://flask-rest-jsonapi.readthedocs.io/en/latest/)
 
 # Flask-Rest-JSONAPI
 Flask-Rest-JSONAPI is an implementation of jsonapi reference http://jsonapi.org around flask and marshmallow.
