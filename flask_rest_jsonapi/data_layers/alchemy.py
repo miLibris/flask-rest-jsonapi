@@ -6,7 +6,7 @@ from sqlalchemy.sql.expression import desc, asc, text
 
 from flask_rest_jsonapi.constants import DEFAULT_PAGE_SIZE
 from flask_rest_jsonapi.data_layers.base import BaseDataLayer
-from flask_rest_jsonapi.exceptions import EntityNotFound, RelationNotFound, RelatedItemNotFound
+from flask_rest_jsonapi.exceptions import ObjectNotFound, RelationNotFound, RelatedObjectNotFound
 
 
 class SqlalchemyDataLayer(BaseDataLayer):
@@ -41,7 +41,8 @@ class SqlalchemyDataLayer(BaseDataLayer):
         try:
             item = self.session.query(self.model).filter(filter_field == filter_value).one()
         except NoResultFound:
-            raise EntityNotFound(self.model.__name__, filter_value)
+            raise ObjectNotFound('.'.join([self.model.__name__, self.id_field]),
+                                 "Could not find %s.%s=%s object" % (self.model.__name__, self.id_field, filter_value))
 
         return item
 
@@ -54,8 +55,7 @@ class SqlalchemyDataLayer(BaseDataLayer):
         :return tuple: the number of item and the list of items
         """
         if not hasattr(self, 'get_base_query'):
-            raise Exception("You must provide an get_base_query in data layer kwargs in %s"
-                            % self.resource_cls.__name__)
+            raise Exception("You must provide a get_base_query in data layer kwargs in %s" % self.resource_cls.__name__)
 
         query = self.get_base_query(**view_kwargs)
 
@@ -124,7 +124,8 @@ class SqlalchemyDataLayer(BaseDataLayer):
         item = self.get_item(**view_kwargs)
 
         if not hasattr(item, self.relationship_attribut):
-            raise RelationNotFound
+            raise RelationNotFound(self.relationship_attribut,
+                                   "%s as no attribut %s" % (self.model.__name__, self.relationship_attribut))
 
         related_data = getattr(item, self.relationship_attribut)
 
@@ -221,7 +222,10 @@ class SqlalchemyDataLayer(BaseDataLayer):
                                        .filter(getattr(related_model, related_id_field) == item['id'])\
                                        .one()
         except NoResultFound:
-            raise RelatedItemNotFound(item['id'])
+            raise RelatedObjectNotFound('%s.%s' % (related_model.__name__, related_id_field),
+                                        "Could not find %s.%s=%s object" % (related_model.__name__,
+                                                                            related_id_field,
+                                                                            item['id']))
 
         return related_item
 

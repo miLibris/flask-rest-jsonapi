@@ -25,10 +25,9 @@ def compute_schema(schema_cls, default_kwargs, qs, include):
         for include_path in include:
             field = include_path.split('.')[0]
             if field not in schema_cls._declared_fields:
-                raise InvalidInclude("%s has no attribut %s" % (schema_cls.__name__, field))
+                raise InvalidInclude(field, "%s has no attribut %s" % (schema_cls.__name__, field))
             elif not issubclass(schema_cls._declared_fields[field].__class__, MarshmallowJsonapiRelationship):
-                raise InvalidInclude("%s is not a relationship attribut of %s"
-                                     % (field, schema_cls.__name__))
+                raise InvalidInclude(field, "%s is not a relationship attribut of %s" % (field, schema_cls.__name__))
             schema_kwargs['include_data'] += (field, )
 
     # create base schema instance
@@ -39,7 +38,7 @@ def compute_schema(schema_cls, default_kwargs, qs, include):
         # check that sparse fieldsets exists in the schema
         for field in qs.fields[schema.opts.type_]:
             if field not in schema.declared_fields:
-                raise InvalidField("%s has no attribut %s" % (schema.__class__.__name__, field))
+                raise InvalidField(field, "%s has no attribut %s" % (schema.__class__.__name__, field))
 
         tmp_only = set(schema.declared_fields.keys()) & set(qs.fields[schema.opts.type_])
         if schema.only:
