@@ -256,6 +256,14 @@ class ResourceDetail(with_metaclass(ResourceDetailMeta, Resource)):
             return errors, 422
 
         try:
+            if 'id' not in json_data['data']:
+                raise BadRequest('/data/id', 'Missing id in "data" node')
+            if json_data['data']['id'] != kwargs[self.data_layer.url_param_name]:
+                raise BadRequest('/data/id', 'Value of id does not match the resource identifier in url')
+        except BadRequest as e:
+            return jsonapi_errors_serializer([e.to_dict()]), e.status
+
+        try:
             item = self.data_layer.get_item(**kwargs)
         except ObjectNotFound as e:
             return jsonapi_errors_serializer([e.to_dict()]), e.status
