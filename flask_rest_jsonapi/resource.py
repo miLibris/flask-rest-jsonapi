@@ -9,11 +9,13 @@ from werkzeug.wrappers import Response
 from flask import request, url_for, make_response
 from flask.views import MethodViewType, MethodView
 from marshmallow_jsonapi.exceptions import IncorrectTypeError
+from marshmallow import ValidationError
 
-from flask_rest_jsonapi.errors import ErrorFormatter
+from flask_rest_jsonapi.errors import jsonapi_errors_serializer
 from flask_rest_jsonapi.querystring import QueryStringManager as QSManager
 from flask_rest_jsonapi.pagination import add_pagination_links
-from flask_rest_jsonapi.exceptions import EntityNotFound, RelationNotFound, InvalidField, InvalidInclude
+from flask_rest_jsonapi.exceptions import ObjectNotFound, RelationNotFound, InvalidField, InvalidInclude, InvalidType, \
+    BadRequest
 from flask_rest_jsonapi.decorators import disable_method, check_headers, check_requirements, add_headers
 from flask_rest_jsonapi.schema import compute_schema
 
@@ -151,24 +153,14 @@ class ResourceList(with_metaclass(ResourceListMeta, Resource)):
         """
         qs = QSManager(request.args)
 
-        try:
-            item_count, items = self.data_layer.get_items(qs, **kwargs)
-        except EntityNotFound as e:
-            return ErrorFormatter.format_error([e.message]), e.status_code
+        item_count, items = self.data_layer.get_items(qs, **kwargs)
 
         schema_kwargs = self.schema.get('get_kwargs', {})
-        if qs.fields.get(self.resource_type):
-            if schema_kwargs.get('only'):
-                schema_kwargs['only'] = tuple(set(schema_kwargs['only']) &
-                                              set(self.schema['cls']._declared_fields.keys()) &
-                                              set(qs.fields[self.resource_type]))
-            else:
-                schema_kwargs['only'] = tuple(set(self.schema['cls']._declared_fields.keys()) &
-                                              set(qs.fields[self.resource_type]))
-        if schema_kwargs.get('only') and 'id' not in schema_kwargs['only']:
-            schema_kwargs['only'] += ('id',)
-        schema_kwargs.pop('many', None)
-        schema = self.schema['cls'](many=True, **schema_kwargs)
+        schema_kwargs.update({'many': True})
+        try:
+            schema = compute_schema(self.schema['cls'], schema_kwargs, qs, None)
+        except InvalidField as e:
+            return jsonapi_errors_serializer([e.to_dict()]), e.status
 
         result = schema.dump(items)
 
@@ -189,16 +181,26 @@ class ResourceList(with_metaclass(ResourceListMeta, Resource)):
         schema = self.schema['cls'](**self.schema.get('post_kwargs', {}))
         try:
             data, errors = schema.load(json_data)
-        except IncorrectTypeError as err:
-            return err.messages, 409
-
-        if errors:
+        except IncorrectTypeError as e:
+            errors = e.messages
+            for error in errors['errors']:
+                error['status'] = '409'
+                error['title'] = "Incorrect type"
+            return errors, 409
+        except ValidationError as e:
+            errors = e.messages
+            for message in errors['errors']:
+                message['status'] = '422'
+                message['title'] = "Validation error"
             return errors, 422
 
-        try:
-            item = self.data_layer.create_and_save_item(data, **kwargs)
-        except EntityNotFound as e:
-            return ErrorFormatter.format_error([e.message]), e.status_code
+        if errors:
+            for error in errors['errors']:
+                error['status'] = "422"
+                error['title'] = "Validation error"
+            return errors, 422
+
+        item = self.data_layer.create_and_save_item(data, **kwargs)
 
         return schema.dump(item).data, 201
 
@@ -211,14 +213,14 @@ class ResourceDetail(with_metaclass(ResourceDetailMeta, Resource)):
         """
         try:
             item = self.data_layer.get_item(**kwargs)
-        except EntityNotFound as e:
-            return ErrorFormatter.format_error([e.message]), e.status_code
+        except ObjectNotFound as e:
+            return jsonapi_errors_serializer([e.to_dict()]), e.status
 
         qs = QSManager(request.args)
         try:
             schema = compute_schema(self.schema['cls'], self.schema.get('get_kwargs', {}), qs, qs.include)
         except (InvalidField, InvalidInclude) as e:
-            return ErrorFormatter.format_error([e.message]), 400
+            return jsonapi_errors_serializer([e.to_dict()]), e.status
 
         result = schema.dump(item)
         return result.data
@@ -229,31 +231,42 @@ class ResourceDetail(with_metaclass(ResourceDetailMeta, Resource)):
         """
         json_data = request.get_json()
 
-        try:
-            if json_data['data']['id'] is None:
-                raise KeyError
-            elif json_data['data']['id'] != str(kwargs[self.data_layer.url_param_name]):
-                return ErrorFormatter.format_error(["The id field does not match this one in the url"]), 409
-            elif json_data['data']['type'] != self.resource_type:
-                return ErrorFormatter.format_error(["The type field does not match with resource type"]), 409
-        except KeyError:
-            return ErrorFormatter.format_error(["You must provide id and type of the entity"]), 422
-
         schema_kwargs = self.schema.get('patch_kwargs', {})
         schema_kwargs.pop('partial', None)
         schema = self.schema['cls'](partial=True, **schema_kwargs)
         try:
             data, errors = schema.load(json_data)
-        except IncorrectTypeError as err:
-            return err.messages, 409
+        except IncorrectTypeError as e:
+            errors = e.messages
+            for error in errors['errors']:
+                error['status'] = '409'
+                error['title'] = "Incorrect type"
+            return errors, 409
+        except ValidationError as e:
+            errors = e.messages
+            for message in errors['errors']:
+                message['status'] = '422'
+                message['title'] = "Validation error"
+            return errors, 422
 
         if errors:
+            for error in errors['errors']:
+                error['status'] = "422"
+                error['title'] = "Validation error"
             return errors, 422
 
         try:
+            if 'id' not in json_data['data']:
+                raise BadRequest('/data/id', 'Missing id in "data" node')
+            if str(json_data['data']['id']) != str(kwargs[self.data_layer.url_param_name]):
+                raise BadRequest('/data/id', 'Value of id does not match the resource identifier in url')
+        except BadRequest as e:
+            return jsonapi_errors_serializer([e.to_dict()]), e.status
+
+        try:
             item = self.data_layer.get_item(**kwargs)
-        except EntityNotFound as e:
-            return ErrorFormatter.format_error([e.message]), e.status_code
+        except ObjectNotFound as e:
+            return jsonapi_errors_serializer([e.to_dict()]), e.status
 
         self.data_layer.update_and_save_item(item, data, **kwargs)
 
@@ -267,8 +280,8 @@ class ResourceDetail(with_metaclass(ResourceDetailMeta, Resource)):
         """
         try:
             item = self.data_layer.get_item(**kwargs)
-        except EntityNotFound as e:
-            return ErrorFormatter.format_error([e.message]), e.status_code
+        except ObjectNotFound as e:
+            return jsonapi_errors_serializer([e.to_dict()]), e.status
 
         self.data_layer.delete_item(item, **kwargs)
 
@@ -283,12 +296,8 @@ class Relationship(with_metaclass(ResourceRelationshipMeta, Resource)):
         """
         try:
             item, data = self.data_layer.get_relationship(self.related_resource_type, self.related_id_field, **kwargs)
-        except RelationNotFound:
-            return ErrorFormatter.format_error(["Relationship %s not found on model %s"
-                                                % (self.data_layer.relationship_attribut,
-                                                   self.data_layer.model.__name__)]), 404
-        except EntityNotFound as e:
-            return ErrorFormatter.format_error([e.message]), e.status_code
+        except (RelationNotFound, ObjectNotFound) as e:
+            return jsonapi_errors_serializer([e.to_dict()]), e.status
 
         related_endpoint_kwargs = kwargs
         if hasattr(self, 'endpoint_kwargs'):
@@ -309,7 +318,7 @@ class Relationship(with_metaclass(ResourceRelationshipMeta, Resource)):
             try:
                 schema = compute_schema(self.schema, dict(), qs, qs.include)
             except (InvalidField, InvalidInclude) as e:
-                return ErrorFormatter.format_error([e.message]), 400
+                return jsonapi_errors_serializer([e.to_dict()]), e.status
 
             serialized_item = schema.dump(item)
             result['included'] = serialized_item.data['included']
@@ -322,24 +331,27 @@ class Relationship(with_metaclass(ResourceRelationshipMeta, Resource)):
         """
         json_data = request.get_json()
 
-        if 'data' not in json_data or not isinstance(json_data.get('data'), list):
-            return ErrorFormatter.format_error(["You must provide a dictionary with a data key in params"]), 400
-
-        for item in json_data['data']:
-            if 'type' not in item or 'id' not in item:
-                return ErrorFormatter.format_error(["You must provide a type and an id in data params"]), 400
-            if item['type'] != self.related_resource_type:
-                return ErrorFormatter.format_error(["The resource type provided in params does not match the resource \
-                                                    type declared in the relationship resource"]), 400
+        try:
+            if 'data' not in json_data:
+                raise BadRequest('/data', 'You must provide data with a "data" route node')
+            if not isinstance(json_data.get('data'), list):
+                raise BadRequest('/data', 'You must provide data as list')
+            for item in json_data['data']:
+                if 'type' not in item:
+                    raise BadRequest('/data/type', 'Missing type in "data" node')
+                if 'id' not in item:
+                    raise BadRequest('/data/id', 'Missing id in "data" node')
+                if item['type'] != self.resource_type:
+                    raise InvalidType('/data/type', 'The type provided does not match the resource type')
+        except (BadRequest, InvalidType) as e:
+            return jsonapi_errors_serializer([e.to_dict()]), e.status
 
         try:
             self.data_layer.add_relationship(json_data, self.related_id_field, **kwargs)
-        except RelationNotFound:
-            return ErrorFormatter.format_error(["Relationship %s not found on model %s"
-                                                % (self.data_layer.relationship_attribut,
-                                                   self.data_layer.model.__name__)]), 404
-        except EntityNotFound as e:
-            return ErrorFormatter.format_error([e.message]), e.status_code
+        except (RelationNotFound, ObjectNotFound) as e:
+            return jsonapi_errors_serializer([e.to_dict()]), e.status
+
+        return ''
 
     @check_requirements
     def patch(self, *args, **kwargs):
@@ -347,31 +359,31 @@ class Relationship(with_metaclass(ResourceRelationshipMeta, Resource)):
         """
         json_data = request.get_json()
 
-        if 'data' not in json_data:
-            return ErrorFormatter.format_error(["You must provide a dictionary with a data key in params"]), 400
-
-        if isinstance(json_data['data'], dict):
-            if 'type' not in json_data['data'] or 'id' not in json_data['data']:
-                return ErrorFormatter.format_error(["You must provide a type and an id in data params"]), 400
-            if json_data['data']['type'] != self.related_resource_type:
-                return ErrorFormatter.format_error([""]), 400
-
-        if isinstance(json_data['data'], list):
-            for item in json_data['data']:
-                if 'type' not in item or 'id' not in item:
-                    return ErrorFormatter.format_error(["You must provide a type and an id in data params"]), 400
-                if item['type'] != self.related_resource_type:
-                    return ErrorFormatter.format_error(["The resource type provided in params does not match the \
-                                                        resource type declared in the relationship resource"]), 400
+        try:
+            if 'data' not in json_data:
+                raise BadRequest('/data', 'You must provide data with a "data" route node')
+            if isinstance(json_data['data'], dict):
+                if 'type' not in json_data['data']:
+                    raise BadRequest('/data/type', 'Missing type in "data" node')
+                if 'id' not in json_data['data']:
+                    raise BadRequest('/data/id', 'Missing id in "data" node')
+                if json_data['data']['type'] != self.resource_type:
+                    raise InvalidType('/data/type', 'The type field does not match the resource type')
+            if isinstance(json_data['data'], list):
+                for item in json_data['data']:
+                    if 'type' not in item:
+                        raise BadRequest('/data/type', 'Missing type in "data" node')
+                    if 'id' not in item:
+                        raise BadRequest('/data/id', 'Missing id in "data" node')
+                    if item['type'] != self.resource_type:
+                        raise InvalidType('/data/type', 'The type provided does not match the resource type')
+        except (BadRequest, InvalidType) as e:
+            return jsonapi_errors_serializer([e.to_dict()]), e.status
 
         try:
             self.data_layer.update_relationship(json_data, self.related_id_field, **kwargs)
-        except RelationNotFound:
-            return ErrorFormatter.format_error(["Relationship %s not found on model %s"
-                                                % (self.data_layer.relationship_attribut,
-                                                   self.data_layer.model.__name__)]), 404
-        except EntityNotFound as e:
-            return ErrorFormatter.format_error([e.message]), e.status_code
+        except (RelationNotFound, ObjectNotFound) as e:
+            return jsonapi_errors_serializer([e.to_dict()]), e.status
 
         return ''
 
@@ -381,21 +393,24 @@ class Relationship(with_metaclass(ResourceRelationshipMeta, Resource)):
         """
         json_data = request.get_json()
 
-        if 'data' not in json_data or not isinstance(json_data.get('data'), list):
-            return ErrorFormatter.format_error(["You must provide a dictionary with a data key in params"]), 400
-
-        for item in json_data['data']:
-            if 'type' not in item or 'id' not in item:
-                return ErrorFormatter.format_error(["You must provide a type and an id in data params"]), 400
-            if item['type'] != self.related_resource_type:
-                return ErrorFormatter.format_error(["The resource type provided in params does not match the resource \
-                                                    type declared in the relationship resource"]), 400
+        try:
+            if 'data' not in json_data:
+                raise BadRequest('/data', 'You must provide data with a "data" route node')
+            if not isinstance(json_data.get('data'), list):
+                raise BadRequest('/data', 'You must provide data as list')
+            for item in json_data['data']:
+                if 'type' not in item:
+                    raise BadRequest('/data/type', 'Missing type in "data" node')
+                if 'id' not in item:
+                    raise BadRequest('/data/id', 'Missing id in "data" node')
+                if item['type'] != self.resource_type:
+                    raise InvalidType('/data/type', 'The type provided does not match the resource type')
+        except (BadRequest, InvalidType) as e:
+            return jsonapi_errors_serializer([e.to_dict()]), e.status
 
         try:
             self.data_layer.remove_relationship(json_data, self.related_id_field, **kwargs)
-        except RelationNotFound:
-            return ErrorFormatter.format_error(["Relationship %s not found on model %s"
-                                                % (self.data_layer.relationship_attribut,
-                                                   self.data_layer.model.__name__)]), 404
-        except EntityNotFound as e:
-            return ErrorFormatter.format_error([e.message]), e.status_code
+        except RelationNotFound as e:
+            return jsonapi_errors_serializer([e.to_dict()]), e.status
+
+        return ''

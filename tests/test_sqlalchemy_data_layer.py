@@ -164,7 +164,7 @@ def test_get_detail_resource(client, register_routes):
     assert response.status_code == 200
 
 
-def test_patch_patch_resource(client, register_routes):
+def test_patch_detail_resource(client, register_routes):
     response = client.patch('/items/1',
                             data=json.dumps({"data": {"type": "item", "id": "1", "attributes": {"title": "test2"}}}),
                             content_type='application/vnd.api+json')
@@ -188,11 +188,11 @@ def test_get_detail_resource_not_found(client, register_routes):
     assert response.status_code == 404
 
 
-def test_patch_patch_resource_error(client, register_routes):
+def test_patch_detail_resource_error(client, register_routes):
     response = client.patch('/items/1',
                             data=json.dumps({"data": {"type": "item", "attributes": {"title": "test2"}}}),
                             content_type='application/vnd.api+json')
-    assert response.status_code == 422
+    assert response.status_code == 400
 
 
 def test_wrong_content_type(client, register_routes):

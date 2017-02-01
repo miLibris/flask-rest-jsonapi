@@ -1,44 +1,48 @@
 # -*- coding: utf-8 -*-
 
 
-class RelationNotFound(Exception):
-    pass
+class JsonApiException(Exception):
+
+    title = 'Unknow error'
+    status = 500
+
+    def __init__(self, source, detail):
+        self.source = source
+        self.detail = detail
+
+    def to_dict(self):
+        return {'status': self.status,
+                'source': {'pointer': self.source},
+                'title': self.title,
+                'detail': self.detail}
 
 
-class InvalidField(Exception):
-
-    message = "Invalid fields querystring parameter."
-
-    def __init__(self, message):
-        self.message = " ".join([self.message, message])
+class BadRequest(JsonApiException):
+    title = "Bad request"
+    status = 400
 
 
-class InvalidInclude(Exception):
-
-    message = "Invalid include querystring parameter."
-
-    def __init__(self, message):
-        self.message = " ".join([self.message, message])
+class InvalidField(BadRequest):
+    title = "Invalid fields querystring parameter."
 
 
-class HttpException(Exception):
-
-    def __init__(self, message, status_code):
-        self.message = message
-        self.status_code = status_code
+class InvalidInclude(BadRequest):
+    title = "Invalid include querystring parameter."
 
 
-class EntityNotFound(HttpException):
-
-    def __init__(self, entity_name, identifier, additional_message=''):
-        super(EntityNotFound, self).__init__(". ".join(["%s with id: %s not found" % (entity_name, identifier),
-                                                       additional_message]), 404)
+class ObjectNotFound(JsonApiException):
+    title = "Object not found"
+    status = 404
 
 
-class RelatedItemNotFound(HttpException):
+class RelatedObjectNotFound(ObjectNotFound):
+    title = "Related object not found"
 
-    message = "Related item with id %s not found"
 
-    def __init__(self, related_item_id):
-        message = self.message % related_item_id
-        super(RelatedItemNotFound, self).__init__(message, 404)
+class RelationNotFound(JsonApiException):
+    title = "Relation not found"
+
+
+class InvalidType(JsonApiException):
+    title = "Invalid type"
+    status = 409
