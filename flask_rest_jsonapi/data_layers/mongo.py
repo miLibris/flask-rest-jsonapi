@@ -2,7 +2,7 @@
 
 from flask_rest_jsonapi.constants import DEFAULT_PAGE_SIZE
 from flask_rest_jsonapi.data_layers.base import BaseDataLayer
-from flask_rest_jsonapi.exceptions import EntityNotFound
+from flask_rest_jsonapi.exceptions import ObjectNotFound
 from pymongo import ASCENDING, DESCENDING
 
 
@@ -26,7 +26,7 @@ class MongoDataLayer(BaseDataLayer):
         query = self.get_single_item_query(**view_kwargs)
         result = self.get_collection().find_one(query)
         if result is None:
-            raise EntityNotFound(self.collection, view_kwargs.get(self.url_param_name))
+            raise ObjectNotFound(self.collection, view_kwargs.get(self.url_param_name))
         return result
 
     def get_items(self, qs, **view_kwargs):

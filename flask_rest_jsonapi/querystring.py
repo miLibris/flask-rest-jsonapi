@@ -37,8 +37,11 @@ class QueryStringManager(object):
         for key, value in self.qs.items():
             if not key.startswith(index):
                 continue
-            key_start = key.index('[') + 1
-            key_end = key.index(']')
+            try:
+                key_start = key.index('[') + 1
+                key_end = key.index(']')
+            except ValueError:
+                continue
             item_key = key[key_start:key_end]
             if multiple_values:
                 item_value = value.split(',')
