@@ -164,7 +164,7 @@ def test_get_detail_resource(client, register_routes):
     assert response.status_code == 200
 
 
-def test_patch_patch_resource(client, register_routes):
+def test_patch_detail_resource(client, register_routes):
     response = client.patch('/items/1',
                             data=json.dumps({"data": {"type": "item", "id": "1", "attributes": {"title": "test2"}}}),
                             content_type='application/vnd.api+json')
