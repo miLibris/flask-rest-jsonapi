@@ -1,9 +1,14 @@
 # -*- coding: utf-8 -*-
 
 from flask_rest_jsonapi.data_layers.alchemy import SqlalchemyDataLayer
-from flask_rest_jsonapi.data_layers.mongo import MongoDataLayer
 
 __all__ = [
     'SqlalchemyDataLayer',
-    'MongoDataLayer'
 ]
+
+try:
+    from flask_rest_jsonapi.data_layers.mongo import MongoDataLayer
+except ImportError:
+    pass
+else:
+    __all__.append('MongoDataLayer')
