@@ -16,22 +16,22 @@ class QueryStringManager(object):
         'include'
     )
 
-    def __init__(self, query_string):
+    def __init__(self, querystring):
         """Initialization instance
 
-        :param dict query_string: query string dict from request.args
+        :param dict querystring: query string dict from request.args
         """
-        if not isinstance(query_string, dict):
+        if not isinstance(querystring, dict):
             raise ValueError('QueryStringManager require a dict-like object query_string parameter')
 
-        self.qs = query_string
+        self.qs = querystring
 
     def _get_key_values(self, index, multiple_values=True):
         """Return a dict containing key / values items for a given key, used for items like filters, page, etc.
 
         :param str index: index to use for filtering
         :param bool multiple_values: indicate if each key can have more than one value
-        :return: a dict of key / values items
+        :return dict: a dict of key / values items
         """
         results = {}
         for key, value in self.qs.items():
@@ -53,6 +53,8 @@ class QueryStringManager(object):
     @property
     def querystring(self):
         """Return original querystring but containing only managed keys
+
+        :return dict: dict of managed querystring parameter
         """
         ret = {}
         for key, value in self.qs.items():
@@ -63,6 +65,8 @@ class QueryStringManager(object):
     @property
     def filters(self):
         """Return filters from query string.
+
+        :return list: a list of filter information
 
         Filters will be parsed based on jsonapi recommendations_
 
@@ -86,6 +90,8 @@ class QueryStringManager(object):
     @property
     def pagination(self):
         """Return all page parameters as a dict.
+
+        :return dict: a dict of pagination information
 
         To allow multiples strategies, all parameters starting with `page` will be included. e.g::
 
@@ -114,6 +120,8 @@ class QueryStringManager(object):
     def fields(self):
         """Return fields wanted by client.
 
+        :return dict: a dict of sparse fieldsets information
+
         Return value will be a dict containing all fields by resource, for example::
 
             {
@@ -127,6 +135,8 @@ class QueryStringManager(object):
     def sorting(self):
         """Return fields to sort by including sort name for SQLAlchemy and row
         sort parameter for other ORMs
+
+        :return list: a list of sorting information
 
         Example of return value::
 
@@ -148,6 +158,8 @@ class QueryStringManager(object):
     @property
     def include(self):
         """Return fields to include
+
+        :return list: a list of include information
         """
         include_param = self.qs.get('include')
         return include_param.split(',') if include_param else []

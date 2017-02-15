@@ -11,13 +11,15 @@ from flask.views import MethodViewType, MethodView
 from marshmallow_jsonapi.exceptions import IncorrectTypeError
 from marshmallow import ValidationError
 
-from flask_rest_jsonapi.errors import jsonapi_errors_serializer
+from flask_rest_jsonapi.errors import jsonapi_errors
 from flask_rest_jsonapi.querystring import QueryStringManager as QSManager
 from flask_rest_jsonapi.pagination import add_pagination_links
 from flask_rest_jsonapi.exceptions import ObjectNotFound, RelationNotFound, InvalidField, InvalidInclude, InvalidType, \
     BadRequest
-from flask_rest_jsonapi.decorators import disable_method, check_headers, check_requirements, add_headers
+from flask_rest_jsonapi.decorators import not_allowed_method, check_headers, check_method_requirements, add_headers
 from flask_rest_jsonapi.schema import compute_schema
+from flask_rest_jsonapi.data_layers.base import BaseDataLayer
+from flask_rest_jsonapi.data_layers.alchemy import SqlalchemyDataLayer
 
 
 class ResourceMeta(MethodViewType):
@@ -26,28 +28,35 @@ class ResourceMeta(MethodViewType):
         super(ResourceMeta, cls).__init__(name, bases, nmspc)
         meta = nmspc.get('Meta')
 
+        # compute data_layer
+        data_layer = None
+
+        alternative_data_layer_cls = getattr(meta, 'data_layer', None)
+        if alternative_data_layer_cls is not None and BaseDataLayer not in inspect.getmro(alternative_data_layer_cls):
+            raise Exception("You must provide a data layer class inherited from BaseDataLayer in %s resource" % name)
+
+        if nmspc.get('data_layer_kwargs') is not None:
+            if not isinstance(nmspc['data_layer_kwargs'], dict):
+                raise Exception("You must provide data layer information as dictionary in %s resource" % name)
+            else:
+                data_layer_cls = getattr(meta, 'data_layer', SqlalchemyDataLayer)
+                data_layer_kwargs = nmspc.get('data_layer_kwargs', dict())
+                data_layer = type('%sDataLayer' % name, (data_layer_cls, ), dict())(**data_layer_kwargs)
+                data_layer.configure(meta)
+
+        if data_layer is not None:
+            data_layer.resource = cls
+            cls.data_layer = data_layer
+
+        # disable access to methods according to meta options
         if meta is not None:
-            data_layer = getattr(meta, 'data_layer', None)
-
-            if data_layer is not None:
-                if not isinstance(data_layer, dict):
-                    raise Exception("You must provide data layer informations as dictionary")
-                if data_layer.get('cls') is None:
-                    raise Exception("You must provide a data layer class")
-                else:
-                    if 'BaseDataLayer' not in [cls_.__name__ for cls_ in inspect.getmro(data_layer['cls'])]:
-                        raise Exception("You must provide a data layer class inherited from BaseDataLayer")
-
-                data_layer_kwargs = {}
-                data_layer_kwargs['resource_cls'] = cls
-                data_layer_kwargs.update(data_layer.get('kwargs', {}))
-                cls.data_layer = type('DataLayer', (data_layer['cls'], ), {})(**data_layer_kwargs)
-                cls.data_layer.configure(data_layer)
-
-            disabled_methods = getattr(meta, 'disabled_methods', [])
-            for method in disabled_methods:
+            not_allowed_methods = getattr(meta, 'not_allowed_methods', [])
+            for method in not_allowed_methods:
                 if hasattr(cls, method.lower()):
-                    setattr(cls, method.lower(), disable_method(getattr(cls, method.lower())))
+                    setattr(cls, method.lower(), not_allowed_method(getattr(cls, method.lower())))
+
+        # set meta information as opts of the resource class
+        cls.opts = meta
 
 
 class ResourceListMeta(ResourceMeta):
@@ -147,38 +156,39 @@ class Resource(MethodView):
 
 class ResourceList(with_metaclass(ResourceListMeta, Resource)):
 
-    @check_requirements
+    @check_method_requirements
     def get(self, *args, **kwargs):
-        """Retrieve a collection of items
+        """Retrieve a collection of objects
         """
         qs = QSManager(request.args)
 
-        item_count, items = self.data_layer.get_items(qs, **kwargs)
+        object_count, objects = self.data_layer.get_collection(qs, **kwargs)
 
-        schema_kwargs = self.schema.get('get_kwargs', {})
+        schema_kwargs = getattr(self.opts, 'schema_get_kwargs', dict())
         schema_kwargs.update({'many': True})
         try:
-            schema = compute_schema(self.schema['cls'], schema_kwargs, qs, None)
+            schema = compute_schema(self.schema, schema_kwargs, qs, None)
         except InvalidField as e:
-            return jsonapi_errors_serializer([e.to_dict()]), e.status
+            return jsonapi_errors([e.to_dict()]), e.status
 
-        result = schema.dump(items)
+        result = schema.dump(objects)
 
-        endpoint_kwargs = request.view_args if self.endpoint.get('include_view_kwargs') is True else {}
+        endpoint_kwargs = request.view_args if getattr(self.opts, 'include_endpoint_kwargs', None) is True else dict()
         add_pagination_links(result.data,
-                             item_count,
+                             object_count,
                              qs,
-                             url_for(self.endpoint.get('name'), **endpoint_kwargs))
+                             url_for(self.endpoint, **endpoint_kwargs))
 
         return result.data
 
-    @check_requirements
+    @check_method_requirements
     def post(self, *args, **kwargs):
-        """Create an item
+        """Create an object
         """
         json_data = request.get_json()
 
-        schema = self.schema['cls'](**self.schema.get('post_kwargs', {}))
+        schema_kwargs = getattr(self.opts, 'schema_post_kwargs', dict())
+        schema = self.schema(**schema_kwargs)
         try:
             data, errors = schema.load(json_data)
         except IncorrectTypeError as e:
@@ -200,40 +210,43 @@ class ResourceList(with_metaclass(ResourceListMeta, Resource)):
                 error['title'] = "Validation error"
             return errors, 422
 
-        item = self.data_layer.create_and_save_item(data, **kwargs)
+        obj = self.data_layer.create_object(data, **kwargs)
 
-        return schema.dump(item).data, 201
+        return schema.dump(obj).data, 201
 
 
 class ResourceDetail(with_metaclass(ResourceDetailMeta, Resource)):
 
-    @check_requirements
+    @check_method_requirements
     def get(self, *args, **kwargs):
-        """Get item details
+        """Get object details
         """
         try:
-            item = self.data_layer.get_item(**kwargs)
+            obj = self.data_layer.get_object(**kwargs)
         except ObjectNotFound as e:
-            return jsonapi_errors_serializer([e.to_dict()]), e.status
+            return jsonapi_errors([e.to_dict()]), e.status
 
         qs = QSManager(request.args)
         try:
-            schema = compute_schema(self.schema['cls'], self.schema.get('get_kwargs', {}), qs, qs.include)
+            schema = compute_schema(self.schema,
+                                    getattr(self.opts, 'schema_get_kwargs', dict()),
+                                    qs,
+                                    qs.include)
         except (InvalidField, InvalidInclude) as e:
-            return jsonapi_errors_serializer([e.to_dict()]), e.status
+            return jsonapi_errors([e.to_dict()]), e.status
 
-        result = schema.dump(item)
+        result = schema.dump(obj)
         return result.data
 
-    @check_requirements
+    @check_method_requirements
     def patch(self, *args, **kwargs):
-        """Update an item
+        """Update an object
         """
         json_data = request.get_json()
 
-        schema_kwargs = self.schema.get('patch_kwargs', {})
+        schema_kwargs = getattr(self.opts, 'schema_patch_kwargs', dict())
         schema_kwargs.pop('partial', None)
-        schema = self.schema['cls'](partial=True, **schema_kwargs)
+        schema = self.schema(partial=True, **schema_kwargs)
         try:
             data, errors = schema.load(json_data)
         except IncorrectTypeError as e:
@@ -258,56 +271,57 @@ class ResourceDetail(with_metaclass(ResourceDetailMeta, Resource)):
         try:
             if 'id' not in json_data['data']:
                 raise BadRequest('/data/id', 'Missing id in "data" node')
-            if str(json_data['data']['id']) != str(kwargs[self.data_layer.url_param_name]):
+            if json_data['data']['id'] != kwargs[self.data_layer.url_field]:
                 raise BadRequest('/data/id', 'Value of id does not match the resource identifier in url')
         except BadRequest as e:
-            return jsonapi_errors_serializer([e.to_dict()]), e.status
+            return jsonapi_errors([e.to_dict()]), e.status
 
         try:
-            item = self.data_layer.get_item(**kwargs)
+            obj = self.data_layer.get_object(**kwargs)
         except ObjectNotFound as e:
-            return jsonapi_errors_serializer([e.to_dict()]), e.status
+            return jsonapi_errors([e.to_dict()]), e.status
 
-        self.data_layer.update_and_save_item(item, data, **kwargs)
+        self.data_layer.update_object(obj, data, **kwargs)
 
-        result = schema.dump(item)
+        result = schema.dump(obj)
 
         return result.data
 
-    @check_requirements
+    @check_method_requirements
     def delete(self, *args, **kwargs):
-        """Delete an item
+        """Delete an object
         """
         try:
-            item = self.data_layer.get_item(**kwargs)
+            obj = self.data_layer.get_object(**kwargs)
         except ObjectNotFound as e:
-            return jsonapi_errors_serializer([e.to_dict()]), e.status
+            return jsonapi_errors([e.to_dict()]), e.status
 
-        self.data_layer.delete_item(item, **kwargs)
+        self.data_layer.delete_object(obj, **kwargs)
 
         return '', 204
 
 
 class Relationship(with_metaclass(ResourceRelationshipMeta, Resource)):
 
-    @check_requirements
+    @check_method_requirements
     def get(self, *args, **kwargs):
         """Get a relationship details
         """
+        related_id_field = getattr(self.opts, 'related_id_field', 'id')
         try:
-            item, data = self.data_layer.get_relationship(self.related_resource_type, self.related_id_field, **kwargs)
+            obj, data = self.data_layer.get_relation(self.related_type_, related_id_field, **kwargs)
         except (RelationNotFound, ObjectNotFound) as e:
-            return jsonapi_errors_serializer([e.to_dict()]), e.status
+            return jsonapi_errors([e.to_dict()]), e.status
 
         related_endpoint_kwargs = kwargs
-        if hasattr(self, 'endpoint_kwargs'):
-            for key, value in copy(self.endpoint_kwargs).items():
-                tmp_endpoint_kwargs_value = item
-                for attr in value.split('.'):
-                    tmp_endpoint_kwargs_value = getattr(tmp_endpoint_kwargs_value, attr)
+        if hasattr(self.opts, 'endpoint_kwargs'):
+            for key, value in copy(self.opts.endpoint_kwargs).items():
+                tmp_endpoint_kwargs_value = obj
+                for field in value.split('.'):
+                    tmp_endpoint_kwargs_value = getattr(tmp_endpoint_kwargs_value, field)
                 endpoint_kwargs_value = tmp_endpoint_kwargs_value
-                self.endpoint_kwargs[key] = endpoint_kwargs_value
-            related_endpoint_kwargs = self.endpoint_kwargs
+                self.opts.endpoint_kwargs[key] = endpoint_kwargs_value
+            related_endpoint_kwargs = self.opts.endpoint_kwargs
 
         result = {'links': {'self': url_for(self.endpoint, **kwargs),
                             'related': url_for(self.related_endpoint, **related_endpoint_kwargs)},
@@ -318,46 +332,51 @@ class Relationship(with_metaclass(ResourceRelationshipMeta, Resource)):
             try:
                 schema = compute_schema(self.schema, dict(), qs, qs.include)
             except (InvalidField, InvalidInclude) as e:
-                return jsonapi_errors_serializer([e.to_dict()]), e.status
+                return jsonapi_errors([e.to_dict()]), e.status
 
-            serialized_item = schema.dump(item)
-            result['included'] = serialized_item.data['included']
+            serialized_obj = schema.dump(obj)
+            result['included'] = serialized_obj.data['included']
 
         return result
 
-    @check_requirements
+    @check_method_requirements
     def post(self, *args, **kwargs):
         """Add / create relationship(s)
         """
         json_data = request.get_json()
+
+        type_ = self.schema.opts.type_
 
         try:
             if 'data' not in json_data:
                 raise BadRequest('/data', 'You must provide data with a "data" route node')
             if not isinstance(json_data.get('data'), list):
                 raise BadRequest('/data', 'You must provide data as list')
-            for item in json_data['data']:
-                if 'type' not in item:
+            for obj in json_data['data']:
+                if 'type' not in obj:
                     raise BadRequest('/data/type', 'Missing type in "data" node')
-                if 'id' not in item:
+                if 'id' not in obj:
                     raise BadRequest('/data/id', 'Missing id in "data" node')
-                if item['type'] != self.resource_type:
+                if obj['type'] != type_:
                     raise InvalidType('/data/type', 'The type provided does not match the resource type')
         except (BadRequest, InvalidType) as e:
-            return jsonapi_errors_serializer([e.to_dict()]), e.status
+            return jsonapi_errors([e.to_dict()]), e.status
 
+        related_id_field = getattr(self.opts, 'related_id_field', 'id')
         try:
-            self.data_layer.add_relationship(json_data, self.related_id_field, **kwargs)
+            self.data_layer.create_relation(json_data, related_id_field, **kwargs)
         except (RelationNotFound, ObjectNotFound) as e:
-            return jsonapi_errors_serializer([e.to_dict()]), e.status
+            return jsonapi_errors([e.to_dict()]), e.status
 
         return ''
 
-    @check_requirements
+    @check_method_requirements
     def patch(self, *args, **kwargs):
         """Update a relationship
         """
         json_data = request.get_json()
+
+        type_ = self.schema.opts.type_
 
         try:
             if 'data' not in json_data:
@@ -367,50 +386,54 @@ class Relationship(with_metaclass(ResourceRelationshipMeta, Resource)):
                     raise BadRequest('/data/type', 'Missing type in "data" node')
                 if 'id' not in json_data['data']:
                     raise BadRequest('/data/id', 'Missing id in "data" node')
-                if json_data['data']['type'] != self.resource_type:
+                if json_data['data']['type'] != type_:
                     raise InvalidType('/data/type', 'The type field does not match the resource type')
             if isinstance(json_data['data'], list):
-                for item in json_data['data']:
-                    if 'type' not in item:
+                for obj in json_data['data']:
+                    if 'type' not in obj:
                         raise BadRequest('/data/type', 'Missing type in "data" node')
-                    if 'id' not in item:
+                    if 'id' not in obj:
                         raise BadRequest('/data/id', 'Missing id in "data" node')
-                    if item['type'] != self.resource_type:
+                    if obj['type'] != self.type_:
                         raise InvalidType('/data/type', 'The type provided does not match the resource type')
         except (BadRequest, InvalidType) as e:
-            return jsonapi_errors_serializer([e.to_dict()]), e.status
+            return jsonapi_errors([e.to_dict()]), e.status
 
+        related_id_field = getattr(self.opts, 'related_id_field', 'id')
         try:
-            self.data_layer.update_relationship(json_data, self.related_id_field, **kwargs)
+            self.data_layer.update_relation(json_data, related_id_field, **kwargs)
         except (RelationNotFound, ObjectNotFound) as e:
-            return jsonapi_errors_serializer([e.to_dict()]), e.status
+            return jsonapi_errors([e.to_dict()]), e.status
 
         return ''
 
-    @check_requirements
+    @check_method_requirements
     def delete(self, *args, **kwargs):
         """Delete relationship(s)
         """
         json_data = request.get_json()
+
+        type_ = self.schema.opts.type_
 
         try:
             if 'data' not in json_data:
                 raise BadRequest('/data', 'You must provide data with a "data" route node')
             if not isinstance(json_data.get('data'), list):
                 raise BadRequest('/data', 'You must provide data as list')
-            for item in json_data['data']:
-                if 'type' not in item:
+            for obj in json_data['data']:
+                if 'type' not in obj:
                     raise BadRequest('/data/type', 'Missing type in "data" node')
-                if 'id' not in item:
+                if 'id' not in obj:
                     raise BadRequest('/data/id', 'Missing id in "data" node')
-                if item['type'] != self.resource_type:
+                if obj['type'] != type_:
                     raise InvalidType('/data/type', 'The type provided does not match the resource type')
         except (BadRequest, InvalidType) as e:
-            return jsonapi_errors_serializer([e.to_dict()]), e.status
+            return jsonapi_errors([e.to_dict()]), e.status
 
+        related_id_field = getattr(self.opts, 'related_id_field', 'id')
         try:
-            self.data_layer.remove_relationship(json_data, self.related_id_field, **kwargs)
+            self.data_layer.delete_relation(json_data, related_id_field, **kwargs)
         except RelationNotFound as e:
-            return jsonapi_errors_serializer([e.to_dict()]), e.status
+            return jsonapi_errors([e.to_dict()]), e.status
 
         return ''

@@ -7,6 +7,11 @@ class JsonApiException(Exception):
     status = 500
 
     def __init__(self, source, detail):
+        """Initialize a jsonapi exception
+
+        :param str source: the source of the error
+        :param str detail: the detail of the error
+        """
         self.source = source
         self.detail = detail
 

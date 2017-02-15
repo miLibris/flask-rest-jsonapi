@@ -30,6 +30,10 @@ def compute_schema(schema_cls, default_kwargs, qs, include):
                 raise InvalidInclude(field, "%s is not a relationship attribut of %s" % (field, schema_cls.__name__))
             schema_kwargs['include_data'] += (field, )
 
+    # make sure id field is in only parameter unless marshamllow will raise an Exception
+    if schema_kwargs.get('only') is not None and 'id' not in schema_kwargs['only']:
+        schema_kwargs['only'] += ('id',)
+
     # create base schema instance
     schema = schema_cls(**schema_kwargs)
 
@@ -44,10 +48,6 @@ def compute_schema(schema_cls, default_kwargs, qs, include):
         if schema.only:
             tmp_only &= set(schema.only)
         schema.only = tuple(tmp_only)
-
-    # make sure id field is in only parameter unless marshamllow will raise an Exception
-    if schema.only and 'id' not in schema.only:
-        schema.only += ('id',)
 
     # manage compound documents
     if include:
