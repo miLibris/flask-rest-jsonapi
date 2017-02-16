@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 
 from flask import Blueprint
-from flask_rest_jsonapi.resource import ResourceList, ResourceDetail, Relationship
 
 
 class Api(object):
@@ -18,230 +17,39 @@ class Api(object):
 
         self.resources = []
 
-    def list_route(self, endpoint, *urls, **kwargs):
-        """Create endpoint to retrieve a list of item or to create one.
-
-        :param endpoint (str): the endpoint name
-        :param urls (list): the urls of the endpoint
-        :param resource_cls (ResourceList): a resource class like flask.MethodView
-        :param resource_type (str): the name of the collection
-        :param schema (Schema): a marshallow schema class
-        :param schema_get_kwargs (dict): schema kwargs for get method
-        :param schema_post_kwargs (dict): schema kwargs for post method
-        :param data_layer (BaseDataLayer): a the data layer class
-        :param data_layer_kwargs (dict): the data layer kwargs
-        :param data_layer_additional_functions (dict): the data layer additional functions
-        :param get_decorators (list): a list of decorator for the get method
-        :param post_decorators (list): a list of decorator for the post method
-        :param disabled_methods (list): list of methods to disable
-        :param url_rule_options (dict): additional parameters for flask.Flask.add_url_rule
-        :param endpoint_include_view_kwargs (boolean): a flag that indicate to include view kwargs to the context of
-                                                       flask.url_for
-        """
-        self.register_resource('list', endpoint, urls, kwargs)
-
-    def detail_route(self, endpoint, *urls, **kwargs):
-        """Create endpoint to retrieve a list of item or to create one.
-
-        :param endpoint (str): the endpoint name
-        :param urls (list): the urls of the endpoint
-        :param resource_cls (ResourceList): a resource class like flask.MethodView
-        :param resource_type (str): the name of the collection
-        :param schema (Schema): a marshallow schema class
-        :param schema_get_kwargs (dict): schema kwargs for get method
-        :param schema_patch_kwargs (dict): schema kwargs for post method
-        :param data_layer (BaseDataLayer): a the data layer class
-        :param data_layer_kwargs (dict): the data layer kwargs
-        :param data_layer_additional_functions (dict): the data layer additional functions
-        :param get_decorators (list): a list of decorator for the get method
-        :param patch_decorators (list): a list of decorator for the patch method
-        :param delete_decorators (list): a list of decorator for the delete method
-        :param disabled_methods (list): list of methods to disable
-        :param url_rule_options (dict): additional parameters for flask.Flask.add_url_rule
-        """
-        self.register_resource('detail', endpoint, urls, kwargs)
-
-    def relationship(self, endpoint, url, **kwargs):
-        """Create an endpoint to manage a relationship
-
-        :param endpoint (str): the relationship endpoint name
-        :param url (str): the url of the relationship endpoint
-        :param related_resource_type (str): the name of the related collection
-        :param related_endpoint (str): the related endpoint name
-        :param data_layer (BaseDataLayer): a the data layer class
-        :param data_layer_kwargs (dict): the data layer kwargs
-        :param url_rule_options (dict): additional parameters for flask.Flask.add_url_rule
-        """
-        relationship_cls = self.build_relationship_cls(endpoint, kwargs)
-
-        options = kwargs.get('url_rule_options') or dict()
-        self.register_route(relationship_cls, endpoint, options, [url])
-
     def init_app(self, app):
         """Update flask application with our api
 
-        :param app (Application): a flask application
+        :param Application app: a flask application
         """
         if self.blueprint is not None:
             app.register_blueprint(self.blueprint)
         else:
             self.app = app
             for resource in self.resources:
-                self.register_route(**resource)
+                self.route(**resource)
 
-    def register_resource(self, kind, endpoint, urls, kwargs):
-        """Register a resource in api
+    def route(self, resource, endpoint, *urls, **kwargs):
+        """Create an api endpoint.
 
-        :param kind (str): the kind of the resource (list or detail)
-        :param endpoint (str): the endpoint name
-        :param urls (list): the urls of the endpoint
-        :param kwargs (dict): route kwargs
+        :param Resource resource: a resource class inherited from flask_rest_jsonapi.resource.Resource
+        :param str endpoint: the endpoint name
+        :param list urls: the urls of the endpoint
+        :param dict kwargs: additional options of the route
         """
-        resource_cls = self.build_resource_cls(kind, endpoint, kwargs)
-
+        resource.endpoint = endpoint
+        view_func = resource.as_view(endpoint)
         options = kwargs.get('url_rule_options') or dict()
-        self.register_route(resource_cls, endpoint, options, urls)
 
-    def build_resource_cls(self, kind, endpoint, kwargs):
-        """Build a resource class
-
-        :param kind (str): the kind of the resource (list or detail)
-        :param endpoint (str): the endpoint name
-        :param kwargs (dict): route kwargs
-        """
-        resource_kwargs = self.get_resource_kwargs(endpoint, kwargs)
-
-        default_resource_cls = {'list': ResourceList, 'detail': ResourceDetail}[kind]
-
-        resource_cls = kwargs.get('resource_cls') or type("%sResourceList" % kwargs['resource_type'].capitalize(),
-                                                          (default_resource_cls, ),
-                                                          resource_kwargs)
-
-        return resource_cls
-
-    def get_resource_kwargs(self, endpoint, kwargs):
-        """Get kwargs from route kwargs
-
-        :param endpoint (str): the endpoint name
-        :param kwargs (dict): route kwargs
-        """
-        resource_kwargs = {}
-
-        if kwargs.get('resource_type') is not None:
-            resource_kwargs['resource_type'] = kwargs['resource_type']
-
-        if kwargs.get('schema') is not None:
-            resource_kwargs['schema'] = {'cls': kwargs['schema']}
-            if kwargs.get('schema_get_kwargs') is not None:
-                resource_kwargs['schema'].update({'get_kwargs': kwargs['schema_get_kwargs']})
-            if kwargs.get('schema_post_kwargs') is not None:
-                resource_kwargs['schema'].update({'post_kwargs': kwargs['schema_post_kwargs']})
-
-        if self.blueprint is not None and self.blueprint.name is not None:
-            endpoint = '.'.join([self.blueprint.name, endpoint])
-        resource_kwargs['endpoint'] = {'name': endpoint}
-        if kwargs.get('endpoint_include_view_kwargs') is not None:
-            resource_kwargs['endpoint'].update({'include_view_kwargs': kwargs['endpoint_include_view_kwargs']})
-
-        meta = None
-
-        if kwargs.get('data_layer') is not None:
-            meta = meta or type('Meta', (), {})
-            data_layer = {'cls': kwargs['data_layer']}
-            if kwargs.get('data_layer_kwargs') is not None:
-                data_layer.update({'kwargs': kwargs['data_layer_kwargs']})
-            if kwargs.get('data_layer_additional_functions') is not None:
-                data_layer.update(kwargs['data_layer_additional_functions'])
-            setattr(meta, 'data_layer', data_layer)
-
-        if kwargs.get('get_decorators') is not None:
-            meta = meta or type('Meta', (), {})
-            setattr(meta, 'get_decorators', kwargs['get_decorators'])
-
-        if kwargs.get('post_decorators') is not None:
-            meta = meta or type('Meta', (), {})
-            setattr(meta, 'post_decorators', kwargs['post_decorators'])
-
-        if kwargs.get('patch_decorators') is not None:
-            meta = meta or type('Meta', (), {})
-            setattr(meta, 'patch_decorators', kwargs['patch_decorators'])
-
-        if kwargs.get('delete_decorators') is not None:
-            meta = meta or type('Meta', (), {})
-            setattr(meta, 'delete_decorators', kwargs['delete_decorators'])
-
-        if kwargs.get('disabled_methods') is not None:
-            meta = meta or type('Meta', (), {})
-            setattr(meta, 'disabled_methods', kwargs['disabled_methods'])
-
-        if meta is not None:
-            resource_kwargs['Meta'] = meta
-
-        return resource_kwargs
-
-    def build_relationship_cls(self, endpoint, kwargs):
-        """Build a relationship class
-
-        :param endpoint (str): the relationship endpoint name
-        """
-        relationship_kwargs = self.get_relationship_kwargs(endpoint, kwargs)
-
-        relationship_cls_name = "".join(["".join([item.capitalize() for item in endpoint.split('_')]), 'Relationship'])
-
-        relationship_cls = kwargs.get('relationship_cls') or type(relationship_cls_name,
-                                                                  (Relationship, ),
-                                                                  relationship_kwargs)
-
-        return relationship_cls
-
-    def get_relationship_kwargs(self, endpoint, kwargs):
-        """Get kwargs from route kwargs
-
-        :param endpoint (str): the endpoint name
-        :param kwargs (dict): route kwargs
-        """
-        relationship_kwargs = {}
-
-        if kwargs.get('endpoint') is not None:
-            relationship_kwargs['endpoint'] = kwargs['endpoint']
-
-        if kwargs.get('related_resource_type') is not None:
-            relationship_kwargs['resource_type'] = kwargs['resource_type']
-
-        if kwargs.get('related_endpoint') is not None:
-            relationship_kwargs['target_endpoint'] = kwargs['target_endpoint']
-
-        meta = None
-
-        if kwargs.get('data_layer') is not None:
-            meta = meta or type('Meta', (), {})
-            data_layer = {'cls': kwargs['data_layer']}
-            if kwargs.get('data_layer_kwargs') is not None:
-                data_layer.update({'kwargs': kwargs['data_layer_kwargs']})
-            setattr(meta, 'data_layer', data_layer)
-
-        if meta is not None:
-            relationship_kwargs['Meta'] = meta
-
-        return relationship_kwargs
-
-    def register_route(self, resource_cls, endpoint, options, urls):
-        """Register url
-
-        :param resource_cls (Resource): a resource class
-        :param endpoint (str): the endpoint name
-        :options (dict): options for flask.add_url_rule
-        :param urls (list): the urls of the endpoint
-        """
-        view_func = resource_cls.as_view(endpoint)
         if self.app is not None:
             for url in urls:
                 self.app.add_url_rule(url, view_func=view_func, **options)
         elif self.blueprint is not None:
+            resource.endpoint = '.'.join([self.blueprint.name, resource.endpoint])
             for url in urls:
                 self.blueprint.add_url_rule(url, view_func=view_func, **options)
         else:
-            self.resources.append({'resource_cls': resource_cls,
+            self.resources.append({'resource': resource,
                                    'endpoint': endpoint,
-                                   'options': options,
-                                   'urls': urls})
+                                   'urls': urls,
+                                   'options': options})

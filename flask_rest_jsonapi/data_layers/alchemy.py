@@ -15,49 +15,61 @@ class SqlalchemyDataLayer(BaseDataLayer):
         super(SqlalchemyDataLayer, self).__init__(*args, **kwargs)
 
         if not hasattr(self, 'session'):
-            raise Exception("You must provide a session to use sqlalchemy data layer")
+            raise Exception("You must provide a session in data_layer_kwargs to use sqlalchemy data layer in %s"
+                            % self.resource.__name__)
         if not hasattr(self, 'model'):
-            raise Exception("You must provide a model to use sqlalchemy data layer")
+            raise Exception("You must provide a model in data_layer_kwargs to use sqlalchemy data layer in %s"
+                            % self.resource.__name__)
 
-    def get_item(self, **view_kwargs):
-        """Retrieve an item through sqlalchemy
+    def create_object(self, data, **view_kwargs):
+        """Create an object through sqlalchemy
+
+        :param dict data: the data validated by marshmallow
+        :param dict view_kwargs: kwargs from the resource view
+        :return DeclarativeMeta: an object from sqlalchemy
+        """
+        self.before_create_object(data, **view_kwargs)
+
+        obj = self.model(**data)
+
+        self.session.add(obj)
+        self.session.commit()
+
+        return obj
+
+    def get_object(self, **view_kwargs):
+        """Retrieve an object through sqlalchemy
 
         :params dict view_kwargs: kwargs from the resource view
-        :return DeclarativeMeta: an item from sqlalchemy
+        :return DeclarativeMeta: an object from sqlalchemy
         """
-        if not hasattr(self, 'id_field'):
-            raise Exception("You must provide an id_field in data layer kwargs in %s" % self.resource_cls.__name__)
-        if not hasattr(self, 'url_param_name'):
-            raise Exception("You must provide an url_param_name in data layer kwargs in %s"
-                            % self.resource_cls.__name__)
+        if not hasattr(self, 'url_field'):
+            raise Exception("You must provide an url_field in data_layer_kwargs in %s" % self.resource.__name__)
 
+        id_field = getattr(self, 'id_field', 'id')
         try:
-            filter_field = getattr(self.model, self.id_field)
+            filter_field = getattr(self.model, id_field)
         except Exception:
-            raise Exception("Unable to find column name: %s on model: %s" % (self.id_field, self.model.__name__))
+            raise Exception("Unable to find attribut: %s on model: %s" % (id_field, self.model.__name__))
 
-        filter_value = view_kwargs[self.url_param_name]
+        filter_value = view_kwargs[self.url_field]
 
         try:
-            item = self.session.query(self.model).filter(filter_field == filter_value).one()
+            obj = self.session.query(self.model).filter(filter_field == filter_value).one()
         except NoResultFound:
-            raise ObjectNotFound('.'.join([self.model.__name__, self.id_field]),
-                                 "Could not find %s.%s=%s object" % (self.model.__name__, self.id_field, filter_value))
+            raise ObjectNotFound('.'.join([self.model.__name__, id_field]),
+                                 "Could not find %s.%s=%s object" % (self.model.__name__, id_field, filter_value))
 
-        return item
+        return obj
 
-    def get_items(self, qs, **view_kwargs):
-        """Retrieve a collection of items
+    def get_collection(self, qs, **view_kwargs):
+        """Retrieve a collection of objects through sqlalchemy
 
         :param QueryStringManager qs: a querystring manager to retrieve information from url
         :param dict view_kwargs: kwargs from the resource view
-        :return int item_count: the number of items in the collection
-        :return tuple: the number of item and the list of items
+        :return tuple: the number of object and the list of objects
         """
-        if not hasattr(self, 'get_base_query'):
-            raise Exception("You must provide a get_base_query in data layer kwargs in %s" % self.resource_cls.__name__)
-
-        query = self.get_base_query(**view_kwargs)
+        query = self.query(**view_kwargs)
 
         if qs.filters:
             query = self.filter_query(query, qs.filters, self.model)
@@ -65,215 +77,199 @@ class SqlalchemyDataLayer(BaseDataLayer):
         if qs.sorting:
             query = self.sort_query(query, qs.sorting)
 
-        item_count = query.count()
+        object_count = query.count()
 
         query = self.paginate_query(query, qs.pagination)
 
-        return item_count, query.all()
+        return object_count, query.all()
 
-    def create_and_save_item(self, data, **view_kwargs):
-        """Create and save an item through sqlalchemy
+    def update_object(self, obj, data, **view_kwargs):
+        """Update an object through sqlalchemy
 
-        :param dict data: the data validated by marshmallow
-        :param dict view_kwargs: kwargs from the resource view
-        :return DeclarativeMeta: an item from sqlalchemy
-        """
-        self.before_create_instance(data, **view_kwargs)
-
-        item = self.model(**data)
-
-        self.session.add(item)
-        self.session.commit()
-
-        return item
-
-    def update_and_save_item(self, item, data, **view_kwargs):
-        """Update an instance of an item and store changes
-
-        :param DeclarativeMeta item: an item from sqlalchemy
+        :param DeclarativeMeta obj: an object from sqlalchemy
         :param dict data: the data validated by marshmallow
         :param dict view_kwargs: kwargs from the resource view
         """
-        self.before_update_instance(item, data, **view_kwargs)
+        self.before_update_object(obj, data, **view_kwargs)
 
         for field in data:
-            if hasattr(item, field):
-                setattr(item, field, data[field])
+            if hasattr(obj, field):
+                setattr(obj, field, data[field])
 
         self.session.commit()
 
-    def delete_item(self, item, **view_kwargs):
-        """Delete an item
+    def delete_object(self, obj, **view_kwargs):
+        """Delete an object through sqlalchemy
 
         :param DeclarativeMeta item: an item from sqlalchemy
         :param dict view_kwargs: kwargs from the resource view
         """
-        self.before_delete_instance(item, **view_kwargs)
+        self.before_delete_object(obj, **view_kwargs)
 
-        self.session.delete(item)
+        self.session.delete(obj)
         self.session.commit()
 
-    def get_relationship(self, related_resource_type, related_id_field, **view_kwargs):
-        """Get related data of a relationship
-
-        :param str related_resource_type: the related resource type name
-        :param str related_id_field: the identifier field of the related model
-        :param dict view_kwargs: kwargs from the resource view
-        :return tuple: the item and related resource(s)
-        """
-        item = self.get_item(**view_kwargs)
-
-        if not hasattr(item, self.relationship_attribut):
-            raise RelationNotFound(self.relationship_attribut,
-                                   "%s as no attribut %s" % (self.model.__name__, self.relationship_attribut))
-
-        related_data = getattr(item, self.relationship_attribut)
-
-        if related_data is None:
-            return item, related_data
-
-        if isinstance(related_data, InstrumentedList):
-            return item,\
-                [{'type': related_resource_type, 'id': getattr(item_, related_id_field)} for item_ in related_data]
-        else:
-            return item, {'type': related_resource_type, 'id': getattr(related_data, related_id_field)}
-
-    def update_relationship(self, json_data, related_id_field, **view_kwargs):
-        """Update a relationship
+    def create_relation(self, json_data, related_id_field, **view_kwargs):
+        """Create a relation
 
         :param dict json_data: the request params
         :param str related_id_field: the identifier field of the related model
         :param dict view_kwargs: kwargs from the resource view
         """
-        item = self.get_item(**view_kwargs)
+        obj = self.get_object(**view_kwargs)
 
-        if not hasattr(item, self.relationship_attribut):
+        if not hasattr(obj, self.relation_field):
             raise RelationNotFound
 
-        related_model = getattr(item.__class__, self.relationship_attribut).property.mapper.class_
+        related_model = getattr(obj.__class__, self.relation_field).property.mapper.class_
+
+        for obj_ in json_data['data']:
+            related_object = self.get_related_object(related_model, related_id_field, obj_)
+            getattr(obj, self.relation_field).append(related_object)
+
+        self.session.commit()
+
+    def get_relation(self, related_type_, related_id_field, **view_kwargs):
+        """Get a relation
+
+        :param str related_type_: the related resource type
+        :param str related_id_field: the identifier field of the related model
+        :param dict view_kwargs: kwargs from the resource view
+        :return tuple: the object and related object(s)
+        """
+        obj = self.get_object(**view_kwargs)
+
+        if not hasattr(obj, self.relation_field):
+            raise RelationNotFound(self.relation_field,
+                                   "%s as no attribut %s" % (self.model.__name__, self.relation_field))
+
+        related_objects = getattr(obj, self.relation_field)
+
+        if related_objects is None:
+            return obj, related_objects
+
+        if isinstance(related_objects, InstrumentedList):
+            return obj,\
+                [{'type': related_type_, 'id': getattr(obj_, related_id_field)} for obj_ in related_objects]
+        else:
+            return obj, {'type': related_type_, 'id': getattr(related_objects, related_id_field)}
+
+    def update_relation(self, json_data, related_id_field, **view_kwargs):
+        """Update a relation
+
+        :param dict json_data: the request params
+        :param str related_id_field: the identifier field of the related model
+        :param dict view_kwargs: kwargs from the resource view
+        """
+        obj = self.get_object(**view_kwargs)
+
+        if not hasattr(obj, self.relation_field):
+            raise RelationNotFound
+
+        related_model = getattr(obj.__class__, self.relation_field).property.mapper.class_
 
         if not isinstance(json_data['data'], list):
-            related_item = None
+            related_object = None
 
             if json_data['data'] is not None:
-                related_item = self.get_related_item(related_model, related_id_field, json_data['data'])
+                related_object = self.get_related_object(related_model, related_id_field, json_data['data'])
 
-            setattr(item, self.relationship_attribut, related_item)
+            setattr(obj, self.relation_field, related_object)
         else:
-            related_items = []
+            related_objects = []
 
-            for item_ in json_data['data']:
-                related_item = self.get_related_item(related_model, related_id_field, item_)
+            for obj_ in json_data['data']:
+                related_object = self.get_related_object(related_model, related_id_field, obj_)
 
-            setattr(item, self.relationship_attribut, related_items)
+            setattr(obj, self.relation_field, related_objects)
 
         self.session.commit()
 
-    def add_relationship(self, json_data, related_id_field, **view_kwargs):
-        """Add / create a relationship
+    def delete_relation(self, json_data, related_id_field, **view_kwargs):
+        """Delete a relation
 
         :param dict json_data: the request params
         :param str related_id_field: the identifier field of the related model
         :param dict view_kwargs: kwargs from the resource view
         """
-        item = self.get_item(**view_kwargs)
+        obj = self.get_object(**view_kwargs)
 
-        if not hasattr(item, self.relationship_attribut):
+        if not hasattr(obj, self.relation_field):
             raise RelationNotFound
 
-        related_model = getattr(item.__class__, self.relationship_attribut).property.mapper.class_
+        related_model = getattr(obj.__class__, self.relation_field).property.mapper.class_
 
-        for item_ in json_data['data']:
-            related_item = self.get_related_item(related_model, related_id_field, item_)
-            getattr(item, self.relationship_attribut).append(related_item)
+        for obj_ in json_data['data']:
+            related_object = self.get_related_object(related_model, related_id_field, obj_)
+            getattr(obj, self.relation_field).remove(related_object)
 
         self.session.commit()
 
-    def remove_relationship(self, json_data, related_id_field, **view_kwargs):
-        """Remove a relationship
-
-        :param dict json_data: the request params
-        :param str related_id_field: the identifier field of the related model
-        :param dict view_kwargs: kwargs from the resource view
-        """
-        item = self.get_item(**view_kwargs)
-
-        if not hasattr(item, self.relationship_attribut):
-            raise RelationNotFound
-
-        related_model = getattr(item.__class__, self.relationship_attribut).property.mapper.class_
-
-        for item_ in json_data['data']:
-            related_item = self.get_related_item(related_model, related_id_field, item_)
-            getattr(item, self.relationship_attribut).remove(related_item)
-
-        self.session.commit()
-
-    def get_related_item(self, related_model, related_id_field, item):
-        """Get a related item
+    def get_related_object(self, related_model, related_id_field, obj):
+        """Get a related object
 
         :param Model related_model: an sqlalchemy model
         :param str related_id_field: the identifier field of the related model
-        :param DeclarativeMeta item: the sqlalchemy item instance to retrieve related items from
-        :return DeclarativeMeta: a related item
+        :param DeclarativeMeta obj: the sqlalchemy object to retrieve related objects from
+        :return DeclarativeMeta: a related object
         """
         try:
-            related_item = self.session.query(related_model)\
-                                       .filter(getattr(related_model, related_id_field) == item['id'])\
-                                       .one()
+            related_object = self.session.query(related_model)\
+                                         .filter(getattr(related_model, related_id_field) == obj['id'])\
+                                         .one()
         except NoResultFound:
             raise RelatedObjectNotFound('%s.%s' % (related_model.__name__, related_id_field),
                                         "Could not find %s.%s=%s object" % (related_model.__name__,
                                                                             related_id_field,
-                                                                            item['id']))
+                                                                            obj['id']))
 
-        return related_item
+        return related_object
 
     def filter_query(self, query, filter_info, model):
-        """Filter query according to jsonapi rfc
+        """Filter query according to jsonapi 1.0
 
         :param Query query: sqlalchemy query to sort
         :param list filter_info: filter information
         :param DeclarativeMeta model: an sqlalchemy model
         :return Query: the sorted query
         """
-        for item in filter_info[model.__name__.lower()]:
+        for obj in filter_info[model.__name__.lower()]:
             try:
-                column = getattr(model, item['field'])
+                column = getattr(model, obj['field'])
             except AttributeError:
                 continue
-            if item['op'] == 'in':
-                filt = column.in_(item['value'].split(','))
+            if obj['op'] == 'in':
+                filt = column.in_(obj['value'].split(','))
             else:
                 try:
-                    attr = next(iter(filter(lambda e: hasattr(column, e % item['op']),
-                                            ['%s', '%s_', '__%s__']))) % item['op']
+                    attr = next(iter(filter(lambda e: hasattr(column, e % obj['op']),
+                                            ['%s', '%s_', '__%s__']))) % obj['op']
                 except IndexError:
                     continue
-                if item['value'] == 'null':
-                    item['value'] = None
-                filt = getattr(column, attr)(item['value'])
+                if obj['value'] == 'null':
+                    obj['value'] = None
+                filt = getattr(column, attr)(obj['value'])
                 query = query.filter(filt)
 
         return query
 
     def sort_query(self, query, sort_info):
-        """Sort query according to jsonapi rfc
+        """Sort query according to jsonapi 1.0
 
         :param Query query: sqlalchemy query to sort
         :param list sort_info: sort information
         :return Query: the sorted query
         """
         expressions = {'asc': asc, 'desc': desc}
-        order_items = []
+        order_objects = []
         for sort_opt in sort_info:
             field = text(sort_opt['field'])
             order = expressions.get(sort_opt['order'])
-            order_items.append(order(field))
-        return query.order_by(*order_items)
+            order_objects.append(order(field))
+        return query.order_by(*order_objects)
 
     def paginate_query(self, query, paginate_info):
-        """Paginate query according to jsonapi rfc
+        """Paginate query according to jsonapi 1.0
 
         :param Query query: sqlalchemy queryset
         :param dict paginate_info: pagination information
@@ -289,52 +285,44 @@ class SqlalchemyDataLayer(BaseDataLayer):
 
         return query
 
-    def get_base_query(self, **view_kwargs):
+    def query(self, **view_kwargs):
         """Construct the base query to retrieve wanted data
 
         :param dict view_kwargs: kwargs from the resource view
         """
-        raise NotImplemented
+        return self.session.query(self.model)
 
-    def before_create_instance(self, data, **view_kwargs):
-        """Provide additional data before instance creation
+    def before_create_object(self, data, **view_kwargs):
+        """Provide additional data before object creation
 
         :param dict data: the data validated by marshmallow
         :param dict view_kwargs: kwargs from the resource view
         """
         pass
 
-    def before_update_instance(self, item, data, **view_kwargs):
-        """Make checks or provide additional data before update instance
+    def before_update_object(self, obj, data, **view_kwargs):
+        """Make checks or provide additional data before update object
 
-        :param DeclarativeMeta item: an item from sqlalchemy
+        :param obj: an object from data layer
         :param dict data: the data validated by marshmallow
         :param dict view_kwargs: kwargs from the resource view
         """
         pass
 
-    def before_delete_instance(self, item, **view_kwargs):
-        """Make checks before delete instance
+    def before_delete_object(self, obj, **view_kwargs):
+        """Make checks before delete object
 
-        :param DeclarativeMeta item: an item from sqlalchemy
+        :param obj: an object from data layer
         :param dict view_kwargs: kwargs from the resource view
         """
         pass
 
     @classmethod
-    def configure(cls, data_layer):
-        """Plug get_base_query and optionally before_create_instance to the instance class
+    def configure(cls, meta):
+        """Rewrite default implemantation of methods or attributs
 
-        :param dict data_layer: information from Meta class used to configure the data layer instance
+        :param class meta: information from Meta class used to configure the data layer instance
         """
-        if data_layer.get('get_base_query') is not None and callable(data_layer['get_base_query']):
-            cls.get_base_query = data_layer['get_base_query']
-
-        if data_layer.get('before_create_instance') is not None and callable(data_layer['before_create_instance']):
-            cls.before_create_instance = data_layer['before_create_instance']
-
-        if data_layer.get('before_update_instance') is not None and callable(data_layer['before_update_instance']):
-            cls.before_update_instance = data_layer['before_update_instance']
-
-        if data_layer.get('before_delete_instance') is not None and callable(data_layer['before_delete_instance']):
-            cls.before_delete_instance = data_layer['before_delete_instance']
+        for obj in ('query', 'before_create_object', 'before_update_object', 'before_delete_object'):
+            if hasattr(meta, obj) and callable(getattr(meta, obj)):
+                setattr(cls, obj, getattr(meta, obj))

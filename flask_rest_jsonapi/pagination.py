@@ -7,11 +7,11 @@ from copy import copy
 from flask_rest_jsonapi.constants import DEFAULT_PAGE_SIZE
 
 
-def add_pagination_links(data, item_count, querystring, base_url):
+def add_pagination_links(data, object_count, querystring, base_url):
     """Add pagination links to result
 
     :param dict data: the result of the view
-    :param int item_count: number of main item in result
+    :param int object_count: number of objects in result
     :param QueryStringManager querystring: the managed querystring fields and values
     :param str base_url: the base url for pagination
     """
@@ -35,7 +35,7 @@ def add_pagination_links(data, item_count, querystring, base_url):
 
     # compute last link
     page_size = int(querystring.pagination.get('size', 0)) or DEFAULT_PAGE_SIZE
-    last_page = int(ceil(item_count / page_size))
+    last_page = int(ceil(object_count / page_size))
     if last_page > 0:
         all_qs_args.update({'page[number]': last_page})
         links['last'] += '?' + urlencode(all_qs_args)

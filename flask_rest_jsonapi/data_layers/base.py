@@ -11,28 +11,53 @@ class BaseDataLayer(object):
         for key, value in kwargs.items():
             setattr(self, key, value)
 
-    def get_items(self, *args, **kwargs):
-        """Get a collection of items through the data layer
+    def create_object(self, *args, **kwargs):
+        """Create an instance of an object and store it through the data layer
         """
         raise NotImplemented
 
-    def get_item(self, *args, **kwargs):
-        """Get an item through the data layer
+    def get_object(self, *args, **kwargs):
+        """Get an object through the data layer
         """
         raise NotImplemented
 
-    def create_and_save_item(self, *args, **kwargs):
-        """Create an instance of the item and store it through the data layer
+    def get_collection(self, *args, **kwargs):
+        """Get a collection of objects through the data layer
         """
         raise NotImplemented
 
-    def update_and_save_item(self, *args, **kwargs):
-        """Update an instance of an item and store changes through the data layer
+    def update_object(self, *args, **kwargs):
+        """Update an instance of an object and store changes through the data layer
         """
         raise NotImplemented
 
-    def delete_item(self, *args, **kwargs):
+    def delete_object(self, *args, **kwargs):
         """Delete an item through the data layer
+        """
+        raise NotImplemented
+
+    def before_create_object(self, data, **view_kwargs):
+        """Provide additional data before instance creation
+
+        :param dict data: the data validated by marshmallow
+        :param dict view_kwargs: kwargs from the resource view
+        """
+        raise NotImplemented
+
+    def before_update_object(self, obj, data, **view_kwargs):
+        """Make checks or provide additional data before update instance
+
+        :param obj: an object from data layer
+        :param dict data: the data validated by marshmallow
+        :param dict view_kwargs: kwargs from the resource view
+        """
+        raise NotImplemented
+
+    def before_delete_object(self, obj, **view_kwargs):
+        """Make checks before delete instance
+
+        :param obj: an object from data layer
+        :param dict view_kwargs: kwargs from the resource view
         """
         raise NotImplemented
 
