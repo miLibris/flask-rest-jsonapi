@@ -6,7 +6,7 @@ class JsonApiException(Exception):
     title = 'Unknow error'
     status = 500
 
-    def __init__(self, source, detail):
+    def __init__(self, source, detail, title=None, status=None):
         """Initialize a jsonapi exception
 
         :param str source: the source of the error
@@ -14,6 +14,10 @@ class JsonApiException(Exception):
         """
         self.source = source
         self.detail = detail
+        if title is not None:
+            self.title = title
+        if status is not None:
+            self.status = status
 
     def to_dict(self):
         return {'status': self.status,

@@ -50,7 +50,7 @@ class SqlalchemyDataLayer(BaseDataLayer):
         try:
             filter_field = getattr(self.model, id_field)
         except Exception:
-            raise Exception("Unable to find column name: %s on model: %s" % (id_field, self.model.__name__))
+            raise Exception("Unable to find attribut: %s on model: %s" % (id_field, self.model.__name__))
 
         filter_value = view_kwargs[self.url_field]
 

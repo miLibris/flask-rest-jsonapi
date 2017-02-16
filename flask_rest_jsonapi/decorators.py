@@ -56,11 +56,11 @@ def check_method_requirements(f):
         error_data = {'cls': cls.__name__, 'method': method_name}
 
         if not hasattr(self, 'data_layer'):
-            error_data.update({'error_field': 'data layer information'})
+            error_data.update({'error_field': 'a data layer class'})
             raise Exception(error_message % error_data)
 
         if not hasattr(self, 'schema'):
-            error_data.update({'error_field': 'schema information'})
+            error_data.update({'error_field': 'a schema class'})
             raise Exception(error_message % error_data)
 
         if 'ResourceRelationship' in cls_bases:

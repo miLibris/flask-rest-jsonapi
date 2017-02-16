@@ -15,7 +15,7 @@ from flask_rest_jsonapi.errors import jsonapi_errors
 from flask_rest_jsonapi.querystring import QueryStringManager as QSManager
 from flask_rest_jsonapi.pagination import add_pagination_links
 from flask_rest_jsonapi.exceptions import ObjectNotFound, RelationNotFound, InvalidField, InvalidInclude, InvalidType, \
-    BadRequest
+    BadRequest, JsonApiException
 from flask_rest_jsonapi.decorators import not_allowed_method, check_headers, check_method_requirements, add_headers
 from flask_rest_jsonapi.schema import compute_schema
 from flask_rest_jsonapi.data_layers.base import BaseDataLayer
@@ -37,7 +37,7 @@ class ResourceMeta(MethodViewType):
 
         if nmspc.get('data_layer_kwargs') is not None:
             if not isinstance(nmspc['data_layer_kwargs'], dict):
-                raise Exception("You must provide data layer information as dictionary in %s resource" % name)
+                raise Exception("You must provide data_layer_kwargs as dictionary in %s resource" % name)
             else:
                 data_layer_cls = getattr(meta, 'data_layer', SqlalchemyDataLayer)
                 data_layer_kwargs = nmspc.get('data_layer_kwargs', dict())
@@ -210,7 +210,10 @@ class ResourceList(with_metaclass(ResourceListMeta, Resource)):
                 error['title'] = "Validation error"
             return errors, 422
 
-        obj = self.data_layer.create_object(data, **kwargs)
+        try:
+            obj = self.data_layer.create_object(data, **kwargs)
+        except JsonApiException as e:
+            return jsonapi_errors([e.to_dict()]), e.status
 
         return schema.dump(obj).data, 201
 
@@ -281,7 +284,10 @@ class ResourceDetail(with_metaclass(ResourceDetailMeta, Resource)):
         except ObjectNotFound as e:
             return jsonapi_errors([e.to_dict()]), e.status
 
-        self.data_layer.update_object(obj, data, **kwargs)
+        try:
+            self.data_layer.update_object(obj, data, **kwargs)
+        except JsonApiException as e:
+            return jsonapi_errors([e.to_dict()]), e.status
 
         result = schema.dump(obj)
 
@@ -296,7 +302,10 @@ class ResourceDetail(with_metaclass(ResourceDetailMeta, Resource)):
         except ObjectNotFound as e:
             return jsonapi_errors([e.to_dict()]), e.status
 
-        self.data_layer.delete_object(obj, **kwargs)
+        try:
+            self.data_layer.delete_object(obj, **kwargs)
+        except JsonApiException as e:
+            return jsonapi_errors([e.to_dict()]), e.status
 
         return '', 204
 
@@ -314,14 +323,13 @@ class Relationship(with_metaclass(ResourceRelationshipMeta, Resource)):
             return jsonapi_errors([e.to_dict()]), e.status
 
         related_endpoint_kwargs = kwargs
-        if hasattr(self.opts, 'endpoint_kwargs'):
-            for key, value in copy(self.opts.endpoint_kwargs).items():
-                tmp_endpoint_kwargs_value = obj
+        if hasattr(self.opts, 'related_endpoint_kwargs'):
+            for key, value in copy(self.opts.related_endpoint_kwargs).items():
+                tmp_obj = obj
                 for field in value.split('.'):
-                    tmp_endpoint_kwargs_value = getattr(tmp_endpoint_kwargs_value, field)
-                endpoint_kwargs_value = tmp_endpoint_kwargs_value
-                self.opts.endpoint_kwargs[key] = endpoint_kwargs_value
-            related_endpoint_kwargs = self.opts.endpoint_kwargs
+                    tmp_obj = getattr(tmp_obj, field)
+                self.opts.related_endpoint_kwargs[key] = tmp_obj
+            related_endpoint_kwargs = self.opts.related_endpoint_kwargs
 
         result = {'links': {'self': url_for(self.endpoint, **kwargs),
                             'related': url_for(self.related_endpoint, **related_endpoint_kwargs)},
@@ -394,7 +402,7 @@ class Relationship(with_metaclass(ResourceRelationshipMeta, Resource)):
                         raise BadRequest('/data/type', 'Missing type in "data" node')
                     if 'id' not in obj:
                         raise BadRequest('/data/id', 'Missing id in "data" node')
-                    if obj['type'] != self.type_:
+                    if obj['type'] != type_:
                         raise InvalidType('/data/type', 'The type provided does not match the resource type')
         except (BadRequest, InvalidType) as e:
             return jsonapi_errors([e.to_dict()]), e.status

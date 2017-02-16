@@ -49,6 +49,10 @@ def compute_schema(schema_cls, default_kwargs, qs, include):
             tmp_only &= set(schema.only)
         schema.only = tuple(tmp_only)
 
+        # make sure again that id field is in only parameter unless marshamllow will raise an Exception
+        if schema.only is not None and 'id' not in schema.only:
+            schema.only += ('id',)
+
     # manage compound documents
     if include:
         for include_path in include:
