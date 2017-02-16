@@ -173,7 +173,7 @@ class ResourceList(with_metaclass(ResourceListMeta, Resource)):
 
         result = schema.dump(objects)
 
-        endpoint_kwargs = request.view_args if getattr(self.opts, 'include_endpoint_kwargs', None) is True else dict()
+        endpoint_kwargs = request.view_args if getattr(self.opts, 'endpoint_kwargs', None) is True else dict()
         add_pagination_links(result.data,
                              object_count,
                              qs,
@@ -322,14 +322,15 @@ class Relationship(with_metaclass(ResourceRelationshipMeta, Resource)):
         except (RelationNotFound, ObjectNotFound) as e:
             return jsonapi_errors([e.to_dict()]), e.status
 
-        related_endpoint_kwargs = kwargs
         if hasattr(self.opts, 'related_endpoint_kwargs'):
+            related_endpoint_kwargs = dict()
             for key, value in copy(self.opts.related_endpoint_kwargs).items():
                 tmp_obj = obj
                 for field in value.split('.'):
                     tmp_obj = getattr(tmp_obj, field)
-                self.opts.related_endpoint_kwargs[key] = tmp_obj
-            related_endpoint_kwargs = self.opts.related_endpoint_kwargs
+                related_endpoint_kwargs[key] = tmp_obj
+        else:
+            related_endpoint_kwargs = kwargs
 
         result = {'links': {'self': url_for(self.endpoint, **kwargs),
                             'related': url_for(self.related_endpoint, **related_endpoint_kwargs)},
@@ -353,8 +354,6 @@ class Relationship(with_metaclass(ResourceRelationshipMeta, Resource)):
         """
         json_data = request.get_json()
 
-        type_ = self.schema.opts.type_
-
         try:
             if 'data' not in json_data:
                 raise BadRequest('/data', 'You must provide data with a "data" route node')
@@ -365,7 +364,7 @@ class Relationship(with_metaclass(ResourceRelationshipMeta, Resource)):
                     raise BadRequest('/data/type', 'Missing type in "data" node')
                 if 'id' not in obj:
                     raise BadRequest('/data/id', 'Missing id in "data" node')
-                if obj['type'] != type_:
+                if obj['type'] != self.related_type_:
                     raise InvalidType('/data/type', 'The type provided does not match the resource type')
         except (BadRequest, InvalidType) as e:
             return jsonapi_errors([e.to_dict()]), e.status
@@ -384,8 +383,6 @@ class Relationship(with_metaclass(ResourceRelationshipMeta, Resource)):
         """
         json_data = request.get_json()
 
-        type_ = self.schema.opts.type_
-
         try:
             if 'data' not in json_data:
                 raise BadRequest('/data', 'You must provide data with a "data" route node')
@@ -394,7 +391,7 @@ class Relationship(with_metaclass(ResourceRelationshipMeta, Resource)):
                     raise BadRequest('/data/type', 'Missing type in "data" node')
                 if 'id' not in json_data['data']:
                     raise BadRequest('/data/id', 'Missing id in "data" node')
-                if json_data['data']['type'] != type_:
+                if json_data['data']['type'] != self.related_type_:
                     raise InvalidType('/data/type', 'The type field does not match the resource type')
             if isinstance(json_data['data'], list):
                 for obj in json_data['data']:
@@ -402,7 +399,7 @@ class Relationship(with_metaclass(ResourceRelationshipMeta, Resource)):
                         raise BadRequest('/data/type', 'Missing type in "data" node')
                     if 'id' not in obj:
                         raise BadRequest('/data/id', 'Missing id in "data" node')
-                    if obj['type'] != type_:
+                    if obj['type'] != self.related_type_:
                         raise InvalidType('/data/type', 'The type provided does not match the resource type')
         except (BadRequest, InvalidType) as e:
             return jsonapi_errors([e.to_dict()]), e.status
@@ -421,8 +418,6 @@ class Relationship(with_metaclass(ResourceRelationshipMeta, Resource)):
         """
         json_data = request.get_json()
 
-        type_ = self.schema.opts.type_
-
         try:
             if 'data' not in json_data:
                 raise BadRequest('/data', 'You must provide data with a "data" route node')
@@ -433,7 +428,7 @@ class Relationship(with_metaclass(ResourceRelationshipMeta, Resource)):
                     raise BadRequest('/data/type', 'Missing type in "data" node')
                 if 'id' not in obj:
                     raise BadRequest('/data/id', 'Missing id in "data" node')
-                if obj['type'] != type_:
+                if obj['type'] != self.related_type_:
                     raise InvalidType('/data/type', 'The type provided does not match the resource type')
         except (BadRequest, InvalidType) as e:
             return jsonapi_errors([e.to_dict()]), e.status
