@@ -132,7 +132,13 @@ class Resource(MethodView):
             meth = getattr(self, 'get', None)
         assert meth is not None, 'Unimplemented method %r' % request.method
 
-        resp = meth(*args, **kwargs)
+        try:
+            resp = meth(*args, **kwargs)
+        except JsonApiException as e:
+            return make_response(json.dumps(jsonapi_errors([e.to_dict()])), e.status, dict())
+        except Exception as e:
+            exc = JsonApiException('', str(e))
+            return make_response(json.dumps(jsonapi_errors([exc.to_dict()])), exc.status, dict())
 
         if isinstance(resp, Response):
             return resp
