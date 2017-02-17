@@ -132,7 +132,13 @@ class Resource(MethodView):
             meth = getattr(self, 'get', None)
         assert meth is not None, 'Unimplemented method %r' % request.method
 
-        resp = meth(*args, **kwargs)
+        try:
+            resp = meth(*args, **kwargs)
+        except JsonApiException as e:
+            return make_response(json.dumps(jsonapi_errors([e.to_dict()])), e.status, dict())
+        except Exception as e:
+            exc = JsonApiException('', str(e))
+            return make_response(json.dumps(jsonapi_errors([exc.to_dict()])), exc.status, dict())
 
         if isinstance(resp, Response):
             return resp
@@ -167,8 +173,11 @@ class ResourceList(with_metaclass(ResourceListMeta, Resource)):
         schema_kwargs = getattr(self.opts, 'schema_get_kwargs', dict())
         schema_kwargs.update({'many': True})
         try:
-            schema = compute_schema(self.schema, schema_kwargs, qs, None)
-        except InvalidField as e:
+            schema = compute_schema(self.schema,
+                                    schema_kwargs,
+                                    qs,
+                                    qs.include)
+        except (InvalidField, InvalidInclude) as e:
             return jsonapi_errors([e.to_dict()]), e.status
 
         result = schema.dump(objects)
@@ -187,8 +196,15 @@ class ResourceList(with_metaclass(ResourceListMeta, Resource)):
         """
         json_data = request.get_json()
 
-        schema_kwargs = getattr(self.opts, 'schema_post_kwargs', dict())
-        schema = self.schema(**schema_kwargs)
+        qs = QSManager(request.args)
+        try:
+            schema = compute_schema(self.schema,
+                                    getattr(self.opts, 'schema_post_kwargs', dict()),
+                                    qs,
+                                    qs.include)
+        except (InvalidField, InvalidInclude) as e:
+            return jsonapi_errors([e.to_dict()]), e.status
+
         try:
             data, errors = schema.load(json_data)
         except IncorrectTypeError as e:
@@ -247,9 +263,17 @@ class ResourceDetail(with_metaclass(ResourceDetailMeta, Resource)):
         """
         json_data = request.get_json()
 
+        qs = QSManager(request.args)
         schema_kwargs = getattr(self.opts, 'schema_patch_kwargs', dict())
-        schema_kwargs.pop('partial', None)
-        schema = self.schema(partial=True, **schema_kwargs)
+        schema_kwargs.update({'partial': True})
+        try:
+            schema = compute_schema(self.schema,
+                                    schema_kwargs,
+                                    qs,
+                                    qs.include)
+        except (InvalidField, InvalidInclude) as e:
+            return jsonapi_errors([e.to_dict()]), e.status
+
         try:
             data, errors = schema.load(json_data)
         except IncorrectTypeError as e:
