@@ -43,16 +43,14 @@ class SqlalchemyDataLayer(BaseDataLayer):
         :params dict view_kwargs: kwargs from the resource view
         :return DeclarativeMeta: an object from sqlalchemy
         """
-        if not hasattr(self, 'url_field'):
-            raise Exception("You must provide an url_field in data_layer_kwargs in %s" % self.resource.__name__)
-
         id_field = getattr(self, 'id_field', 'id')
         try:
             filter_field = getattr(self.model, id_field)
         except Exception:
             raise Exception("Unable to find attribut: %s on model: %s" % (id_field, self.model.__name__))
 
-        filter_value = view_kwargs[self.url_field]
+        url_field = getattr(self, 'url_field', 'id')
+        filter_value = view_kwargs[url_field]
 
         try:
             obj = self.session.query(self.model).filter(filter_field == filter_value).one()
@@ -316,13 +314,3 @@ class SqlalchemyDataLayer(BaseDataLayer):
         :param dict view_kwargs: kwargs from the resource view
         """
         pass
-
-    @classmethod
-    def configure(cls, meta):
-        """Rewrite default implemantation of methods or attributs
-
-        :param class meta: information from Meta class used to configure the data layer instance
-        """
-        for obj in ('query', 'before_create_object', 'before_update_object', 'before_delete_object'):
-            if hasattr(meta, obj) and callable(getattr(meta, obj)):
-                setattr(cls, obj, getattr(meta, obj))
