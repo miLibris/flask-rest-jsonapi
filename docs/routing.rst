@@ -18,12 +18,12 @@ Example:
 
 This routing example will create this site map:
 
-============================  ================  ============
-url                           method            endpoint
-============================  ================  ============
-/topics                       GET,POST          topic_list
-/topics/<int:topic_id>        GET,PATCH,DELETE  topic_detail
-============================  ================  ============
+======================  ================  ============
+url                     method            endpoint
+======================  ================  ============
+/topics                 GET,POST          topic_list
+/topics/<int:topic_id>  GET,PATCH,DELETE  topic_detail
+======================  ================  ============
 
 You can add multiple URLs for the same resource:
 
