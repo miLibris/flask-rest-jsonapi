@@ -316,13 +316,3 @@ class SqlalchemyDataLayer(BaseDataLayer):
         :param dict view_kwargs: kwargs from the resource view
         """
         pass
-
-    @classmethod
-    def configure(cls, meta):
-        """Rewrite default implemantation of methods or attributs
-
-        :param class meta: information from Meta class used to configure the data layer instance
-        """
-        for obj in ('query', 'before_create_object', 'before_update_object', 'before_delete_object'):
-            if hasattr(meta, obj) and callable(getattr(meta, obj)):
-                setattr(cls, obj, getattr(meta, obj))
