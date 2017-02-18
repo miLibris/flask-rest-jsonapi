@@ -8,20 +8,25 @@
     :target: http://flask-rest-jsonapi.readthedocs.io/en/latest/?badge=latest
     :alt: Documentation Status
 
-# Flask-Rest-JSONAPI
+==================
+Flask-Rest-JSONAPI
+==================
+
 Flask-Rest-JSONAPI is a flask extension to build REST api. It combines the power of
 [Flask-Restless](https://flask-restless.readthedocs.io/en/stable/) and the flexibility of
 [Flask-RESTful](http://flask-restful-cn.readthedocs.io/en/0.3.5/a) around a strong specification
 [JSONAPI 1.0](http://jsonapi.org/). This framework is design to quickly build REST api and to fit the complexity of real
 life projects with legacy data and different data storages.
 
-## Install
-
-.. code-block:: bash
+-------
+Install
+-------
 
     $ pip install Flask-Rest-JSONAPI
 
-## Quickstart
+----------
+Quickstart
+----------
 
 .. code-block:: python
 
@@ -91,37 +96,27 @@ url                       method  endpoint       Usage
 /persons/<int:person_id>  DELETE  person_detail  Delete a person
 ========================  ======  =============  ===========================
 
-## Flask-Rest-JSONAPI vs [Flask-RESTful](http://flask-restful-cn.readthedocs.io/en/0.3.5/a)
+----------------------------------------------------------------------------------------
+Flask-Rest-JSONAPI vs [Flask-RESTful](http://flask-restful-cn.readthedocs.io/en/0.3.5/a)
+----------------------------------------------------------------------------------------
 
-- Instead of [Flask-RESTful](http://flask-restful-cn.readthedocs.io/en/0.3.5/a), Flask-Rest-JSONAPI provides a default
-implementation of get, post, patch and delete methods around a strong specification JSONAPI 1.0. Thanks to this you can
-build REST api very quickly.
-- Flask-Rest-JSONAPI is as flexible as [Flask-RESTful](http://flask-restful-cn.readthedocs.io/en/0.3.5/a). You can
-rewrite every default methods implementation to make custom work like distributing object creation.
+* Instead of [Flask-RESTful](http://flask-restful-cn.readthedocs.io/en/0.3.5/a), Flask-Rest-JSONAPI provides a default implementation of get, post, patch and delete methods around a strong specification JSONAPI 1.0. Thanks to this you can build REST api very quickly.
+* Flask-Rest-JSONAPI is as flexible as [Flask-RESTful](http://flask-restful-cn.readthedocs.io/en/0.3.5/a). You can rewrite every default methods implementation to make custom work like distributing object creation.
 
-## Flask-Rest-JSONAPI vs [Flask-Restless](https://flask-restless.readthedocs.io/en/stable/)
+----------------------------------------------------------------------------------------
+Flask-Rest-JSONAPI vs [Flask-Restless](https://flask-restless.readthedocs.io/en/stable/)
+----------------------------------------------------------------------------------------
 
-- Flask-Rest-JSONAPI is a real implementation of JSONAPI 1.0 specification. So instead of
-[Flask-Restless](https://flask-restless.readthedocs.io/en/stable/), Flask-Rest-JSONAPI force you to create a real
-logical abstration over your data models with [Marshmallow](https://marshmallow.readthedocs.io/en/latest/). So you can
-create complex resource over your data.
-- Instead of [Flask-Restless](https://flask-restless.readthedocs.io/en/stable/), Flask-Rest-JSONAPI can use any ORM or
-data storage through the data layer concept, not only [SQLAlchemy](http://www.sqlalchemy.org/). A data layer is a CRUD
-interface between your resource and one or more data storage so you can fetch data from any data storage of your choice
-or create resource that use multiple data storage.
-- Like i said previously, Flask-Rest-JSONAPI is a real implementation of JSONAPI 1.0 specification. So instead of
-[Flask-Restless](https://flask-restless.readthedocs.io/en/stable/) you can manage relationships via REST. You can create
-dedicated url to create a CRUD api to manage relationships. 
-- Plus Flask-Rest-JSONAPI helps you to design your application with strong separation between resource definition
-(schemas), resource management (resource class) and route definition to get a great organization of your source code.
-- Instead of [Flask-Restless](https://flask-restless.readthedocs.io/en/stable/), Flask-Rest-JSONAPI is highly
-customizable. For example you can entirely customize you urls, define multiple urls for the same resource manager,
-control serialization parameters of each methods and lot of very useful parameters.
-- Finally instead of [Flask-Restless](https://flask-restless.readthedocs.io/en/stable/), Flask-Rest-JSONAPI provides a
-great error handling system according to JSONAPI 1.0. Plus the exception handling system really helps the api developer
-to quickly find missing configuration requirements of your resources.
+* Flask-Rest-JSONAPI is a real implementation of JSONAPI 1.0 specification. So instead of [Flask-Restless](https://flask-restless.readthedocs.io/en/stable/), Flask-Rest-JSONAPI force you to create a real logical abstration over your data models with [Marshmallow](https://marshmallow.readthedocs.io/en/latest/). So you can create complex resource over your data.
+* Instead of [Flask-Restless](https://flask-restless.readthedocs.io/en/stable/), Flask-Rest-JSONAPI can use any ORM or data storage through the data layer concept, not only [SQLAlchemy](http://www.sqlalchemy.org/). A data layer is a CRUD interface between your resource and one or more data storage so you can fetch data from any data storage of your choice or create resource that use multiple data storage.
+* Like i said previously, Flask-Rest-JSONAPI is a real implementation of JSONAPI 1.0 specification. So instead of [Flask-Restless](https://flask-restless.readthedocs.io/en/stable/) you can manage relationships via REST. You can create dedicated url to create a CRUD api to manage relationships. 
+* Plus Flask-Rest-JSONAPI helps you to design your application with strong separation between resource definition (schemas), resource management (resource class) and route definition to get a great organization of your source code.
+* Instead of [Flask-Restless](https://flask-restless.readthedocs.io/en/stable/), Flask-Rest-JSONAPI is highlycustomizable. For example you can entirely customize you urls, define multiple urls for the same resource manager,control serialization parameters of each methods and lot of very useful parameters.
+* Finally instead of [Flask-Restless](https://flask-restless.readthedocs.io/en/stable/), Flask-Rest-JSONAPI provides agreat error handling system according to JSONAPI 1.0. Plus the exception handling system really helps the api developerto quickly find missing configuration requirements of your resources.
 
-## Documentation
+-------------
+Documentation
+-------------
 
 Documentation available here: http://flask-rest-jsonapi.readthedocs.io/en/latest/
 
