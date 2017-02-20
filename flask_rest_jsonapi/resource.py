@@ -298,7 +298,7 @@ class ResourceDetail(with_metaclass(ResourceDetailMeta, Resource)):
         try:
             if 'id' not in json_data['data']:
                 raise BadRequest('/data/id', 'Missing id in "data" node')
-            if json_data['data']['id'] != kwargs[self.data_layer.url_field]:
+            if json_data['data']['id'] != str(kwargs[getattr(self.data_layer, 'url_field', 'id')]):
                 raise BadRequest('/data/id', 'Value of id does not match the resource identifier in url')
         except BadRequest as e:
             return jsonapi_errors([e.to_dict()]), e.status
