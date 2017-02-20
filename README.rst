@@ -110,7 +110,7 @@ Flask-Rest-JSONAPI vs `Flask-Restless <https://flask-restless.readthedocs.io/en/
 * Like i said previously, Flask-Rest-JSONAPI is a real implementation of JSONAPI 1.0 specification. So instead of Flask-Restless you can manage relationships via REST. You can create dedicated url to create a CRUD api to manage relationships. 
 * Plus Flask-Rest-JSONAPI helps you to design your application with strong separation between resource definition (schemas), resource management (resource class) and route definition to get a great organization of your source code.
 * Instead of Flask-Restless, Flask-Rest-JSONAPI is highly customizable. For example you can entirely customize you urls, define multiple urls for the same resource manager,control serialization parameters of each methods and lot of very useful parameters.
-* Finally instead of Flask-Restless, Flask-Rest-JSONAPI provides agreat error handling system according to JSONAPI 1.0. Plus the exception handling system really helps the api developer to quickly find missing resources requirements.
+* Finally instead of Flask-Restless, Flask-Rest-JSONAPI provides a great error handling system according to JSONAPI 1.0. Plus the exception handling system really helps the api developer to quickly find missing resources requirements.
 
 Documentation
 =============
