@@ -22,10 +22,12 @@ Quickstart
 
 .. code-block:: python
 
+    # -*- coding: utf-8 -*-
+
     from flask import Flask
-    from flask_rest_jsonapi import Api, ResourceDetail
+    from flask_rest_jsonapi import Api, ResourceDetail, ResourceList
     from flask_sqlalchemy import SQLAlchemy
-    from marshmallow_jsonapi.flask import Schema, Relationship
+    from marshmallow_jsonapi.flask import Schema
     from marshmallow_jsonapi import fields
 
     # Create the Flask application and the Flask-SQLAlchemy object.
@@ -37,6 +39,7 @@ Quickstart
     # Create the api
     api = Api(app)
 
+
     # Create model
     class Person(db.Model):
         id = db.Column(db.Integer, primary_key=True)
@@ -46,16 +49,18 @@ Quickstart
     # Create the database tables.
     db.create_all()
 
+
     # Create schema
     class PersonSchema(Schema):
         class Meta:
             type_ = 'person'
             self_view = 'person_detail'
-            self_view_kwargs = {'person_id': '<id>'}
+            self_view_kwargs = {'id': '<id>'}
 
         id = fields.Str(dump_only=True)
         name = fields.Str()
         created = fields.Date()
+
 
     # Create resource
     class PersonList(ResourceList):
@@ -66,7 +71,7 @@ Quickstart
 
     class PersonDetail(ResourceDetail):
         schema = PersonSchema
-        data_layer_kwargs = {'session': sql_db.session,
+        data_layer_kwargs = {'session': db.session,
                              'model': Person}
 
     # Create endpoints
@@ -75,6 +80,8 @@ Quickstart
 
     # start the flask loop
     app.run()
+
+
 
 
 This example provides this api:
