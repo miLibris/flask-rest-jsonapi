@@ -136,9 +136,9 @@ class Resource(MethodView):
             resp = meth(*args, **kwargs)
         except JsonApiException as e:
             return make_response(json.dumps(jsonapi_errors([e.to_dict()])), e.status, dict())
-        except Exception as e:
-            exc = JsonApiException('', str(e))
-            return make_response(json.dumps(jsonapi_errors([exc.to_dict()])), exc.status, dict())
+        # except Exception as e:
+        #     exc = JsonApiException('', str(e))
+        #     return make_response(json.dumps(jsonapi_errors([exc.to_dict()])), exc.status, dict())
 
         if isinstance(resp, Response):
             return resp
@@ -227,7 +227,7 @@ class ResourceList(with_metaclass(ResourceListMeta, Resource)):
             return errors, 422
 
         try:
-            obj = self.data_layer.create_object(data, **kwargs)
+            obj = self.data_layer.create_object(data, self.opts, **kwargs)
         except JsonApiException as e:
             return jsonapi_errors([e.to_dict()]), e.status
 
@@ -298,7 +298,7 @@ class ResourceDetail(with_metaclass(ResourceDetailMeta, Resource)):
         try:
             if 'id' not in json_data['data']:
                 raise BadRequest('/data/id', 'Missing id in "data" node')
-            if json_data['data']['id'] != kwargs[self.data_layer.url_field]:
+            if json_data['data']['id'] != str(kwargs[getattr(self.data_layer, 'url_field', 'id')]):
                 raise BadRequest('/data/id', 'Value of id does not match the resource identifier in url')
         except BadRequest as e:
             return jsonapi_errors([e.to_dict()]), e.status
@@ -309,7 +309,7 @@ class ResourceDetail(with_metaclass(ResourceDetailMeta, Resource)):
             return jsonapi_errors([e.to_dict()]), e.status
 
         try:
-            self.data_layer.update_object(obj, data, **kwargs)
+            self.data_layer.update_object(obj, data, self.opts, **kwargs)
         except JsonApiException as e:
             return jsonapi_errors([e.to_dict()]), e.status
 
@@ -342,7 +342,7 @@ class Relationship(with_metaclass(ResourceRelationshipMeta, Resource)):
         """
         related_id_field = getattr(self.opts, 'related_id_field', 'id')
         try:
-            obj, data = self.data_layer.get_relation(self.related_type_, related_id_field, **kwargs)
+            obj, data = self.data_layer.get_relationship(self.related_type_, related_id_field, **kwargs)
         except (RelationNotFound, ObjectNotFound) as e:
             return jsonapi_errors([e.to_dict()]), e.status
 
@@ -395,7 +395,7 @@ class Relationship(with_metaclass(ResourceRelationshipMeta, Resource)):
 
         related_id_field = getattr(self.opts, 'related_id_field', 'id')
         try:
-            self.data_layer.create_relation(json_data, related_id_field, **kwargs)
+            self.data_layer.create_relationship(json_data, related_id_field, **kwargs)
         except (RelationNotFound, ObjectNotFound) as e:
             return jsonapi_errors([e.to_dict()]), e.status
 
@@ -430,7 +430,7 @@ class Relationship(with_metaclass(ResourceRelationshipMeta, Resource)):
 
         related_id_field = getattr(self.opts, 'related_id_field', 'id')
         try:
-            self.data_layer.update_relation(json_data, related_id_field, **kwargs)
+            self.data_layer.update_relationship(json_data, related_id_field, **kwargs)
         except (RelationNotFound, ObjectNotFound) as e:
             return jsonapi_errors([e.to_dict()]), e.status
 
@@ -459,7 +459,7 @@ class Relationship(with_metaclass(ResourceRelationshipMeta, Resource)):
 
         related_id_field = getattr(self.opts, 'related_id_field', 'id')
         try:
-            self.data_layer.delete_relation(json_data, related_id_field, **kwargs)
+            self.data_layer.delete_relationship(json_data, related_id_field, **kwargs)
         except RelationNotFound as e:
             return jsonapi_errors([e.to_dict()]), e.status
 

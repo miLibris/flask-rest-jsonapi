@@ -9,7 +9,7 @@ class JsonApiException(Exception):
     def __init__(self, source, detail, title=None, status=None):
         """Initialize a jsonapi exception
 
-        :param str source: the source of the error
+        :param dict source: the source of the error
         :param str detail: the detail of the error
         """
         self.source = source
@@ -21,7 +21,7 @@ class JsonApiException(Exception):
 
     def to_dict(self):
         return {'status': self.status,
-                'source': {'pointer': self.source},
+                'source': self.source,
                 'title': self.title,
                 'detail': self.detail}
 
@@ -34,9 +34,33 @@ class BadRequest(JsonApiException):
 class InvalidField(BadRequest):
     title = "Invalid fields querystring parameter."
 
+    def __init__(self, detail):
+        self.source = {'parameter': 'fields'}
+        self.detail = detail
+
 
 class InvalidInclude(BadRequest):
     title = "Invalid include querystring parameter."
+
+    def __init__(self, detail):
+        self.source = {'parameter': 'include'}
+        self.detail = detail
+
+
+class InvalidFilters(BadRequest):
+    title = "Invalid filters querystring parameter."
+
+    def __init__(self, detail):
+        self.source = {'parameter': 'filters'}
+        self.detail = detail
+
+
+class InvalidSort(BadRequest):
+    title = "Invalid sort querystring parameter."
+
+    def __init__(self, detail):
+        self.source = {'parameter': 'sort'}
+        self.detail = detail
 
 
 class ObjectNotFound(JsonApiException):
