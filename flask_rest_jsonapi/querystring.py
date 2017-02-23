@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
 
 import json
-from copy import copy
+
+from flask_rest_jsonapi.exceptions import BadRequest, InvalidFilters, InvalidSort, InvalidInclude
 
 
 class QueryStringManager(object):
@@ -26,28 +27,31 @@ class QueryStringManager(object):
 
         self.qs = querystring
 
-    def _get_key_values(self, index, multiple_values=True):
+    def _get_key_values(self, index):
         """Return a dict containing key / values items for a given key, used for items like filters, page, etc.
 
         :param str index: index to use for filtering
-        :param bool multiple_values: indicate if each key can have more than one value
         :return dict: a dict of key / values items
         """
         results = {}
+
         for key, value in self.qs.items():
-            if not key.startswith(index):
-                continue
             try:
+                if not key.startswith(index):
+                    continue
+
                 key_start = key.index('[') + 1
                 key_end = key.index(']')
-            except ValueError:
-                continue
-            item_key = key[key_start:key_end]
-            if multiple_values:
-                item_value = value.split(',')
-            else:
-                item_value = value
-            results.update({item_key: item_value})
+                item_key = key[key_start:key_end]
+
+                if ',' in value:
+                    item_value = value.split(',')
+                else:
+                    item_value = value
+                results.update({item_key: item_value})
+            except Exception:
+                raise BadRequest({'parameter': key}, "Parse error")
+
         return results
 
     @property
@@ -56,34 +60,23 @@ class QueryStringManager(object):
 
         :return dict: dict of managed querystring parameter
         """
-        ret = {}
-        for key, value in self.qs.items():
-            if key.startswith(self.MANAGED_KEYS):
-                ret[key] = value
-        return ret
+        return {key: value for (key, value) in self.qs.items() if key.startswith(self.MANAGED_KEYS)}
 
     @property
     def filters(self):
         """Return filters from query string.
 
-        :return list: a list of filter information
-
-        Filters will be parsed based on jsonapi recommendations_
-
-        .. _recommendations: http://jsonapi.org/recommendations/#filtering
-
-        Return value will be a dict containing all fields by resource, for example::
-
-            {
-                "user": [{'field': 'username', 'op': 'eq', 'value': 'test'}],
-            }
+        :return list: filter information
         """
-        filters = self._get_key_values('filter', multiple_values=False)
-        for key, value in copy(filters).items():
+        filters = self.qs.get('filters')
+        if filters is not None:
             try:
-                filters[key] = json.loads(value)
-            except ValueError:
-                del filters[key]
+                filters = json.loads(filters)
+            except (ValueError, TypeError):
+                raise InvalidFilters("Parse error")
+
+            if not isinstance(filters, list):
+                raise InvalidFilters("Must be a list")
 
         return filters
 
@@ -112,7 +105,7 @@ class QueryStringManager(object):
             try:
                 int(value)
             except ValueError:
-                raise Exception("Invalid value for %s attribut of page in querystring" % key)
+                raise BadRequest({'parameter': 'page[%s]' % key}, "Parse error")
 
         return result
 
@@ -141,19 +134,21 @@ class QueryStringManager(object):
         Example of return value::
 
             [
-                {'field': 'created_at', 'order': 'desc', 'raw': '-created_at'},
+                {'field': 'created_at', 'order': 'desc'},
             ]
 
         """
-        sort_fields = self.qs.get('sort')
-        if not sort_fields:
-            return []
-        sorting_results = []
-        for sort_field in sort_fields.split(','):
-            field = sort_field.replace('-', '')
-            order = 'desc' if sort_field.startswith('-') else 'asc'
-            sorting_results.append({'field': field, 'order': order, 'raw': sort_field})
-        return sorting_results
+        if self.qs.get('sort'):
+            try:
+                sorting_results = []
+                for sort_field in self.qs['sort'].split(','):
+                    field = sort_field.replace('-', '')
+                    order = 'desc' if sort_field.startswith('-') else 'asc'
+                    sorting_results.append({'field': field, 'order': order})
+            except Exception:
+                raise InvalidSort("Parse error")
+
+        return []
 
     @property
     def include(self):
@@ -162,4 +157,7 @@ class QueryStringManager(object):
         :return list: a list of include information
         """
         include_param = self.qs.get('include')
-        return include_param.split(',') if include_param else []
+        try:
+            return include_param.split(',') if include_param else []
+        except Exception:
+            raise InvalidInclude("Parse error")

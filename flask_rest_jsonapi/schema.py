@@ -2,7 +2,7 @@
 
 from marshmallow import class_registry
 from marshmallow.base import SchemaABC
-from marshmallow_jsonapi.fields import Relationship as MarshmallowJsonapiRelationship
+from marshmallow_jsonapi.fields import Relationship
 
 from flask_rest_jsonapi.exceptions import InvalidField, InvalidInclude
 
@@ -25,9 +25,9 @@ def compute_schema(schema_cls, default_kwargs, qs, include):
         for include_path in include:
             field = include_path.split('.')[0]
             if field not in schema_cls._declared_fields:
-                raise InvalidInclude(field, "%s has no attribut %s" % (schema_cls.__name__, field))
-            elif not issubclass(schema_cls._declared_fields[field].__class__, MarshmallowJsonapiRelationship):
-                raise InvalidInclude(field, "%s is not a relationship attribut of %s" % (field, schema_cls.__name__))
+                raise InvalidInclude("%s has no attribut %s" % (schema_cls.__name__, field))
+            elif not isinstance(schema_cls._declared_fields[field], Relationship):
+                raise InvalidInclude("%s is not a relationship attribut of %s" % (field, schema_cls.__name__))
             schema_kwargs['include_data'] += (field, )
 
     # make sure id field is in only parameter unless marshamllow will raise an Exception
@@ -42,7 +42,7 @@ def compute_schema(schema_cls, default_kwargs, qs, include):
         # check that sparse fieldsets exists in the schema
         for field in qs.fields[schema.opts.type_]:
             if field not in schema.declared_fields:
-                raise InvalidField(field, "%s has no attribut %s" % (schema.__class__.__name__, field))
+                raise InvalidField("%s has no attribut %s" % (schema.__class__.__name__, field))
 
         tmp_only = set(schema.declared_fields.keys()) & set(qs.fields[schema.opts.type_])
         if schema.only:
@@ -73,3 +73,11 @@ def compute_schema(schema_cls, default_kwargs, qs, include):
             relation_field.__dict__['_Relationship__schema'] = related_schema
 
     return schema
+
+
+def get_relationships(schema):
+    """Return relationship fields of a schema
+
+    :param Schema schema: a marshmallow schema
+    """
+    return [key for (key, value) in schema._declared_fields.items() if isinstance(value, Relationship)]
