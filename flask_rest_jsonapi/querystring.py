@@ -122,7 +122,12 @@ class QueryStringManager(object):
             }
 
         """
-        return self._get_key_values('fields')
+        result = self._get_key_values('fields')
+        for key, value in result.items():
+            if not isinstance(value, list):
+                result[key] = [value]
+
+        return result
 
     @property
     def sorting(self):
