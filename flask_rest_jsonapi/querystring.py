@@ -150,6 +150,7 @@ class QueryStringManager(object):
                     field = sort_field.replace('-', '')
                     order = 'desc' if sort_field.startswith('-') else 'asc'
                     sorting_results.append({'field': field, 'order': order})
+                    return sorting_results
             except Exception:
                 raise InvalidSort("Parse error")
 
