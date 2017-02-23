@@ -27,17 +27,17 @@ class QueryStringManager(object):
 
         self.qs = querystring
 
-    def _get_key_values(self, index):
+    def _get_key_values(self, name):
         """Return a dict containing key / values items for a given key, used for items like filters, page, etc.
 
-        :param str index: index to use for filtering
+        :param str name: name of the querystring parameter
         :return dict: a dict of key / values items
         """
         results = {}
 
         for key, value in self.qs.items():
             try:
-                if not key.startswith(index):
+                if not key.startswith(name):
                     continue
 
                 key_start = key.index('[') + 1
@@ -100,7 +100,7 @@ class QueryStringManager(object):
             {'number': '25', 'size': '10'}
         """
         # check values type
-        result = self._get_key_values('page', multiple_values=False)
+        result = self._get_key_values('page')
         for key, value in result.items():
             try:
                 int(value)
