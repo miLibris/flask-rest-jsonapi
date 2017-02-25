@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 
+import types
+
 from sqlalchemy.orm.exc import NoResultFound
 from sqlalchemy.orm.collections import InstrumentedList
 from sqlalchemy.sql.expression import desc, asc, text
@@ -446,3 +448,13 @@ class SqlalchemyDataLayer(BaseDataLayer):
         :param dict view_kwargs: kwargs from the resource view
         """
         pass
+
+    def configure(self, meta):
+        """Rewrite default method implemantation of query, before_create_instance, before_update_instance and
+        before_delete_instance ùethods
+
+        :param class meta: information from Meta class used to configure the data layer instance
+        """
+        for obj in ('query', 'before_create_instance', 'before_update_instance', 'before_delete_instance'):
+            if hasattr(meta, obj):
+                setattr(self, obj, types.MethodType(getattr(meta, obj), self))

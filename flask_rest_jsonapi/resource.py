@@ -4,7 +4,6 @@ import inspect
 from six import with_metaclass
 import json
 from copy import copy
-import types
 
 from werkzeug.wrappers import Response
 from flask import request, url_for, make_response
@@ -42,9 +41,7 @@ class ResourceMeta(MethodViewType):
                 data_layer_cls = getattr(meta, 'data_layer', SqlalchemyDataLayer)
                 data_layer_kwargs = nmspc.get('data_layer_kwargs', dict())
                 data_layer = type('%sDataLayer' % name, (data_layer_cls, ), dict())(**data_layer_kwargs)
-                for obj in ('query', 'before_create_instance', 'before_update_instance', 'before_delete_instance'):
-                    if hasattr(meta, obj):
-                        setattr(data_layer, obj, types.MethodType(getattr(meta, obj), data_layer))
+                data_layer.configure(meta)
 
         if data_layer is not None:
             data_layer.resource = cls
