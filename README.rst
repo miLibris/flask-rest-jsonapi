@@ -1,9 +1,9 @@
 .. image:: https://badge.fury.io/py/Flask-Rest-JSONAPI.svg
     :target: https://badge.fury.io/py/Flask-Rest-JSONAPI
-.. image:: https://travis-ci.org/miLibris/flask-rest-jsonapi.svg?branch=master
+.. image:: https://travis-ci.org/miLibris/flask-rest-jsonapi.svg
     :target: https://travis-ci.org/miLibris/flask-rest-jsonapi
-.. image:: https://coveralls.io/repos/github/miLibris/flask-rest-jsonapi/badge.svg?branch=master
-    :target: https://coveralls.io/github/miLibris/flask-rest-jsonapi?branch=master
+.. image:: https://coveralls.io/repos/github/miLibris/flask-rest-jsonapi/badge.svg
+    :target: https://coveralls.io/github/miLibris/flask-rest-jsonapi
 .. image:: https://readthedocs.org/projects/flask-rest-jsonapi/badge/?version=latest
     :target: http://flask-rest-jsonapi.readthedocs.io/en/latest/?badge=latest
     :alt: Documentation Status
