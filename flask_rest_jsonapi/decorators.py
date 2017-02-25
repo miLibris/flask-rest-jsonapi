@@ -50,7 +50,6 @@ def check_method_requirements(f):
     """
     def wrapped_f(self, *args, **kwargs):
         cls = type(self)
-        cls_bases = [cls_.__name__ for cls_ in cls.__bases__]
         method_name = f.__name__
         error_message = "You must provide %(error_field)s in %(cls)s to get access to the default %(method)s method"
         error_data = {'cls': cls.__name__, 'method': method_name}
@@ -59,18 +58,14 @@ def check_method_requirements(f):
             error_data.update({'error_field': 'a data layer class'})
             raise Exception(error_message % error_data)
 
-        if not hasattr(self, 'schema'):
-            error_data.update({'error_field': 'a schema class'})
-            raise Exception(error_message % error_data)
-
-        if 'ResourceRelationship' in cls_bases:
-            if not hasattr(self, 'related_type_'):
-                error_data.update({'error_field': 'related_type_'})
+        if method_name != 'delete':
+            if not hasattr(self, 'schema'):
+                error_data.update({'error_field': 'a schema class'})
                 raise Exception(error_message % error_data)
-            if method_name == 'get':
-                if not hasattr(self, 'related_endpoint'):
-                    error_data.update({'error_field': 'related_endpoint'})
-                    raise Exception(error_message % error_data)
+
+            if not hasattr(self, 'opts'):
+                error_data.update({'error_field': 'a opts class'})
+                raise Exception(error_message % error_data)
 
         return f(self, *args, **kwargs)
 

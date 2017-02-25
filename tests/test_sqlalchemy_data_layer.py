@@ -3,16 +3,15 @@
 from six.moves.urllib.parse import urlencode
 import pytest
 import json
-import datetime
 
-from sqlalchemy import create_engine, Column, Integer, DateTime, String
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy import create_engine, Column, Integer, DateTime, String, ForeignKey
+from sqlalchemy.orm import sessionmaker, relationship
 from sqlalchemy.ext.declarative import declarative_base
 from flask import Blueprint
-from marshmallow_jsonapi.flask import Schema
+from marshmallow_jsonapi.flask import Schema, Relationship
 from marshmallow_jsonapi import fields
 
-from flask_rest_jsonapi import ResourceList, ResourceDetail, SqlalchemyDataLayer
+from flask_rest_jsonapi import Api, ResourceList, ResourceDetail, Relationship as ResourceRelationship
 
 
 @pytest.fixture(scope="session")
@@ -21,22 +20,37 @@ def base():
 
 
 @pytest.fixture(scope="session")
-def item_cls(base):
-    class Item(base):
+def person_model(base):
+    class Person(base):
 
-        __tablename__ = 'item'
+        __tablename__ = 'person'
 
-        id = Column(Integer, primary_key=True)
-        title = Column(String)
-        content = Column(String)
-        created = Column(DateTime, default=datetime.datetime.utcnow)
-    yield Item
+        person_id = Column(Integer, primary_key=True)
+        name = Column(String, nullable=False)
+        birth_date = Column(DateTime)
+
+        computers = relationship("Computer", backref="owner")
+    yield Person
 
 
 @pytest.fixture(scope="session")
-def engine(item_cls):
+def computer_model(base):
+    class Computer(base):
+
+        __tablename__ = 'computer'
+
+        id = Column(Integer, primary_key=True)
+        serial = Column(String, nullable=False)
+        person_id = Column(Integer, ForeignKey('person.person_id'))
+
+    yield Computer
+
+
+@pytest.fixture(scope="session")
+def engine(person_model, computer_model):
     engine = create_engine("sqlite:///:memory:")
-    item_cls.metadata.create_all(engine)
+    person_model.metadata.create_all(engine)
+    computer_model.metadata.create_all(engine)
     return engine
 
 
@@ -44,13 +58,6 @@ def engine(item_cls):
 def session(engine):
     Session = sessionmaker(bind=engine)
     return Session()
-
-
-@pytest.fixture(scope="session")
-def base_query(item_cls):
-    def get_base_query(self, **view_kwargs):
-        return self.session.query(item_cls)
-    yield get_base_query
 
 
 @pytest.fixture(scope="session")
@@ -63,143 +70,404 @@ def dummy_decorator():
 
 
 @pytest.fixture(scope="session")
-def item_schema():
-    class ItemSchema(Schema):
+def person_schema():
+    class PersonSchema(Schema):
         class Meta:
-            type_ = 'item'
-            self_view = 'rest_api.item_detail'
-            self_view_kwargs = {'item_id': '<id>'}
-            self_view_many = 'rest_api.item_list'
-        id = fields.Str(dump_only=True)
-        title = fields.Str()
-        content = fields.Str()
-        created = fields.DateTime()
-    yield ItemSchema
+            type_ = 'person'
+            self_view = 'api.person_detail'
+            self_view_kwargs = {'person_id': '<id>'}
+        id = fields.Str(dump_only=True, attribute='person_id')
+        name = fields.Str(required=True)
+        birth_date = fields.DateTime()
+        computers = Relationship(related_view='api.computer_list',
+                                 related_view_kwargs={'person_id': '<person_id>'},
+                                 schema='ComputerSchema',
+                                 type_='computer',
+                                 many=True)
+    yield PersonSchema
 
 
 @pytest.fixture(scope="session")
-def item_list_resource(session, item_cls, base_query, dummy_decorator, item_schema):
-    class ItemList(ResourceList):
+def computer_schema():
+    class ComputerSchema(Schema):
         class Meta:
-            data_layer = {'cls': SqlalchemyDataLayer,
-                          'kwargs': {'model': item_cls, 'session': session},
-                          'get_base_query': base_query}
+            type_ = 'computer'
+            self_view = 'api.computer_detail'
+            self_view_kwargs = {'id': '<id>'}
+        id = fields.Str(dump_only=True)
+        serial = fields.Str(required=True)
+        owner = Relationship(related_view='api.person_detail',
+                             related_view_kwargs={'person_id': '<owner.person_id>'},
+                             schema='PersonSchema',
+                             id_field='person_id',
+                             type_='person')
+    yield ComputerSchema
+
+
+def base_before_create_object(self, data, **view_kwargs):
+    pass
+
+
+def base_before_update_object(self, obj, data, **view_kwargs):
+    pass
+
+
+def base_before_delete_object(self, obj, **view_kwargs):
+    pass
+
+
+@pytest.fixture(scope="session")
+def person_list(session, person_model, dummy_decorator, person_schema):
+    class PersonList(ResourceList):
+        schema = person_schema
+        data_layer_kwargs = {'model': person_model, 'session': session}
+
+        class Meta:
             get_decorators = [dummy_decorator]
             post_decorators = [dummy_decorator]
-        resource_type = 'item'
-        schema = {'cls': item_schema}
-        endpoint = {'name': 'rest_api.item_list'}
-    yield ItemList
+            before_create_object = base_before_create_object
+            get_schema_kwargs = dict()
+            post_schema_kwargs = dict()
+    yield PersonList
 
 
 @pytest.fixture(scope="session")
-def item_detail_resource(session, item_cls, base_query, dummy_decorator, item_schema):
-    class ItemDetail(ResourceDetail):
+def person_detail(session, person_model, dummy_decorator, person_schema):
+    class PersonDetail(ResourceDetail):
+        schema = person_schema
+        data_layer_kwargs = {'model': person_model,
+                             'session': session,
+                             'url_field': 'person_id'}
+
         class Meta:
-            data_layer = {'cls': SqlalchemyDataLayer,
-                          'kwargs': {'model': item_cls,
-                                     'session': session,
-                                     'id_field': 'id',
-                                     'url_param_name': 'item_id'},
-                          'get_base_query': base_query}
             get_decorators = [dummy_decorator]
             patch_decorators = [dummy_decorator]
             delete_decorators = [dummy_decorator]
-        resource_type = 'item'
-        schema = {'cls': item_schema}
-    yield ItemDetail
+            before_update_object = base_before_update_object
+            before_delete_object = base_before_delete_object
+            get_schema_kwargs = dict()
+            patch_schema_kwargs = dict()
+            delete_schema_kwargs = dict()
+    yield PersonDetail
 
 
 @pytest.fixture(scope="session")
-def item_list_resource_not_allowed(session, item_cls, base_query, dummy_decorator, item_schema):
-    class ItemList(ResourceList):
+def person_computers(session, person_model, dummy_decorator, person_schema):
+    class PersonComputersRelationship(ResourceRelationship):
+        schema = person_schema
+        data_layer_kwargs = {'session': session,
+                             'model': person_model,
+                             'url_field': 'person_id'}
+
         class Meta:
-            data_layer = {'cls': SqlalchemyDataLayer,
-                          'kwargs': {'model': item_cls, 'session': session},
-                          'get_base_query': base_query}
             get_decorators = [dummy_decorator]
-            disabled_methods = ['POST']
-        resource_type = 'item'
-        schema_cls = item_schema
-        collection_endpoint = 'rest_api.item_list'
-    yield ItemList
+            post_decorators = [dummy_decorator]
+            patch_decorators = [dummy_decorator]
+            delete_decorators = [dummy_decorator]
+    yield PersonComputersRelationship
 
 
 @pytest.fixture(scope="session")
-def rest_api_blueprint(client):
-    bp = Blueprint('rest_api', __name__)
+def base_query(computer_model, person_model):
+    def get_base_query(self, **view_kwargs):
+        if view_kwargs.get('person_id') is not None:
+            return self.session.query(computer_model).join(person_model).filter_by(person_id=view_kwargs['person_id'])
+        return self.session.query(computer_model)
+    yield get_base_query
+
+
+@pytest.fixture(scope="session")
+def computer_list(session, computer_model, computer_schema, base_query):
+    class ComputerList(ResourceList):
+        schema = computer_schema
+        data_layer_kwargs = {'model': computer_model, 'session': session}
+
+        class Meta:
+            query = base_query
+            not_allowed_methods = ['POST']
+            relationship_mapping = {'person': {'relationship_field': 'owner', 'id_field': 'person_id'}}
+    yield ComputerList
+
+
+@pytest.fixture(scope="session")
+def computer_detail(session, computer_model, dummy_decorator, computer_schema):
+    class ComputerDetail(ResourceDetail):
+        schema = computer_schema
+        data_layer_kwargs = {'model': computer_model,
+                             'session': session}
+    yield ComputerDetail
+
+
+@pytest.fixture(scope="session")
+def computer_owner(session, computer_model, dummy_decorator, computer_schema):
+    class ComputerOwnerRelationship(ResourceRelationship):
+        schema = computer_schema
+        data_layer_kwargs = {'session': session,
+                             'model': computer_model}
+    yield ComputerOwnerRelationship
+
+
+@pytest.fixture(scope="session")
+def api_blueprint(client):
+    bp = Blueprint('api', __name__)
     yield bp
 
 
 @pytest.fixture(scope="session")
-def register_routes(client, rest_api_blueprint, item_list_resource, item_detail_resource,
-                    item_list_resource_not_allowed):
-    rest_api_blueprint.add_url_rule('/items', view_func=item_list_resource.as_view('item_list'))
-    rest_api_blueprint.add_url_rule('/items/<int:item_id>', view_func=item_detail_resource.as_view('item_detail'))
-    rest_api_blueprint.add_url_rule('/items_not_allowed',
-                                    view_func=item_list_resource_not_allowed.as_view('item_list_not_allowed'))
-    client.application.register_blueprint(rest_api_blueprint)
+def register_routes(client, api_blueprint, person_list, person_detail, person_computers, computer_list,
+                    computer_detail, computer_owner):
+    api = Api(api_blueprint)
+    api.route(person_list, 'person_list', '/persons')
+    api.route(person_detail, 'person_detail', '/persons/<int:person_id>')
+    api.route(person_computers, 'person_computers', '/persons/<int:person_id>/relationships/computers')
+    api.route(computer_list, 'computer_list', '/computers', '/persons/<int:person_id>/computers')
+    api.route(computer_list, 'computer_detail', '/computers/<int:id>')
+    api.route(computer_owner, 'computer_owner', '/computers/<int:id>/relationships/owner')
+    api.init_app(client.application)
 
 
-def test_get_list_resource(client, register_routes):
-    querystring = urlencode({'page[number]': 3,
-                             'page[size]': 1,
-                             'fields[item]': 'title,content',
-                             'sort': '-created,title',
-                             'filter[item]': json.dumps([{'field': 'created', 'op': 'gt', 'value': '2016-11-10'}])})
-    response = client.get('/items' + '?' + querystring,
-                          content_type='application/vnd.api+json')
-    assert response.status_code == 200
+# test good case
+def test_get_list(client, register_routes):
+    with client:
+        querystring = urlencode({'page[number]': 3,
+                                 'page[size]': 1,
+                                 'fields[person]': 'name',
+                                 'sort': '-name',
+                                 'include': 'computers',
+                                 'filters': json.dumps(
+                                     [
+                                         {
+                                             'and': [
+                                                 {
+                                                     'name': 'computers',
+                                                     'op': 'any',
+                                                     'val': {
+                                                         'name': 'serial',
+                                                         'op': 'eq',
+                                                         'val': '0000'
+                                                     }
+                                                 },
+                                                 {
+                                                     'or': [
+                                                         {
+                                                             'name': 'name',
+                                                             'op': 'like',
+                                                             'val': '%test%'
+                                                         },
+                                                         {
+                                                             'name': 'name',
+                                                             'op': 'like',
+                                                             'val': '%test2%'
+                                                         }
+                                                     ]
+                                                 }
+                                             ]
+                                         }
+                                     ])})
+        response = client.get('/persons' + '?' + querystring,
+                              content_type='application/vnd.api+json')
+        assert response.status_code == 200
 
 
-def test_post_list_resource(client, register_routes):
-    response = client.post('/items',
-                           data=json.dumps({"data": {"type": "item", "attributes": {"title": "test"}}}),
-                           content_type='application/vnd.api+json')
-    assert response.status_code == 201
+def test_post_list(session, client, register_routes, computer_model):
+    computer = computer_model(serial='1')
+
+    session_ = session
+    session_.add(computer)
+    session_.commit()
+
+    payload = {
+        'data': {
+            'type': 'person',
+            'attributes': {
+                'name': 'test'
+            },
+            'relationships': {
+                'computers': {
+                    'data': [
+                        {
+                            'type': 'computer',
+                            'id': str(computer.id)
+                        }
+                    ]
+                }
+            }
+        }
+    }
+
+    with client:
+        response = client.post('/persons',
+                               data=json.dumps(payload),
+                               content_type='application/vnd.api+json')
+        assert response.status_code == 201
 
 
-def test_get_detail_resource(client, register_routes):
-    response = client.get('/items/1', content_type='application/vnd.api+json')
-    assert response.status_code == 200
+def test_get_detail(client, session, register_routes, person_model):
+    person = person_model(name='test')
+
+    session_ = session
+    session_.add(person)
+    session_.commit()
+
+    with client:
+        response = client.get('/persons/' + str(person.person_id),
+                              content_type='application/vnd.api+json')
+        assert response.status_code == 200
 
 
-def test_patch_detail_resource(client, register_routes):
-    response = client.patch('/items/1',
-                            data=json.dumps({"data": {"type": "item", "id": "1", "attributes": {"title": "test2"}}}),
-                            content_type='application/vnd.api+json')
-    assert response.status_code == 200
+def test_patch_detail(session, client, register_routes, computer_model, person_model):
+    person = person_model(name='test')
+    computer = computer_model(serial='1')
+
+    session_ = session
+    session_.add(computer)
+    session_.add(person)
+    session_.commit()
+
+    payload = {
+        'data': {
+            'id': str(person.person_id),
+            'type': 'person',
+            'attributes': {
+                'name': 'test2'
+            },
+            'relationships': {
+                'computers': {
+                    'data': [
+                        {
+                            'type': 'computer',
+                            'id': str(computer.id)
+                        }
+                    ]
+                }
+            }
+        }
+    }
+
+    with client:
+        response = client.patch('/persons/' + str(person.person_id),
+                                data=json.dumps(payload),
+                                content_type='application/vnd.api+json')
+        assert response.status_code == 200
 
 
-def test_delete_detail_resource(client, register_routes):
-    response = client.delete('/items/1', content_type='application/vnd.api+json')
-    assert response.status_code == 204
+def test_delete_detail(session, client, register_routes, person_model):
+    person = person_model(name='test')
+
+    session_ = session
+    session_.add(person)
+    session_.commit()
+
+    with client:
+        response = client.delete('/persons/' + str(person.person_id),
+                                 content_type='application/vnd.api+json')
+        assert response.status_code == 204
 
 
-def test_post_list_resource_not_allowed(client, register_routes):
-    response = client.post('/items_not_allowed',
-                           data=json.dumps({"data": {"type": "item", "attributes": {"title": "test"}}}),
-                           content_type='application/vnd.api+json')
-    assert response.status_code == 405
+def test_get_relationship(session, client, register_routes, computer_model, person_model):
+    person = person_model(name='test')
+    computer = computer_model(serial='1')
+
+    session_ = session
+    session_.add(person)
+    session_.add(computer)
+
+    person.computers = [computer]
+    session_.commit()
+
+    with client:
+        response = client.get('/persons/' + str(person.person_id) + '/relationships/computers?include=computers',
+                              content_type='application/vnd.api+json')
+        assert response.status_code == 200
 
 
-def test_get_detail_resource_not_found(client, register_routes):
-    response = client.get('/items/2', content_type='application/vnd.api+json')
-    assert response.status_code == 404
+def test_post_relationship(session, client, register_routes, computer_model, person_model):
+    person = person_model(name='test')
+    computer = computer_model(serial='1')
+
+    session_ = session
+    session_.add(person)
+    session_.add(computer)
+
+    session_.commit()
+
+    payload = {
+        'data': [
+            {
+                'type': 'computer',
+                'id': str(computer.id)
+            }
+        ]
+    }
+
+    with client:
+        response = client.post('/persons/' + str(person.person_id) + '/relationships/computers?include=computers',
+                               data=json.dumps(payload),
+                               content_type='application/vnd.api+json')
+        assert response.status_code == 200
 
 
-def test_patch_detail_resource_error(client, register_routes):
-    response = client.patch('/items/1',
-                            data=json.dumps({"data": {"type": "item", "attributes": {"title": "test2"}}}),
-                            content_type='application/vnd.api+json')
-    assert response.status_code == 400
+def test_patch_relationship(session, client, register_routes, computer_model, person_model):
+    person = person_model(name='test')
+    computer = computer_model(serial='1')
+
+    session_ = session
+    session_.add(person)
+    session_.add(computer)
+
+    session_.commit()
+
+    payload = {
+        'data': [
+            {
+                'type': 'computer',
+                'id': str(computer.id)
+            }
+        ]
+    }
+
+    with client:
+        response = client.patch('/persons/' + str(person.person_id) + '/relationships/computers?include=computers',
+                                data=json.dumps(payload),
+                                content_type='application/vnd.api+json')
+        assert response.status_code == 200
 
 
+def test_delete_relationship(session, client, register_routes, computer_model, person_model):
+    person = person_model(name='test')
+    computer = computer_model(serial='1')
+
+    session_ = session
+    session_.add(person)
+    session_.add(computer)
+    person.computers = [computer]
+
+    session_.commit()
+
+    payload = {
+        'data': [
+            {
+                'type': 'computer',
+                'id': str(computer.id)
+            }
+        ]
+    }
+
+    with client:
+        response = client.delete('/persons/' + str(person.person_id) + '/relationships/computers?include=computers',
+                                 data=json.dumps(payload),
+                                 content_type='application/vnd.api+json')
+        assert response.status_code == 200
+
+
+# test errors
 def test_wrong_content_type(client, register_routes):
-    response = client.delete('/items/1')
-    assert response.status_code == 415
+    with client:
+        response = client.get('/persons')
+        assert response.status_code == 415
 
 
-def test_response_content_type(client, register_routes):
-    response = client.delete('/items/1', content_type='application/vnd.api+json')
-    assert response.headers['Content-Type'] == 'application/vnd.api+json'
+def test_wrong_accept_header(client, register_routes):
+    with client:
+        response = client.get('/persons', content_type='application/vnd.api+json', headers={'Accept': 'error'})
+        assert response.status_code == 406

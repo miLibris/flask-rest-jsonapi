@@ -14,8 +14,7 @@ from marshmallow import ValidationError
 from flask_rest_jsonapi.errors import jsonapi_errors
 from flask_rest_jsonapi.querystring import QueryStringManager as QSManager
 from flask_rest_jsonapi.pagination import add_pagination_links
-from flask_rest_jsonapi.exceptions import ObjectNotFound, RelationNotFound, InvalidField, InvalidInclude, InvalidType, \
-    BadRequest, JsonApiException
+from flask_rest_jsonapi.exceptions import InvalidType, BadRequest, JsonApiException
 from flask_rest_jsonapi.decorators import not_allowed_method, check_headers, check_method_requirements, add_headers
 from flask_rest_jsonapi.schema import compute_schema
 from flask_rest_jsonapi.data_layers.base import BaseDataLayer
@@ -135,16 +134,20 @@ class Resource(MethodView):
         try:
             resp = meth(*args, **kwargs)
         except JsonApiException as e:
-            return make_response(json.dumps(jsonapi_errors([e.to_dict()])), e.status, dict())
-        # except Exception as e:
-        #     exc = JsonApiException('', str(e))
-        #     return make_response(json.dumps(jsonapi_errors([exc.to_dict()])), exc.status, dict())
+            return make_response(json.dumps(jsonapi_errors([e.to_dict()])),
+                                 e.status,
+                                 {'Content-Type': 'application/vnd.api+json'})
+        except Exception as e:
+            exc = JsonApiException('', str(e))
+            return make_response(json.dumps(jsonapi_errors([exc.to_dict()])),
+                                 exc.status,
+                                 {'Content-Type': 'application/vnd.api+json'})
 
         if isinstance(resp, Response):
             return resp
 
         if not isinstance(resp, tuple):
-            return make_response(json.dumps(resp))
+            return make_response(json.dumps(resp), 200, {'Content-Type': 'application/vnd.api+json'})
 
         try:
             data, status_code, headers = resp
@@ -153,7 +156,7 @@ class Resource(MethodView):
 
         try:
             data, status_code = resp
-            headers = {}
+            headers = {'Content-Type': 'application/vnd.api+json'}
         except ValueError:
             pass
 
@@ -172,21 +175,19 @@ class ResourceList(with_metaclass(ResourceListMeta, Resource)):
 
         schema_kwargs = getattr(self.opts, 'schema_get_kwargs', dict())
         schema_kwargs.update({'many': True})
-        try:
-            schema = compute_schema(self.schema,
-                                    schema_kwargs,
-                                    qs,
-                                    qs.include)
-        except (InvalidField, InvalidInclude) as e:
-            return jsonapi_errors([e.to_dict()]), e.status
+
+        schema = compute_schema(self.schema,
+                                schema_kwargs,
+                                qs,
+                                qs.include)
 
         result = schema.dump(objects)
 
-        endpoint_kwargs = request.view_args if getattr(self.opts, 'endpoint_kwargs', None) is True else dict()
+        view_kwargs = request.view_args if getattr(self.opts, 'view_kwargs', None) is True else dict()
         add_pagination_links(result.data,
                              object_count,
                              qs,
-                             url_for(self.endpoint, **endpoint_kwargs))
+                             url_for(self.view, **view_kwargs))
 
         return result.data
 
@@ -197,13 +198,11 @@ class ResourceList(with_metaclass(ResourceListMeta, Resource)):
         json_data = request.get_json()
 
         qs = QSManager(request.args)
-        try:
-            schema = compute_schema(self.schema,
-                                    getattr(self.opts, 'schema_post_kwargs', dict()),
-                                    qs,
-                                    qs.include)
-        except (InvalidField, InvalidInclude) as e:
-            return jsonapi_errors([e.to_dict()]), e.status
+
+        schema = compute_schema(self.schema,
+                                getattr(self.opts, 'schema_post_kwargs', dict()),
+                                qs,
+                                qs.include)
 
         try:
             data, errors = schema.load(json_data)
@@ -226,10 +225,7 @@ class ResourceList(with_metaclass(ResourceListMeta, Resource)):
                 error['title'] = "Validation error"
             return errors, 422
 
-        try:
-            obj = self.data_layer.create_object(data, self.opts, **kwargs)
-        except JsonApiException as e:
-            return jsonapi_errors([e.to_dict()]), e.status
+        obj = self.data_layer.create_object(data, self.opts, **kwargs)
 
         return schema.dump(obj).data, 201
 
@@ -240,21 +236,17 @@ class ResourceDetail(with_metaclass(ResourceDetailMeta, Resource)):
     def get(self, *args, **kwargs):
         """Get object details
         """
-        try:
-            obj = self.data_layer.get_object(**kwargs)
-        except ObjectNotFound as e:
-            return jsonapi_errors([e.to_dict()]), e.status
+        obj = self.data_layer.get_object(**kwargs)
 
         qs = QSManager(request.args)
-        try:
-            schema = compute_schema(self.schema,
-                                    getattr(self.opts, 'schema_get_kwargs', dict()),
-                                    qs,
-                                    qs.include)
-        except (InvalidField, InvalidInclude) as e:
-            return jsonapi_errors([e.to_dict()]), e.status
+
+        schema = compute_schema(self.schema,
+                                getattr(self.opts, 'schema_get_kwargs', dict()),
+                                qs,
+                                qs.include)
 
         result = schema.dump(obj)
+
         return result.data
 
     @check_method_requirements
@@ -266,13 +258,11 @@ class ResourceDetail(with_metaclass(ResourceDetailMeta, Resource)):
         qs = QSManager(request.args)
         schema_kwargs = getattr(self.opts, 'schema_patch_kwargs', dict())
         schema_kwargs.update({'partial': True})
-        try:
-            schema = compute_schema(self.schema,
-                                    schema_kwargs,
-                                    qs,
-                                    qs.include)
-        except (InvalidField, InvalidInclude) as e:
-            return jsonapi_errors([e.to_dict()]), e.status
+
+        schema = compute_schema(self.schema,
+                                schema_kwargs,
+                                qs,
+                                qs.include)
 
         try:
             data, errors = schema.load(json_data)
@@ -295,43 +285,26 @@ class ResourceDetail(with_metaclass(ResourceDetailMeta, Resource)):
                 error['title'] = "Validation error"
             return errors, 422
 
-        try:
-            if 'id' not in json_data['data']:
-                raise BadRequest('/data/id', 'Missing id in "data" node')
-            if json_data['data']['id'] != str(kwargs[getattr(self.data_layer, 'url_field', 'id')]):
-                raise BadRequest('/data/id', 'Value of id does not match the resource identifier in url')
-        except BadRequest as e:
-            return jsonapi_errors([e.to_dict()]), e.status
+        if 'id' not in json_data['data']:
+            raise BadRequest('/data/id', 'Missing id in "data" node')
+        if json_data['data']['id'] != str(kwargs[getattr(self.data_layer, 'url_field', 'id')]):
+            raise BadRequest('/data/id', 'Value of id does not match the resource identifier in url')
 
-        try:
-            obj = self.data_layer.get_object(**kwargs)
-        except ObjectNotFound as e:
-            return jsonapi_errors([e.to_dict()]), e.status
-
-        try:
-            self.data_layer.update_object(obj, data, self.opts, **kwargs)
-        except JsonApiException as e:
-            return jsonapi_errors([e.to_dict()]), e.status
+        obj = self.data_layer.get_object(**kwargs)
+        updated = self.data_layer.update_object(obj, data, self.opts, **kwargs)
 
         result = schema.dump(obj)
 
-        return result.data
+        status_code = 200 if updated is True else 204
+        return result.data, status_code
 
     @check_method_requirements
     def delete(self, *args, **kwargs):
         """Delete an object
         """
-        try:
-            obj = self.data_layer.get_object(**kwargs)
-        except ObjectNotFound as e:
-            return jsonapi_errors([e.to_dict()]), e.status
-
-        try:
-            self.data_layer.delete_object(obj, **kwargs)
-        except JsonApiException as e:
-            return jsonapi_errors([e.to_dict()]), e.status
-
-        return '', 204
+        obj = self.data_layer.get_object(**kwargs)
+        self.data_layer.delete_object(obj, **kwargs)
+        return 'Object successful deleted', 204
 
 
 class Relationship(with_metaclass(ResourceRelationshipMeta, Resource)):
@@ -340,32 +313,26 @@ class Relationship(with_metaclass(ResourceRelationshipMeta, Resource)):
     def get(self, *args, **kwargs):
         """Get a relationship details
         """
-        related_id_field = getattr(self.opts, 'related_id_field', 'id')
-        try:
-            obj, data = self.data_layer.get_relationship(self.related_type_, related_id_field, **kwargs)
-        except (RelationNotFound, ObjectNotFound) as e:
-            return jsonapi_errors([e.to_dict()]), e.status
+        relationship_field, related_type_, related_id_field = self._get_relationship_data()
+        related_view = self.schema._declared_fields[relationship_field].related_view
+        related_view_kwargs = self.schema._declared_fields[relationship_field].related_view_kwargs
 
-        if hasattr(self.opts, 'related_endpoint_kwargs'):
-            related_endpoint_kwargs = dict()
-            for key, value in copy(self.opts.related_endpoint_kwargs).items():
+        obj, data = self.data_layer.get_relationship(relationship_field, related_type_, related_id_field, **kwargs)
+
+        for key, value in copy(related_view_kwargs).items():
+            if isinstance(value, str) and value.startswith('<') and value.endswith('>'):
                 tmp_obj = obj
-                for field in value.split('.'):
+                for field in value[1:-1].split('.'):
                     tmp_obj = getattr(tmp_obj, field)
-                related_endpoint_kwargs[key] = tmp_obj
-        else:
-            related_endpoint_kwargs = kwargs
+                related_view_kwargs[key] = tmp_obj
 
-        result = {'links': {'self': url_for(self.endpoint, **kwargs),
-                            'related': url_for(self.related_endpoint, **related_endpoint_kwargs)},
+        result = {'links': {'self': url_for(self.view, **kwargs),
+                            'related': url_for(related_view, **related_view_kwargs)},
                   'data': data}
 
         qs = QSManager(request.args)
         if qs.include:
-            try:
-                schema = compute_schema(self.schema, dict(), qs, qs.include)
-            except (InvalidField, InvalidInclude) as e:
-                return jsonapi_errors([e.to_dict()]), e.status
+            schema = compute_schema(self.schema, dict(), qs, qs.include)
 
             serialized_obj = schema.dump(obj)
             result['included'] = serialized_obj.data['included']
@@ -378,28 +345,28 @@ class Relationship(with_metaclass(ResourceRelationshipMeta, Resource)):
         """
         json_data = request.get_json()
 
-        try:
-            if 'data' not in json_data:
-                raise BadRequest('/data', 'You must provide data with a "data" route node')
-            if not isinstance(json_data.get('data'), list):
-                raise BadRequest('/data', 'You must provide data as list')
-            for obj in json_data['data']:
-                if 'type' not in obj:
-                    raise BadRequest('/data/type', 'Missing type in "data" node')
-                if 'id' not in obj:
-                    raise BadRequest('/data/id', 'Missing id in "data" node')
-                if obj['type'] != self.related_type_:
-                    raise InvalidType('/data/type', 'The type provided does not match the resource type')
-        except (BadRequest, InvalidType) as e:
-            return jsonapi_errors([e.to_dict()]), e.status
+        relationship_field, related_type_, related_id_field = self._get_relationship_data()
 
-        related_id_field = getattr(self.opts, 'related_id_field', 'id')
-        try:
-            self.data_layer.create_relationship(json_data, related_id_field, **kwargs)
-        except (RelationNotFound, ObjectNotFound) as e:
-            return jsonapi_errors([e.to_dict()]), e.status
+        if 'data' not in json_data:
+            raise BadRequest('/data', 'You must provide data with a "data" route node')
+        if not isinstance(json_data.get('data'), list):
+            raise BadRequest('/data', 'You must provide data as list')
+        for obj in json_data['data']:
+            if 'type' not in obj:
+                raise BadRequest('/data/type', 'Missing type in "data" node')
+            if 'id' not in obj:
+                raise BadRequest('/data/id', 'Missing id in "data" node')
+            if obj['type'] != related_type_:
+                raise InvalidType('/data/type', 'The type provided does not match the resource type')
 
-        return ''
+        obj_, updated = self.data_layer.create_relationship(json_data, relationship_field, related_id_field, **kwargs)
+
+        qs = QSManager(request.args)
+        schema = compute_schema(self.schema, dict(), qs, qs.include)
+
+        status_code = 200 if updated is True else 204
+
+        return schema.dump(obj_), status_code
 
     @check_method_requirements
     def patch(self, *args, **kwargs):
@@ -407,34 +374,34 @@ class Relationship(with_metaclass(ResourceRelationshipMeta, Resource)):
         """
         json_data = request.get_json()
 
-        try:
-            if 'data' not in json_data:
-                raise BadRequest('/data', 'You must provide data with a "data" route node')
-            if isinstance(json_data['data'], dict):
-                if 'type' not in json_data['data']:
+        relationship_field, related_type_, related_id_field = self._get_relationship_data()
+
+        if 'data' not in json_data:
+            raise BadRequest('/data', 'You must provide data with a "data" route node')
+        if isinstance(json_data['data'], dict):
+            if 'type' not in json_data['data']:
+                raise BadRequest('/data/type', 'Missing type in "data" node')
+            if 'id' not in json_data['data']:
+                raise BadRequest('/data/id', 'Missing id in "data" node')
+            if json_data['data']['type'] != related_type_:
+                raise InvalidType('/data/type', 'The type field does not match the resource type')
+        if isinstance(json_data['data'], list):
+            for obj in json_data['data']:
+                if 'type' not in obj:
                     raise BadRequest('/data/type', 'Missing type in "data" node')
-                if 'id' not in json_data['data']:
+                if 'id' not in obj:
                     raise BadRequest('/data/id', 'Missing id in "data" node')
-                if json_data['data']['type'] != self.related_type_:
-                    raise InvalidType('/data/type', 'The type field does not match the resource type')
-            if isinstance(json_data['data'], list):
-                for obj in json_data['data']:
-                    if 'type' not in obj:
-                        raise BadRequest('/data/type', 'Missing type in "data" node')
-                    if 'id' not in obj:
-                        raise BadRequest('/data/id', 'Missing id in "data" node')
-                    if obj['type'] != self.related_type_:
-                        raise InvalidType('/data/type', 'The type provided does not match the resource type')
-        except (BadRequest, InvalidType) as e:
-            return jsonapi_errors([e.to_dict()]), e.status
+                if obj['type'] != related_type_:
+                    raise InvalidType('/data/type', 'The type provided does not match the resource type')
 
-        related_id_field = getattr(self.opts, 'related_id_field', 'id')
-        try:
-            self.data_layer.update_relationship(json_data, related_id_field, **kwargs)
-        except (RelationNotFound, ObjectNotFound) as e:
-            return jsonapi_errors([e.to_dict()]), e.status
+        obj_, updated = self.data_layer.update_relationship(json_data, relationship_field, related_id_field, **kwargs)
 
-        return ''
+        qs = QSManager(request.args)
+        schema = compute_schema(self.schema, dict(), qs, qs.include)
+
+        status_code = 200 if updated is True else 204
+
+        return schema.dump(obj_), status_code
 
     @check_method_requirements
     def delete(self, *args, **kwargs):
@@ -442,25 +409,34 @@ class Relationship(with_metaclass(ResourceRelationshipMeta, Resource)):
         """
         json_data = request.get_json()
 
-        try:
-            if 'data' not in json_data:
-                raise BadRequest('/data', 'You must provide data with a "data" route node')
-            if not isinstance(json_data.get('data'), list):
-                raise BadRequest('/data', 'You must provide data as list')
-            for obj in json_data['data']:
-                if 'type' not in obj:
-                    raise BadRequest('/data/type', 'Missing type in "data" node')
-                if 'id' not in obj:
-                    raise BadRequest('/data/id', 'Missing id in "data" node')
-                if obj['type'] != self.related_type_:
-                    raise InvalidType('/data/type', 'The type provided does not match the resource type')
-        except (BadRequest, InvalidType) as e:
-            return jsonapi_errors([e.to_dict()]), e.status
+        relationship_field, related_type_, related_id_field = self._get_relationship_data()
 
-        related_id_field = getattr(self.opts, 'related_id_field', 'id')
-        try:
-            self.data_layer.delete_relationship(json_data, related_id_field, **kwargs)
-        except RelationNotFound as e:
-            return jsonapi_errors([e.to_dict()]), e.status
+        if 'data' not in json_data:
+            raise BadRequest('/data', 'You must provide data with a "data" route node')
+        if not isinstance(json_data.get('data'), list):
+            raise BadRequest('/data', 'You must provide data as list')
+        for obj in json_data['data']:
+            if 'type' not in obj:
+                raise BadRequest('/data/type', 'Missing type in "data" node')
+            if 'id' not in obj:
+                raise BadRequest('/data/id', 'Missing id in "data" node')
+            if obj['type'] != related_type_:
+                raise InvalidType('/data/type', 'The type provided does not match the resource type')
 
-        return ''
+        obj_, updated = self.data_layer.delete_relationship(json_data, relationship_field, related_id_field, **kwargs)
+
+        qs = QSManager(request.args)
+        schema = compute_schema(self.schema, dict(), qs, qs.include)
+
+        status_code = 200 if updated is True else 204
+
+        return schema.dump(obj_), status_code
+
+    def _get_relationship_data(self):
+        """Get useful data for relationship management
+        """
+        relationship_field = getattr(self.opts, 'relationship_field', request.base_url.rsplit('/', maxsplit=1)[-1])
+        related_type_ = self.schema._declared_fields[relationship_field].type_
+        related_id_field = self.schema._declared_fields[relationship_field].id_field
+
+        return relationship_field, related_type_, related_id_field

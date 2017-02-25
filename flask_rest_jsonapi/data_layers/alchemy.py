@@ -3,6 +3,7 @@
 from sqlalchemy.orm.exc import NoResultFound
 from sqlalchemy.orm.collections import InstrumentedList
 from sqlalchemy.sql.expression import desc, asc, text
+from sqlalchemy.inspection import inspect
 
 from flask_rest_jsonapi.constants import DEFAULT_PAGE_SIZE
 from flask_rest_jsonapi.data_layers.base import BaseDataLayer
@@ -33,7 +34,8 @@ class SqlalchemyDataLayer(BaseDataLayer):
         """
         self.before_create_object(data, **view_kwargs)
 
-        obj = self.model(**data)
+        relationship_fields = get_relationships(self.resource.schema)
+        obj = self.model(**{key: value for (key, value) in data.items() if key not in relationship_fields})
         self.apply_relationships(data, opts, obj)
 
         self.session.add(obj)
@@ -51,7 +53,7 @@ class SqlalchemyDataLayer(BaseDataLayer):
         :params dict view_kwargs: kwargs from the resource view
         :return DeclarativeMeta: an object from sqlalchemy
         """
-        id_field = getattr(self, 'id_field', 'id')
+        id_field = getattr(self, 'id_field', inspect(self.model).primary_key[0].name)
         try:
             filter_field = getattr(self.model, id_field)
         except Exception:
@@ -95,21 +97,31 @@ class SqlalchemyDataLayer(BaseDataLayer):
         :param dict data: the data validated by marshmallow
         :param opts: meta options from the resource class
         :param dict view_kwargs: kwargs from the resource view
+        :return boolean: True if object have changed else False
         """
         self.before_update_object(obj, data, **view_kwargs)
+
+        update = False
 
         relationship_fields = get_relationships(self.resource.schema)
         for field in data:
             if hasattr(obj, field) and field not in relationship_fields:
+                if getattr(obj, field) != data[field]:
+                    update = True
                 setattr(obj, field, data[field])
 
-        self.apply_relationships(data, opts, obj)
+        update_relationship = self.apply_relationships(data, opts, obj)
+
+        if update_relationship is True:
+            update = True
 
         try:
             self.session.commit()
         except Exception as e:
             self.session.rollback()
             raise JsonApiException({'pointer': '/data'}, "Update object error: " + str(e))
+
+        return update
 
     def delete_object(self, obj, **view_kwargs):
         """Delete an object through sqlalchemy
@@ -126,23 +138,43 @@ class SqlalchemyDataLayer(BaseDataLayer):
             self.session.rollback()
             raise JsonApiException('', "Delete object error: " + str(e))
 
-    def create_relationship(self, json_data, related_id_field, **view_kwargs):
+    def create_relationship(self, json_data, relationship_field, related_id_field, **view_kwargs):
         """Create a relationship
 
         :param dict json_data: the request params
+        :param str relationship_field: the model attribut used for relationship
         :param str related_id_field: the identifier field of the related model
         :param dict view_kwargs: kwargs from the resource view
+        :return boolean: True if relationship have changed else False
         """
         obj = self.get_object(**view_kwargs)
 
-        if not hasattr(obj, self.relationship_field):
-            raise RelationNotFound(dict(), "%s has no attribut %s" % (obj.__class__.__name__, self.relationship_field))
+        if not hasattr(obj, relationship_field):
+            raise RelationNotFound(dict(), "%s has no attribut %s" % (obj.__class__.__name__, relationship_field))
 
-        related_model = getattr(obj.__class__, self.relationship_field).property.mapper.class_
+        related_model = getattr(obj.__class__, relationship_field).property.mapper.class_
 
-        for obj_ in json_data['data']:
-            related_object = self.get_related_object(related_model, related_id_field, obj_)
-            getattr(obj, self.relationship_field).append(related_object)
+        updated = False
+
+        if isinstance(json_data['data'], list):
+            obj_ids = {str(getattr(obj__, related_id_field)) for obj__ in getattr(obj, relationship_field)}
+
+            for obj_ in json_data['data']:
+                if obj_['id'] not in obj_ids:
+                    getattr(obj,
+                            relationship_field).append(self.get_related_object(related_model, related_id_field, obj_))
+                    updated = True
+        else:
+            related_object = None
+
+            if json_data['data'] is not None:
+                related_object = self.get_related_object(related_model, related_id_field, json_data['data'])
+
+            obj_id = getattr(getattr(obj, relationship_field), related_id_field, None)
+            new_obj_id = getattr(related_object. related_id_field, None)
+            if obj_id != new_obj_id:
+                setattr(obj, relationship_field, related_object)
+                updated = True
 
         try:
             self.session.commit()
@@ -150,9 +182,12 @@ class SqlalchemyDataLayer(BaseDataLayer):
             self.session.rollback()
             raise JsonApiException('', "Create relationship error: " + str(e))
 
-    def get_relationship(self, related_type_, related_id_field, **view_kwargs):
+        return obj, updated
+
+    def get_relationship(self, relationship_field, related_type_, related_id_field, **view_kwargs):
         """Get a relationship
 
+        :param str relationship_field: the model attribut used for relationship
         :param str related_type_: the related resource type
         :param str related_id_field: the identifier field of the related model
         :param dict view_kwargs: kwargs from the resource view
@@ -160,10 +195,10 @@ class SqlalchemyDataLayer(BaseDataLayer):
         """
         obj = self.get_object(**view_kwargs)
 
-        if not hasattr(obj, self.relationship_field):
-            raise RelationNotFound(dict(), "%s has no attribut %s" % (obj.__class__.__name__, self.relationship_field))
+        if not hasattr(obj, relationship_field):
+            raise RelationNotFound(dict(), "%s has no attribut %s" % (obj.__class__.__name__, relationship_field))
 
-        related_objects = getattr(obj, self.relationship_field)
+        related_objects = getattr(obj, relationship_field)
 
         if related_objects is None:
             return obj, related_objects
@@ -174,34 +209,47 @@ class SqlalchemyDataLayer(BaseDataLayer):
         else:
             return obj, {'type': related_type_, 'id': getattr(related_objects, related_id_field)}
 
-    def update_relationship(self, json_data, related_id_field, **view_kwargs):
+    def update_relationship(self, json_data, relationship_field, related_id_field, **view_kwargs):
         """Update a relationship
 
         :param dict json_data: the request params
+        :param str relationship_field: the model attribut used for relationship
         :param str related_id_field: the identifier field of the related model
         :param dict view_kwargs: kwargs from the resource view
+        :return boolean: True if relationship have changed else False
         """
         obj = self.get_object(**view_kwargs)
 
-        if not hasattr(obj, self.relationship_field):
-            raise RelationNotFound(dict(), "%s has no attribut %s" % (obj.__class__.__name__, self.relationship_field))
+        if not hasattr(obj, relationship_field):
+            raise RelationNotFound(dict(), "%s has no attribut %s" % (obj.__class__.__name__, relationship_field))
 
-        related_model = getattr(obj.__class__, self.relationship_field).property.mapper.class_
+        related_model = getattr(obj.__class__, relationship_field).property.mapper.class_
 
-        if not isinstance(json_data['data'], list):
+        updated = False
+
+        if isinstance(json_data['data'], list):
+            related_objects = []
+
+            for obj_ in json_data['data']:
+                related_objects.append(self.get_related_object(related_model, related_id_field, obj_))
+
+            obj_ids = {getattr(obj__, related_id_field) for obj__ in getattr(obj, relationship_field)}
+            new_obj_ids = {getattr(related_object, related_id_field) for related_object in related_objects}
+            if obj_ids != new_obj_ids:
+                setattr(obj, relationship_field, related_objects)
+                updated = True
+
+        else:
             related_object = None
 
             if json_data['data'] is not None:
                 related_object = self.get_related_object(related_model, related_id_field, json_data['data'])
 
-            setattr(obj, self.relationship_field, related_object)
-        else:
-            related_objects = []
-
-            for obj_ in json_data['data']:
-                related_objects = self.get_related_object(related_model, related_id_field, obj_)
-
-            setattr(obj, self.relationship_field, related_objects)
+            obj_id = getattr(getattr(obj, relationship_field), related_id_field, None)
+            new_obj_id = getattr(related_object. related_id_field, None)
+            if obj_id != new_obj_id:
+                setattr(obj, relationship_field, related_object)
+                updated = True
 
         try:
             self.session.commit()
@@ -209,29 +257,44 @@ class SqlalchemyDataLayer(BaseDataLayer):
             self.session.rollback()
             raise JsonApiException('', "Update relationship error: " + str(e))
 
-    def delete_relationship(self, json_data, related_id_field, **view_kwargs):
+        return obj, updated
+
+    def delete_relationship(self, json_data, relationship_field, related_id_field, **view_kwargs):
         """Delete a relationship
 
         :param dict json_data: the request params
+        :param str relationship_field: the model attribut used for relationship
         :param str related_id_field: the identifier field of the related model
         :param dict view_kwargs: kwargs from the resource view
         """
         obj = self.get_object(**view_kwargs)
 
-        if not hasattr(obj, self.relation_field):
-            raise RelationNotFound(dict(), "%s has no attribut %s" % (obj.__class__.__name__, self.relationship_field))
+        if not hasattr(obj, relationship_field):
+            raise RelationNotFound(dict(), "%s has no attribut %s" % (obj.__class__.__name__, relationship_field))
 
-        related_model = getattr(obj.__class__, self.relation_field).property.mapper.class_
+        related_model = getattr(obj.__class__, relationship_field).property.mapper.class_
 
-        for obj_ in json_data['data']:
-            related_object = self.get_related_object(related_model, related_id_field, obj_)
-            getattr(obj, self.relation_field).remove(related_object)
+        updated = False
+
+        if isinstance(json_data['data'], list):
+            obj_ids = {str(getattr(obj__, related_id_field)) for obj__ in getattr(obj, relationship_field)}
+
+            for obj_ in json_data['data']:
+                if obj_['id'] in obj_ids:
+                    getattr(obj,
+                            relationship_field).remove(self.get_related_object(related_model, related_id_field, obj_))
+                    updated = True
+        else:
+            setattr(obj, relationship_field, None)
+            updated = True
 
         try:
             self.session.commit()
         except Exception as e:
             self.session.rollback()
-            raise JsonApiException('', "Update relationship error: " + str(e))
+            raise JsonApiException('', "Delete relationship error: " + str(e))
+
+        return obj, updated
 
     def get_related_object(self, related_model, related_id_field, obj):
         """Get a related object
@@ -258,28 +321,52 @@ class SqlalchemyDataLayer(BaseDataLayer):
         :param dict data: data provided by the client
         :param opts: options of the resource
         :param DeclarativeMeta obj: the sqlalchemy object to plug relationships to
+        :return boolean: True if relationship have changed else False
         """
+        updated = False
         relationship_fields = get_relationships(self.resource.schema)
         for key, value in data.items():
             if key in relationship_fields:
                 relationship_field = key
+
                 if hasattr(opts, 'relationship_mapping') and\
                         opts.relationship_mapping.get(key, {}).get('relationship_field') is not None:
                     relationship_field = opts.relationship_mapping[key]['relationship_field']
+
                 related_model = getattr(obj.__class__, key).property.mapper.class_
-                related_id_field = 'id'
+                related_id_field = self.resource.schema._declared_fields[relationship_field].id_field
+
                 if hasattr(opts, 'relationship_mapping') and\
                         opts.relationship_mapping.get(key, {}).get('id_field') is not None:
                     related_id_field = opts.relationship_mapping[key]['id_field']
+
                 if isinstance(data[key], list):
                     related_objects = []
+
                     for identifier in data[key]:
                         related_object = self.get_related_object(related_model, related_id_field, {'id': identifier})
                         related_objects.append(related_object)
+
+                    obj_ids = {getattr(obj__, related_id_field) for obj__ in getattr(obj, relationship_field)}
+                    new_obj_ids = {getattr(related_object, related_id_field) for related_object in related_objects}
+                    if obj_ids != new_obj_ids:
+                        updated = True
+
                     setattr(obj, relationship_field, related_objects)
                 else:
-                    related_object = self.get_related_object(related_model, related_id_field, {'id': data[key]})
+                    related_object = None
+
+                    if data[key] is not None:
+                        related_object = self.get_related_object(related_model, related_id_field, {'id': data[key]})
+
+                    obj_id = getattr(getattr(obj, relationship_field), related_id_field, None)
+                    new_obj_id = getattr(related_object. related_id_field, None)
+                    if obj_id != new_obj_id:
+                        updated = True
+
                     setattr(obj, relationship_field, related_object)
+
+        return updated
 
     def filter_query(self, query, filter_info, model):
         """Filter query according to jsonapi 1.0

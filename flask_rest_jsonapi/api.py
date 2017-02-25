@@ -29,27 +29,27 @@ class Api(object):
             for resource in self.resources:
                 self.route(**resource)
 
-    def route(self, resource, endpoint, *urls, **kwargs):
-        """Create an api endpoint.
+    def route(self, resource, view, *urls, **kwargs):
+        """Create an api view.
 
         :param Resource resource: a resource class inherited from flask_rest_jsonapi.resource.Resource
-        :param str endpoint: the endpoint name
-        :param list urls: the urls of the endpoint
+        :param str view: the view name
+        :param list urls: the urls of the view
         :param dict kwargs: additional options of the route
         """
-        resource.endpoint = endpoint
-        view_func = resource.as_view(endpoint)
+        resource.view = view
+        view_func = resource.as_view(view)
         options = kwargs.get('url_rule_options') or dict()
 
         if self.app is not None:
             for url in urls:
                 self.app.add_url_rule(url, view_func=view_func, **options)
         elif self.blueprint is not None:
-            resource.endpoint = '.'.join([self.blueprint.name, resource.endpoint])
+            resource.view = '.'.join([self.blueprint.name, resource.view])
             for url in urls:
                 self.blueprint.add_url_rule(url, view_func=view_func, **options)
         else:
             self.resources.append({'resource': resource,
-                                   'endpoint': endpoint,
+                                   'view': view,
                                    'urls': urls,
                                    'options': options})
