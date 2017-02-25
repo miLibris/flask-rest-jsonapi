@@ -36,6 +36,26 @@ class BaseDataLayer(object):
         """
         raise NotImplemented
 
+    def create_relationship(self, *args, **kwargs):
+        """Create a relationship
+        """
+        raise NotImplemented
+
+    def get_relationship(self, *args, **kwargs):
+        """Get information about a relationship
+        """
+        raise NotImplemented
+
+    def update_relationship(self, *args, **kwargs):
+        """Update a relationship
+        """
+        raise NotImplemented
+
+    def delete_relationship(self, *args, **kwargs):
+        """Delete a relationship
+        """
+        raise NotImplemented
+
     def configure(self, meta):
         """Rewrite default implemantation of methods or attributs
 
