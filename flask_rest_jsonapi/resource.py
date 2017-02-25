@@ -4,6 +4,7 @@ import inspect
 from six import with_metaclass
 import json
 from copy import copy
+import types
 
 from werkzeug.wrappers import Response
 from flask import request, url_for, make_response
@@ -41,7 +42,9 @@ class ResourceMeta(MethodViewType):
                 data_layer_cls = getattr(meta, 'data_layer', SqlalchemyDataLayer)
                 data_layer_kwargs = nmspc.get('data_layer_kwargs', dict())
                 data_layer = type('%sDataLayer' % name, (data_layer_cls, ), dict())(**data_layer_kwargs)
-                data_layer.configure(meta)
+                for obj in ('query', 'before_create_instance', 'before_update_instance', 'before_delete_instance'):
+                    if hasattr(meta, obj):
+                        setattr(data_layer, obj, types.MethodType(getattr(meta, obj), data_layer))
 
         if data_layer is not None:
             data_layer.resource = cls
@@ -147,6 +150,8 @@ class Resource(MethodView):
             return resp
 
         if not isinstance(resp, tuple):
+            if isinstance(resp, dict):
+                resp.update({'jsonapi': {'version': '1.0'}})
             return make_response(json.dumps(resp), 200, {'Content-Type': 'application/vnd.api+json'})
 
         try:
@@ -159,6 +164,9 @@ class Resource(MethodView):
             headers = {'Content-Type': 'application/vnd.api+json'}
         except ValueError:
             pass
+
+        if isinstance(data, dict):
+            data.update({'jsonapi': {'version': '1.0'}})
 
         return make_response(json.dumps(data), status_code, headers)
 
@@ -435,7 +443,7 @@ class Relationship(with_metaclass(ResourceRelationshipMeta, Resource)):
     def _get_relationship_data(self):
         """Get useful data for relationship management
         """
-        relationship_field = getattr(self.opts, 'relationship_field', request.base_url.rsplit('/', maxsplit=1)[-1])
+        relationship_field = getattr(self.opts, 'relationship_field', request.base_url.split('/')[-1])
         related_type_ = self.schema._declared_fields[relationship_field].type_
         related_id_field = self.schema._declared_fields[relationship_field].id_field
 

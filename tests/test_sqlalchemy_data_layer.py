@@ -104,15 +104,15 @@ def computer_schema():
     yield ComputerSchema
 
 
-def base_before_create_object(self, data, **view_kwargs):
+def before_create_object_(self, data, **view_kwargs):
     pass
 
 
-def base_before_update_object(self, obj, data, **view_kwargs):
+def before_update_object_(self, obj, data, **view_kwargs):
     pass
 
 
-def base_before_delete_object(self, obj, **view_kwargs):
+def before_delete_object_(self, obj, **view_kwargs):
     pass
 
 
@@ -125,7 +125,7 @@ def person_list(session, person_model, dummy_decorator, person_schema):
         class Meta:
             get_decorators = [dummy_decorator]
             post_decorators = [dummy_decorator]
-            before_create_object = base_before_create_object
+            before_create_object = before_create_object_
             get_schema_kwargs = dict()
             post_schema_kwargs = dict()
     yield PersonList
@@ -143,8 +143,8 @@ def person_detail(session, person_model, dummy_decorator, person_schema):
             get_decorators = [dummy_decorator]
             patch_decorators = [dummy_decorator]
             delete_decorators = [dummy_decorator]
-            before_update_object = base_before_update_object
-            before_delete_object = base_before_delete_object
+            before_update_object = before_update_object_
+            before_delete_object = before_delete_object_
             get_schema_kwargs = dict()
             patch_schema_kwargs = dict()
             delete_schema_kwargs = dict()
@@ -167,23 +167,20 @@ def person_computers(session, person_model, dummy_decorator, person_schema):
     yield PersonComputersRelationship
 
 
-@pytest.fixture(scope="session")
-def base_query(computer_model, person_model):
-    def get_base_query(self, **view_kwargs):
-        if view_kwargs.get('person_id') is not None:
-            return self.session.query(computer_model).join(person_model).filter_by(person_id=view_kwargs['person_id'])
-        return self.session.query(computer_model)
-    yield get_base_query
+def query_(self, **view_kwargs):
+    if view_kwargs.get('person_id') is not None:
+        return self.session.query(computer_model).join(person_model).filter_by(person_id=view_kwargs['person_id'])
+    return self.session.query(computer_model)
 
 
 @pytest.fixture(scope="session")
-def computer_list(session, computer_model, computer_schema, base_query):
+def computer_list(session, computer_model, computer_schema):
     class ComputerList(ResourceList):
         schema = computer_schema
         data_layer_kwargs = {'model': computer_model, 'session': session}
 
         class Meta:
-            query = base_query
+            query = query_
             not_allowed_methods = ['POST']
             relationship_mapping = {'person': {'relationship_field': 'owner', 'id_field': 'person_id'}}
     yield ComputerList
