@@ -11,7 +11,7 @@ from flask import Blueprint
 from marshmallow_jsonapi.flask import Schema, Relationship
 from marshmallow_jsonapi import fields
 
-from flask_rest_jsonapi import Api, ResourceList, ResourceDetail
+from flask_rest_jsonapi import Api, ResourceList, ResourceDetail, Relationship as ResourceRelationship
 
 
 @pytest.fixture(scope="session")
@@ -26,7 +26,7 @@ def person_model(base):
         __tablename__ = 'person'
 
         person_id = Column(Integer, primary_key=True)
-        name = Column(String)
+        name = Column(String, nullable=False)
         birth_date = Column(DateTime)
 
         computers = relationship("Computer", backref="owner")
@@ -40,7 +40,7 @@ def computer_model(base):
         __tablename__ = 'computer'
 
         id = Column(Integer, primary_key=True)
-        serial = Column(String)
+        serial = Column(String, nullable=False)
         person_id = Column(Integer, ForeignKey('person.person_id'))
 
     yield Computer
@@ -77,14 +77,13 @@ def person_schema():
             self_view = 'api.person_detail'
             self_view_kwargs = {'person_id': '<id>'}
         id = fields.Str(dump_only=True, attribute='person_id')
-        name = fields.Str()
+        name = fields.Str(required=True)
         birth_date = fields.DateTime()
-        computers = Relationship(self_view='api.person_computers',
-                                 self_view_kwargs={'person_id': '<person_id>'},
-                                 related_view='api.computer_list',
+        computers = Relationship(related_view='api.computer_list',
                                  related_view_kwargs={'person_id': '<person_id>'},
                                  schema='ComputerSchema',
-                                 type_='computer')
+                                 type_='computer',
+                                 many=True)
     yield PersonSchema
 
 
@@ -95,11 +94,9 @@ def computer_schema():
             type_ = 'computer'
             self_view = 'api.computer_detail'
             self_view_kwargs = {'id': '<id>'}
-        id = fields.Str(dump_only=True, attribute='computer_id')
-        serial = fields.Str()
-        owner = Relationship(self_view='api.computer_person',
-                             self_view_kwargs={'id': '<id>'},
-                             related_view='api.person_detail',
+        id = fields.Str(dump_only=True)
+        serial = fields.Str(required=True)
+        owner = Relationship(related_view='api.person_detail',
                              related_view_kwargs={'person_id': '<owner.person_id>'},
                              schema='PersonSchema',
                              id_field='person_id',
@@ -107,29 +104,20 @@ def computer_schema():
     yield ComputerSchema
 
 
-@pytest.fixture(scope="session")
-def before_create_object():
-    def base_before_create_object(self, data, **view_kwargs):
-        pass
-    yield base_before_create_object
+def base_before_create_object(self, data, **view_kwargs):
+    pass
+
+
+def base_before_update_object(self, obj, data, **view_kwargs):
+    pass
+
+
+def base_before_delete_object(self, obj, **view_kwargs):
+    pass
 
 
 @pytest.fixture(scope="session")
-def before_update_object():
-    def base_before_update_object(self, obj, data, **view_kwargs):
-        pass
-    yield base_before_update_object
-
-
-@pytest.fixture(scope="session")
-def before_delete_object():
-    def base_before_delete_object(self, obj, **view_kwargs):
-        pass
-    yield base_before_delete_object
-
-
-@pytest.fixture(scope="session")
-def person_list(session, person_model, dummy_decorator, person_schema, before_create_object):
+def person_list(session, person_model, dummy_decorator, person_schema):
     class PersonList(ResourceList):
         schema = person_schema
         data_layer_kwargs = {'model': person_model, 'session': session}
@@ -137,27 +125,26 @@ def person_list(session, person_model, dummy_decorator, person_schema, before_cr
         class Meta:
             get_decorators = [dummy_decorator]
             post_decorators = [dummy_decorator]
-            before_create_object = before_create_object
+            before_create_object = base_before_create_object
             get_schema_kwargs = dict()
             post_schema_kwargs = dict()
     yield PersonList
 
 
 @pytest.fixture(scope="session")
-def person_detail(session, person_model, dummy_decorator, person_schema, before_update_object, before_delete_object):
+def person_detail(session, person_model, dummy_decorator, person_schema):
     class PersonDetail(ResourceDetail):
         schema = person_schema
         data_layer_kwargs = {'model': person_model,
                              'session': session,
-                             'id_field': 'person_id',
                              'url_field': 'person_id'}
 
         class Meta:
             get_decorators = [dummy_decorator]
             patch_decorators = [dummy_decorator]
             delete_decorators = [dummy_decorator]
-            before_update_object = before_update_object
-            before_delete_object = before_delete_object
+            before_update_object = base_before_update_object
+            before_delete_object = base_before_delete_object
             get_schema_kwargs = dict()
             patch_schema_kwargs = dict()
             delete_schema_kwargs = dict()
@@ -165,9 +152,27 @@ def person_detail(session, person_model, dummy_decorator, person_schema, before_
 
 
 @pytest.fixture(scope="session")
+def person_computers(session, person_model, dummy_decorator, person_schema):
+    class PersonComputersRelationship(ResourceRelationship):
+        schema = person_schema
+        data_layer_kwargs = {'session': session,
+                             'model': person_model,
+                             'url_field': 'person_id'}
+
+        class Meta:
+            get_decorators = [dummy_decorator]
+            post_decorators = [dummy_decorator]
+            patch_decorators = [dummy_decorator]
+            delete_decorators = [dummy_decorator]
+    yield PersonComputersRelationship
+
+
+@pytest.fixture(scope="session")
 def base_query(computer_model, person_model):
     def get_base_query(self, **view_kwargs):
-        return self.session.query(computer_model).join(person_model).filter_by(person_id=view_kwargs['person_id'])
+        if view_kwargs.get('person_id') is not None:
+            return self.session.query(computer_model).join(person_model).filter_by(person_id=view_kwargs['person_id'])
+        return self.session.query(computer_model)
     yield get_base_query
 
 
@@ -194,33 +199,34 @@ def computer_detail(session, computer_model, dummy_decorator, computer_schema):
 
 
 @pytest.fixture(scope="session")
+def computer_owner(session, computer_model, dummy_decorator, computer_schema):
+    class ComputerOwnerRelationship(ResourceRelationship):
+        schema = computer_schema
+        data_layer_kwargs = {'session': session,
+                             'model': computer_model}
+    yield ComputerOwnerRelationship
+
+
+@pytest.fixture(scope="session")
 def api_blueprint(client):
     bp = Blueprint('api', __name__)
     yield bp
 
 
 @pytest.fixture(scope="session")
-def register_routes(client, api_blueprint, person_list, person_detail, computer_list, computer_detail):
+def register_routes(client, api_blueprint, person_list, person_detail, person_computers, computer_list,
+                    computer_detail, computer_owner):
     api = Api(api_blueprint)
     api.route(person_list, 'person_list', '/persons')
     api.route(person_detail, 'person_detail', '/persons/<int:person_id>')
-    api.route(computer_list, 'computer_list', '/persons/<int:person_id>/computers')
+    api.route(person_computers, 'person_computers', '/persons/<int:person_id>/relationships/computers')
+    api.route(computer_list, 'computer_list', '/computers', '/persons/<int:person_id>/computers')
     api.route(computer_list, 'computer_detail', '/computers/<int:id>')
+    api.route(computer_owner, 'computer_owner', '/computers/<int:id>/relationships/owner')
     api.init_app(client.application)
 
 
-def test_wrong_content_type(client, register_routes):
-    with client:
-        response = client.get('/persons')
-        assert response.status_code == 415
-
-
-def test_wrong_accept_header(client, register_routes):
-    with client:
-        response = client.get('/persons', content_type='application/vnd.api+json', headers={'Accept': 'error'})
-        assert response.status_code == 406
-
-
+# test good case
 def test_get_list(client, register_routes):
     with client:
         querystring = urlencode({'page[number]': 3,
@@ -261,3 +267,207 @@ def test_get_list(client, register_routes):
         response = client.get('/persons' + '?' + querystring,
                               content_type='application/vnd.api+json')
         assert response.status_code == 200
+
+
+def test_post_list(session, client, register_routes, computer_model):
+    computer = computer_model(serial='1')
+
+    session_ = session
+    session_.add(computer)
+    session_.commit()
+
+    payload = {
+        'data': {
+            'type': 'person',
+            'attributes': {
+                'name': 'test'
+            },
+            'relationships': {
+                'computers': {
+                    'data': [
+                        {
+                            'type': 'computer',
+                            'id': str(computer.id)
+                        }
+                    ]
+                }
+            }
+        }
+    }
+
+    with client:
+        response = client.post('/persons',
+                               data=json.dumps(payload),
+                               content_type='application/vnd.api+json')
+        assert response.status_code == 201
+
+
+def test_get_detail(client, session, register_routes, person_model):
+    person = person_model(name='test')
+
+    session_ = session
+    session_.add(person)
+    session_.commit()
+
+    with client:
+        response = client.get('/persons/' + str(person.person_id),
+                              content_type='application/vnd.api+json')
+        assert response.status_code == 200
+
+
+def test_patch_detail(session, client, register_routes, computer_model, person_model):
+    person = person_model(name='test')
+    computer = computer_model(serial='1')
+
+    session_ = session
+    session_.add(computer)
+    session_.add(person)
+    session_.commit()
+
+    payload = {
+        'data': {
+            'id': str(person.person_id),
+            'type': 'person',
+            'attributes': {
+                'name': 'test2'
+            },
+            'relationships': {
+                'computers': {
+                    'data': [
+                        {
+                            'type': 'computer',
+                            'id': str(computer.id)
+                        }
+                    ]
+                }
+            }
+        }
+    }
+
+    with client:
+        response = client.patch('/persons/' + str(person.person_id),
+                                data=json.dumps(payload),
+                                content_type='application/vnd.api+json')
+        assert response.status_code == 200
+
+
+def test_delete_detail(session, client, register_routes, person_model):
+    person = person_model(name='test')
+
+    session_ = session
+    session_.add(person)
+    session_.commit()
+
+    with client:
+        response = client.delete('/persons/' + str(person.person_id),
+                                 content_type='application/vnd.api+json')
+        assert response.status_code == 204
+
+
+def test_get_relationship(session, client, register_routes, computer_model, person_model):
+    person = person_model(name='test')
+    computer = computer_model(serial='1')
+
+    session_ = session
+    session_.add(person)
+    session_.add(computer)
+
+    person.computers = [computer]
+    session_.commit()
+
+    with client:
+        response = client.get('/persons/' + str(person.person_id) + '/relationships/computers?include=computers',
+                              content_type='application/vnd.api+json')
+        assert response.status_code == 200
+
+
+def test_post_relationship(session, client, register_routes, computer_model, person_model):
+    person = person_model(name='test')
+    computer = computer_model(serial='1')
+
+    session_ = session
+    session_.add(person)
+    session_.add(computer)
+
+    session_.commit()
+
+    payload = {
+        'data': [
+            {
+                'type': 'computer',
+                'id': str(computer.id)
+            }
+        ]
+    }
+
+    with client:
+        response = client.post('/persons/' + str(person.person_id) + '/relationships/computers?include=computers',
+                               data=json.dumps(payload),
+                               content_type='application/vnd.api+json')
+        assert response.status_code == 200
+
+
+def test_patch_relationship(session, client, register_routes, computer_model, person_model):
+    person = person_model(name='test')
+    computer = computer_model(serial='1')
+
+    session_ = session
+    session_.add(person)
+    session_.add(computer)
+
+    session_.commit()
+
+    payload = {
+        'data': [
+            {
+                'type': 'computer',
+                'id': str(computer.id)
+            }
+        ]
+    }
+
+    with client:
+        response = client.patch('/persons/' + str(person.person_id) + '/relationships/computers?include=computers',
+                                data=json.dumps(payload),
+                                content_type='application/vnd.api+json')
+        assert response.status_code == 200
+
+
+def test_delete_relationship(session, client, register_routes, computer_model, person_model):
+    person = person_model(name='test')
+    computer = computer_model(serial='1')
+
+    session_ = session
+    session_.add(person)
+    session_.add(computer)
+    person.computers = [computer]
+
+    session_.commit()
+
+    payload = {
+        'data': [
+            {
+                'type': 'computer',
+                'id': str(computer.id)
+            }
+        ]
+    }
+
+    with client:
+        response = client.delete('/persons/' + str(person.person_id) + '/relationships/computers?include=computers',
+                                 data=json.dumps(payload),
+                                 content_type='application/vnd.api+json')
+        assert response.status_code == 200
+
+
+# test errors
+def test_wrong_content_type(client, register_routes):
+    with client:
+        response = client.get('/persons')
+        assert response.status_code == 415
+
+
+def test_wrong_accept_header(client, register_routes):
+    with client:
+        response = client.get('/persons', content_type='application/vnd.api+json', headers={'Accept': 'error'})
+        assert response.status_code == 406
