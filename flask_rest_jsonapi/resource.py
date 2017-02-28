@@ -14,7 +14,7 @@ from marshmallow import ValidationError
 from flask_rest_jsonapi.errors import jsonapi_errors
 from flask_rest_jsonapi.querystring import QueryStringManager as QSManager
 from flask_rest_jsonapi.pagination import add_pagination_links
-from flask_rest_jsonapi.exceptions import InvalidType, BadRequest, JsonApiException
+from flask_rest_jsonapi.exceptions import InvalidType, BadRequest, JsonApiException, RelationNotFound
 from flask_rest_jsonapi.decorators import not_allowed_method, check_headers, check_method_requirements, add_headers
 from flask_rest_jsonapi.schema import compute_schema
 from flask_rest_jsonapi.data_layers.base import BaseDataLayer
@@ -40,7 +40,7 @@ class ResourceMeta(MethodViewType):
             else:
                 data_layer_cls = getattr(meta, 'data_layer', SqlalchemyDataLayer)
                 data_layer_kwargs = nmspc.get('data_layer_kwargs', dict())
-                data_layer = type('%sDataLayer' % name, (data_layer_cls, ), dict())(**data_layer_kwargs)
+                data_layer = data_layer_cls(**data_layer_kwargs)
                 data_layer.configure(meta)
 
         if data_layer is not None:
@@ -441,7 +441,10 @@ class Relationship(with_metaclass(ResourceRelationshipMeta, Resource)):
         """Get useful data for relationship management
         """
         relationship_field = getattr(self.opts, 'relationship_field', request.base_url.split('/')[-1])
-        related_type_ = self.schema._declared_fields[relationship_field].type_
+        try:
+            related_type_ = self.schema._declared_fields[relationship_field].type_
+        except KeyError:
+            raise RelationNotFound('', "%s has no attribut %s" % (self.schema.__name__, relationship_field))
         related_id_field = self.schema._declared_fields[relationship_field].id_field
 
         return relationship_field, related_type_, related_id_field

@@ -63,10 +63,6 @@ def check_method_requirements(f):
                 error_data.update({'error_field': 'a schema class'})
                 raise Exception(error_message % error_data)
 
-            if not hasattr(self, 'opts'):
-                error_data.update({'error_field': 'a opts class'})
-                raise Exception(error_message % error_data)
-
         return f(self, *args, **kwargs)
 
     return wrapped_f
