@@ -302,7 +302,7 @@ def api_blueprint(client):
 
 
 @pytest.fixture(scope="module")
-def register_routes(client, api_blueprint, person_list, person_detail, person_computers,
+def register_routes(client, app, api_blueprint, person_list, person_detail, person_computers,
                     person_list_raise_jsonapiexception, person_list_raise_exception, person_list_response,
                     person_list_without_schema, person_list_wrong_data_layer, person_detail_wrong_data_layer,
                     person_detail_wrong_data_layer_bis, computer_list, computer_detail, computer_owner):
@@ -321,7 +321,7 @@ def register_routes(client, api_blueprint, person_list, person_detail, person_co
     api.route(computer_list, 'computer_list', '/computers', '/persons/<int:person_id>/computers')
     api.route(computer_list, 'computer_detail', '/computers/<int:id>')
     api.route(computer_owner, 'computer_owner', '/computers/<int:id>/relationships/owner')
-    api.init_app(client.application)
+    api.init_app(app)
 
 
 # test good cases
@@ -801,3 +801,57 @@ def test_delete_detail_wrong_dl(session, client, register_routes, person_model):
         response = client.delete('/persons_wrong_dl_bis/' + str(person.person_id),
                                  content_type='application/vnd.api+json')
         assert response.status_code == 500
+
+
+def test_api(app, person_list):
+    api = Api(app)
+    api.route(person_list, 'person_list', '/persons', '/person_list')
+    api.init_app()
+
+
+def test_api_resources(app, person_list):
+    api = Api()
+    api.route(person_list, 'person_list', '/persons', '/person_list')
+    api.init_app(app)
+
+
+def test_get_list_invalid_filters_val(client, register_routes):
+    with client:
+        querystring = urlencode({'filters': json.dumps([{'name': 'computers', 'op': 'any'}])})
+        response = client.get('/persons' + '?' + querystring, content_type='application/vnd.api+json')
+        assert response.status_code == 400
+
+
+def test_get_list_name(client, register_routes):
+    with client:
+        querystring = urlencode({'filters': json.dumps([{'name': 'computers__serial', 'op': 'any', 'val': '1'}])})
+        response = client.get('/persons' + '?' + querystring, content_type='application/vnd.api+json')
+        assert response.status_code == 200
+
+
+def test_get_list_no_name(client, register_routes):
+    with client:
+        querystring = urlencode({'filters': json.dumps([{'op': 'any', 'val': '1'}])})
+        response = client.get('/persons' + '?' + querystring, content_type='application/vnd.api+json')
+        assert response.status_code == 400
+
+
+def test_get_list_no_op(client, register_routes):
+    with client:
+        querystring = urlencode({'filters': json.dumps([{'name': 'computers__serial', 'val': '1'}])})
+        response = client.get('/persons' + '?' + querystring, content_type='application/vnd.api+json')
+        assert response.status_code == 400
+
+
+def test_get_list_attr_error(client, register_routes):
+    with client:
+        querystring = urlencode({'filters': json.dumps([{'name': 'error', 'op': 'eq', 'val': '1'}])})
+        response = client.get('/persons' + '?' + querystring, content_type='application/vnd.api+json')
+        assert response.status_code == 400
+
+
+def test_get_list_field_error(client, register_routes):
+    with client:
+        querystring = urlencode({'filters': json.dumps([{'name': 'name', 'op': 'eq', 'field': 'error'}])})
+        response = client.get('/persons' + '?' + querystring, content_type='application/vnd.api+json')
+        assert response.status_code == 400

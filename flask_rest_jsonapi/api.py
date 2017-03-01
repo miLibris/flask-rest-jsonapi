@@ -17,15 +17,17 @@ class Api(object):
 
         self.resources = []
 
-    def init_app(self, app):
+    def init_app(self, app=None):
         """Update flask application with our api
 
         :param Application app: a flask application
         """
-        if self.blueprint is not None:
-            app.register_blueprint(self.blueprint)
-        else:
+        if self.app is None:
             self.app = app
+
+        if self.blueprint is not None:
+            self.app.register_blueprint(self.blueprint)
+        else:
             for resource in self.resources:
                 self.route(**resource)
 
