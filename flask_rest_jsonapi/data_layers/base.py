@@ -19,7 +19,7 @@ class BaseDataLayer(object):
         :param dict view_kwargs: kwargs from the resource view
         :return DeclarativeMeta: an object
         """
-        raise NotImplemented
+        raise NotImplementedError
 
     def get_object(self, **view_kwargs):
         """Retrieve an object
@@ -27,7 +27,7 @@ class BaseDataLayer(object):
         :params dict view_kwargs: kwargs from the resource view
         :return DeclarativeMeta: an object
         """
-        raise NotImplemented
+        raise NotImplementedError
 
     def get_collection(self, qs, **view_kwargs):
         """Retrieve a collection of objects
@@ -36,7 +36,7 @@ class BaseDataLayer(object):
         :param dict view_kwargs: kwargs from the resource view
         :return tuple: the number of object and the list of objects
         """
-        raise NotImplemented
+        raise NotImplementedError
 
     def update_object(self, obj, data, opts, **view_kwargs):
         """Update an object
@@ -47,36 +47,36 @@ class BaseDataLayer(object):
         :param dict view_kwargs: kwargs from the resource view
         :return boolean: True if object have changed else False
         """
-        raise NotImplemented
+        raise NotImplementedError
 
     def delete_object(self, *args, **kwargs):
         """Delete an item through the data layer
         """
-        raise NotImplemented
+        raise NotImplementedError
 
     def create_relationship(self, *args, **kwargs):
         """Create a relationship
         """
-        raise NotImplemented
+        raise NotImplementedError
 
     def get_relationship(self, *args, **kwargs):
         """Get information about a relationship
         """
-        raise NotImplemented
+        raise NotImplementedError
 
     def update_relationship(self, *args, **kwargs):
         """Update a relationship
         """
-        raise NotImplemented
+        raise NotImplementedError
 
     def delete_relationship(self, *args, **kwargs):
         """Delete a relationship
         """
-        raise NotImplemented
+        raise NotImplementedError
 
     def configure(self, meta):
         """Rewrite default implemantation of methods or attributs
 
         :param class meta: information from Meta class used to configure the data layer instance
         """
-        raise NotImplemented
+        raise NotImplementedError

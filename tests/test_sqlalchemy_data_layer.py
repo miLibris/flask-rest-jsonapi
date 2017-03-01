@@ -13,6 +13,7 @@ from marshmallow_jsonapi import fields
 
 from flask_rest_jsonapi import Api, ResourceList, ResourceDetail, Relationship as ResourceRelationship, JsonApiException
 from flask_rest_jsonapi.data_layers.alchemy import SqlalchemyDataLayer
+from flask_rest_jsonapi.data_layers.base import BaseDataLayer
 
 
 @pytest.fixture(scope="module")
@@ -201,6 +202,62 @@ def person_list_without_schema(session, person_model):
     yield PersonList
 
 
+@pytest.fixture(scope="module")
+def not_implemented_data_layer():
+    class NotImplementedDataLayer(BaseDataLayer):
+        def configure(self, meta):
+            pass
+    yield NotImplementedDataLayer
+
+
+@pytest.fixture(scope="module")
+def not_implemented_data_layer_bis():
+    class NotImplementedDataLayer(BaseDataLayer):
+        def get_object(self, **view_kwargs):
+            pass
+
+        def configure(self, meta):
+            pass
+    yield NotImplementedDataLayer
+
+
+@pytest.fixture(scope="module")
+def person_list_wrong_data_layer(session, person_model, person_schema, not_implemented_data_layer):
+    class PersonList(ResourceList):
+        schema = person_schema
+        data_layer_kwargs = {'model': person_model, 'session': session}
+
+        class Meta:
+            data_layer = not_implemented_data_layer
+    yield PersonList
+
+
+@pytest.fixture(scope="module")
+def person_detail_wrong_data_layer(session, person_model, person_schema, not_implemented_data_layer):
+    class PersonDetail(ResourceDetail):
+        schema = person_schema
+        data_layer_kwargs = {'model': person_model,
+                             'session': session,
+                             'url_field': 'person_id'}
+
+        class Meta:
+            data_layer = not_implemented_data_layer
+    yield PersonDetail
+
+
+@pytest.fixture(scope="module")
+def person_detail_wrong_data_layer_bis(session, person_model, person_schema, not_implemented_data_layer_bis):
+    class PersonDetail(ResourceDetail):
+        schema = person_schema
+        data_layer_kwargs = {'model': person_model,
+                             'session': session,
+                             'url_field': 'person_id'}
+
+        class Meta:
+            data_layer = not_implemented_data_layer_bis
+    yield PersonDetail
+
+
 def query_(self, **view_kwargs):
     if view_kwargs.get('person_id') is not None:
         return self.session.query(computer_model).join(person_model).filter_by(person_id=view_kwargs['person_id'])
@@ -247,7 +304,8 @@ def api_blueprint(client):
 @pytest.fixture(scope="module")
 def register_routes(client, api_blueprint, person_list, person_detail, person_computers,
                     person_list_raise_jsonapiexception, person_list_raise_exception, person_list_response,
-                    person_list_without_schema, computer_list, computer_detail, computer_owner):
+                    person_list_without_schema, person_list_wrong_data_layer, person_detail_wrong_data_layer,
+                    person_detail_wrong_data_layer_bis, computer_list, computer_detail, computer_owner):
     api = Api(api_blueprint)
     api.route(person_list, 'person_list', '/persons')
     api.route(person_detail, 'person_detail', '/persons/<int:person_id>')
@@ -257,6 +315,9 @@ def register_routes(client, api_blueprint, person_list, person_detail, person_co
     api.route(person_list_raise_exception, 'person_list_exception', '/persons_exception')
     api.route(person_list_response, 'person_list_response', '/persons_response')
     api.route(person_list_without_schema, 'person_list_without_schema', '/persons_without_schema')
+    api.route(person_list_wrong_data_layer, 'person_list_wrong_data_layer', '/persons_wrong_dl')
+    api.route(person_detail_wrong_data_layer, 'person_detail_wrong_data_layer', '/persons_wrong_dl/<int:person_id>')
+    api.route(person_detail_wrong_data_layer_bis, 'person_detail_wrong_dl_bis', '/persons_wrong_dl_bis/<int:person_id>')
     api.route(computer_list, 'computer_list', '/computers', '/persons/<int:person_id>/computers')
     api.route(computer_list, 'computer_detail', '/computers/<int:id>')
     api.route(computer_owner, 'computer_owner', '/computers/<int:id>/relationships/owner')
@@ -625,4 +686,118 @@ def test_get_relationship_relationship_field_not_found(session, client, register
     with client:
         response = client.get('/persons/' + str(person.person_id) + '/relationships/computer',
                               content_type='application/vnd.api+json')
+        assert response.status_code == 500
+
+
+@pytest.fixture(scope="module")
+def full_not_implemented_data_layer():
+    class FullNotImplementedDataLayer(BaseDataLayer):
+        pass
+    yield FullNotImplementedDataLayer
+
+
+def test_not_implemented_data_layer(session, person_model, full_not_implemented_data_layer):
+    with pytest.raises(NotImplementedError):
+        class PersonList(ResourceList):
+            data_layer_kwargs = {'session': session, 'model': person_model}
+
+            class Meta:
+                data_layer = full_not_implemented_data_layer
+
+
+def test_get_list_wrong_dl(client, register_routes):
+    with client:
+        response = client.get('/persons_wrong_dl', content_type='application/vnd.api+json')
+        assert response.status_code == 500
+
+
+def test_post_list_wrong_dl(session, client, register_routes, computer_model):
+    computer = computer_model(serial='1')
+
+    session_ = session
+    session_.add(computer)
+    session_.commit()
+
+    payload = {
+        'data': {
+            'type': 'person',
+            'attributes': {
+                'name': 'test'
+            },
+            'relationships': {
+                'computers': {
+                    'data': [
+                        {
+                            'type': 'computer',
+                            'id': str(computer.id)
+                        }
+                    ]
+                }
+            }
+        }
+    }
+
+    with client:
+        response = client.post('/persons_wrong_dl', data=json.dumps(payload), content_type='application/vnd.api+json')
+        assert response.status_code == 500
+
+
+def test_get_detail_wrong_dl(client, session, register_routes, person_model):
+    person = person_model(name='test')
+
+    session_ = session
+    session_.add(person)
+    session_.commit()
+
+    with client:
+        response = client.get('/persons_wrong_dl/' + str(person.person_id), content_type='application/vnd.api+json')
+        assert response.status_code == 500
+
+
+def test_patch_detail_wrong_dl(session, client, register_routes, computer_model, person_model):
+    person = person_model(name='test')
+    computer = computer_model(serial='1')
+
+    session_ = session
+    session_.add(computer)
+    session_.add(person)
+    session_.commit()
+
+    payload = {
+        'data': {
+            'id': str(person.person_id),
+            'type': 'person',
+            'attributes': {
+                'name': 'test2'
+            },
+            'relationships': {
+                'computers': {
+                    'data': [
+                        {
+                            'type': 'computer',
+                            'id': str(computer.id)
+                        }
+                    ]
+                }
+            }
+        }
+    }
+
+    with client:
+        response = client.patch('/persons_wrong_dl_bis/' + str(person.person_id),
+                                data=json.dumps(payload),
+                                content_type='application/vnd.api+json')
+        assert response.status_code == 500
+
+
+def test_delete_detail_wrong_dl(session, client, register_routes, person_model):
+    person = person_model(name='test')
+
+    session_ = session
+    session_.add(person)
+    session_.commit()
+
+    with client:
+        response = client.delete('/persons_wrong_dl_bis/' + str(person.person_id),
+                                 content_type='application/vnd.api+json')
         assert response.status_code == 500
