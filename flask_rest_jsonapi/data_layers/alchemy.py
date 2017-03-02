@@ -174,7 +174,7 @@ class SqlalchemyDataLayer(BaseDataLayer):
                 related_object = self.get_related_object(related_model, related_id_field, json_data['data'])
 
             obj_id = getattr(getattr(obj, relationship_field), related_id_field, None)
-            new_obj_id = getattr(related_object. related_id_field, None)
+            new_obj_id = getattr(related_object, related_id_field, None)
             if obj_id != new_obj_id:
                 setattr(obj, relationship_field, related_object)
                 updated = True
@@ -249,7 +249,7 @@ class SqlalchemyDataLayer(BaseDataLayer):
                 related_object = self.get_related_object(related_model, related_id_field, json_data['data'])
 
             obj_id = getattr(getattr(obj, relationship_field), related_id_field, None)
-            new_obj_id = getattr(related_object. related_id_field, None)
+            new_obj_id = getattr(related_object, related_id_field, None)
             if obj_id != new_obj_id:
                 setattr(obj, relationship_field, related_object)
                 updated = True
