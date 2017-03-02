@@ -2,7 +2,7 @@
 
 import json
 
-from flask_rest_jsonapi.exceptions import BadRequest, InvalidFilters, InvalidSort, InvalidInclude
+from flask_rest_jsonapi.exceptions import BadRequest, InvalidFilters
 
 
 class QueryStringManager(object):
@@ -144,15 +144,12 @@ class QueryStringManager(object):
 
         """
         if self.qs.get('sort'):
-            try:
-                sorting_results = []
-                for sort_field in self.qs['sort'].split(','):
-                    field = sort_field.replace('-', '')
-                    order = 'desc' if sort_field.startswith('-') else 'asc'
-                    sorting_results.append({'field': field, 'order': order})
-                    return sorting_results
-            except Exception:
-                raise InvalidSort("Parse error")
+            sorting_results = []
+            for sort_field in self.qs['sort'].split(','):
+                field = sort_field.replace('-', '')
+                order = 'desc' if sort_field.startswith('-') else 'asc'
+                sorting_results.append({'field': field, 'order': order})
+                return sorting_results
 
         return []
 
@@ -163,7 +160,4 @@ class QueryStringManager(object):
         :return list: a list of include information
         """
         include_param = self.qs.get('include')
-        try:
-            return include_param.split(',') if include_param else []
-        except Exception:
-            raise InvalidInclude("Parse error")
+        return include_param.split(',') if include_param else []

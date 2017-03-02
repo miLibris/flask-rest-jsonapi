@@ -9,7 +9,8 @@ from sqlalchemy.inspection import inspect
 
 from flask_rest_jsonapi.constants import DEFAULT_PAGE_SIZE
 from flask_rest_jsonapi.data_layers.base import BaseDataLayer
-from flask_rest_jsonapi.exceptions import ObjectNotFound, RelationNotFound, RelatedObjectNotFound, JsonApiException
+from flask_rest_jsonapi.exceptions import ObjectNotFound, RelationNotFound, RelatedObjectNotFound, JsonApiException,\
+    InvalidSort
 from flask_rest_jsonapi.data_layers.filtering.alchemy import create_filters
 from flask_rest_jsonapi.schema import get_relationships
 
@@ -152,7 +153,7 @@ class SqlalchemyDataLayer(BaseDataLayer):
         obj = self.get_object(**view_kwargs)
 
         if not hasattr(obj, relationship_field):
-            raise RelationNotFound(dict(), "%s has no attribut %s" % (obj.__class__.__name__, relationship_field))
+            raise RelationNotFound('', "%s has no attribut %s" % (obj.__class__.__name__, relationship_field))
 
         related_model = getattr(obj.__class__, relationship_field).property.mapper.class_
 
@@ -173,7 +174,7 @@ class SqlalchemyDataLayer(BaseDataLayer):
                 related_object = self.get_related_object(related_model, related_id_field, json_data['data'])
 
             obj_id = getattr(getattr(obj, relationship_field), related_id_field, None)
-            new_obj_id = getattr(related_object. related_id_field, None)
+            new_obj_id = getattr(related_object, related_id_field, None)
             if obj_id != new_obj_id:
                 setattr(obj, relationship_field, related_object)
                 updated = True
@@ -198,7 +199,7 @@ class SqlalchemyDataLayer(BaseDataLayer):
         obj = self.get_object(**view_kwargs)
 
         if not hasattr(obj, relationship_field):
-            raise RelationNotFound(dict(), "%s has no attribut %s" % (obj.__class__.__name__, relationship_field))
+            raise RelationNotFound('', "%s has no attribut %s" % (obj.__class__.__name__, relationship_field))
 
         related_objects = getattr(obj, relationship_field)
 
@@ -223,7 +224,7 @@ class SqlalchemyDataLayer(BaseDataLayer):
         obj = self.get_object(**view_kwargs)
 
         if not hasattr(obj, relationship_field):
-            raise RelationNotFound(dict(), "%s has no attribut %s" % (obj.__class__.__name__, relationship_field))
+            raise RelationNotFound('', "%s has no attribut %s" % (obj.__class__.__name__, relationship_field))
 
         related_model = getattr(obj.__class__, relationship_field).property.mapper.class_
 
@@ -248,7 +249,7 @@ class SqlalchemyDataLayer(BaseDataLayer):
                 related_object = self.get_related_object(related_model, related_id_field, json_data['data'])
 
             obj_id = getattr(getattr(obj, relationship_field), related_id_field, None)
-            new_obj_id = getattr(related_object. related_id_field, None)
+            new_obj_id = getattr(related_object, related_id_field, None)
             if obj_id != new_obj_id:
                 setattr(obj, relationship_field, related_object)
                 updated = True
@@ -272,7 +273,7 @@ class SqlalchemyDataLayer(BaseDataLayer):
         obj = self.get_object(**view_kwargs)
 
         if not hasattr(obj, relationship_field):
-            raise RelationNotFound(dict(), "%s has no attribut %s" % (obj.__class__.__name__, relationship_field))
+            raise RelationNotFound('', "%s has no attribut %s" % (obj.__class__.__name__, relationship_field))
 
         related_model = getattr(obj.__class__, relationship_field).property.mapper.class_
 
@@ -362,7 +363,7 @@ class SqlalchemyDataLayer(BaseDataLayer):
                         related_object = self.get_related_object(related_model, related_id_field, {'id': data[key]})
 
                     obj_id = getattr(getattr(obj, relationship_field), related_id_field, None)
-                    new_obj_id = getattr(related_object. related_id_field, None)
+                    new_obj_id = getattr(related_object, related_id_field, None)
                     if obj_id != new_obj_id:
                         updated = True
 
@@ -395,6 +396,8 @@ class SqlalchemyDataLayer(BaseDataLayer):
         expressions = {'asc': asc, 'desc': desc}
         order_objects = []
         for sort_opt in sort_info:
+            if not hasattr(self.model, sort_opt['field']):
+                raise InvalidSort("%s has no attribut %s" % (self.model.__name__, sort_opt['field']))
             field = text(sort_opt['field'])
             order = expressions[sort_opt['order']]
             order_objects.append(order(field))
