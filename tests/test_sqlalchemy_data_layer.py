@@ -395,6 +395,12 @@ def test_get_list_disable_pagination(client, register_routes):
         assert response.status_code == 200
 
 
+def test_head_list(client, register_routes):
+    with client:
+        response = client.head('/persons', content_type='application/vnd.api+json')
+        assert response.status_code == 200
+
+
 def test_post_list(client, register_routes, computer):
     payload = {
         'data': {
@@ -518,7 +524,6 @@ def test_post_relationship_not_list(client, register_routes, computer, person):
         response = client.post('/computers/' + str(computer.id) + '/relationships/owner',
                                data=json.dumps(payload),
                                content_type='application/vnd.api+json')
-        print(response.data)
         assert response.status_code == 200
 
 
@@ -895,3 +900,462 @@ def test_sqlalchemy_data_layer_delete_relationship_field_not_found(session, pers
     with pytest.raises(Exception):
         dl = SqlalchemyDataLayer(session=session, model=person_model)
         dl.delete_relationship(dict(), 'error', '', **{'id': 1})
+
+
+def test_post_list_incorrect_type(client, register_routes, computer):
+    payload = {
+        'data': {
+            'type': 'error',
+            'attributes': {
+                'name': 'test'
+            },
+            'relationships': {
+                'computers': {
+                    'data': [
+                        {
+                            'type': 'computer',
+                            'id': str(computer.id)
+                        }
+                    ]
+                }
+            }
+        }
+    }
+
+    with client:
+        response = client.post('/persons', data=json.dumps(payload), content_type='application/vnd.api+json')
+        assert response.status_code == 409
+
+
+def test_post_list_validation_error(client, register_routes, computer):
+    payload = {
+        'data': {
+            'type': 'person',
+            'attributes': {},
+            'relationships': {
+                'computers': {
+                    'data': [
+                        {
+                            'type': 'computer',
+                            'id': str(computer.id)
+                        }
+                    ]
+                }
+            }
+        }
+    }
+
+    with client:
+        response = client.post('/persons', data=json.dumps(payload), content_type='application/vnd.api+json')
+        assert response.status_code == 422
+
+
+def test_patch_detail_incorrect_type(client, register_routes, computer, person):
+    payload = {
+        'data': {
+            'id': str(person.person_id),
+            'type': 'error',
+            'attributes': {
+                'name': 'test2'
+            },
+            'relationships': {
+                'computers': {
+                    'data': [
+                        {
+                            'type': 'computer',
+                            'id': str(computer.id)
+                        }
+                    ]
+                }
+            }
+        }
+    }
+
+    with client:
+        response = client.patch('/persons/' + str(person.person_id),
+                                data=json.dumps(payload),
+                                content_type='application/vnd.api+json')
+        assert response.status_code == 409
+
+
+def test_patch_detail_validation_error(client, register_routes, computer, person):
+    payload = {
+        'data': {
+            'id': str(person.person_id),
+            'type': 'person',
+            'attributes': {
+                'name': {'test2': 'error'}
+            },
+            'relationships': {
+                'computers': {
+                    'data': [
+                        {
+                            'type': 'computer',
+                            'id': str(computer.id)
+                        }
+                    ]
+                }
+            }
+        }
+    }
+
+    with client:
+        response = client.patch('/persons/' + str(person.person_id),
+                                data=json.dumps(payload),
+                                content_type='application/vnd.api+json')
+        assert response.status_code == 422
+
+
+def test_patch_detail_missing_id(client, register_routes, computer, person):
+    payload = {
+        'data': {
+            'type': 'person',
+            'attributes': {
+                'name': 'test2'
+            },
+            'relationships': {
+                'computers': {
+                    'data': [
+                        {
+                            'type': 'computer',
+                            'id': str(computer.id)
+                        }
+                    ]
+                }
+            }
+        }
+    }
+
+    with client:
+        response = client.patch('/persons/' + str(person.person_id),
+                                data=json.dumps(payload),
+                                content_type='application/vnd.api+json')
+        assert response.status_code == 400
+
+
+def test_patch_detail_wrong_id(client, register_routes, computer, person):
+    payload = {
+        'data': {
+            'id': 'error',
+            'type': 'person',
+            'attributes': {
+                'name': 'test2'
+            },
+            'relationships': {
+                'computers': {
+                    'data': [
+                        {
+                            'type': 'computer',
+                            'id': str(computer.id)
+                        }
+                    ]
+                }
+            }
+        }
+    }
+
+    with client:
+        response = client.patch('/persons/' + str(person.person_id),
+                                data=json.dumps(payload),
+                                content_type='application/vnd.api+json')
+        assert response.status_code == 400
+
+
+def test_post_relationship_no_data(client, register_routes, computer, person):
+    with client:
+        response = client.post('/persons/' + str(person.person_id) + '/relationships/computers?include=computers',
+                               data=json.dumps(dict()),
+                               content_type='application/vnd.api+json')
+        assert response.status_code == 400
+
+
+def test_post_relationship_not_list_missing_type(client, register_routes, computer, person):
+    payload = {
+        'data': {
+            'id': str(person.person_id)
+        }
+    }
+
+    with client:
+        response = client.post('/computers/' + str(computer.id) + '/relationships/owner',
+                               data=json.dumps(payload),
+                               content_type='application/vnd.api+json')
+        assert response.status_code == 400
+
+
+def test_post_relationship_not_list_missing_id(client, register_routes, computer, person):
+    payload = {
+        'data': {
+            'type': 'person'
+        }
+    }
+
+    with client:
+        response = client.post('/computers/' + str(computer.id) + '/relationships/owner',
+                               data=json.dumps(payload),
+                               content_type='application/vnd.api+json')
+        assert response.status_code == 400
+
+
+def test_post_relationship_not_list_wrong_type(client, register_routes, computer, person):
+    payload = {
+        'data': {
+            'type': 'error',
+            'id': str(person.person_id)
+        }
+    }
+
+    with client:
+        response = client.post('/computers/' + str(computer.id) + '/relationships/owner',
+                               data=json.dumps(payload),
+                               content_type='application/vnd.api+json')
+        assert response.status_code == 409
+
+
+def test_post_relationship_missing_type(client, register_routes, computer, person):
+    payload = {
+        'data': [
+            {
+                'id': str(computer.id)
+            }
+        ]
+    }
+
+    with client:
+        response = client.post('/persons/' + str(person.person_id) + '/relationships/computers?include=computers',
+                               data=json.dumps(payload),
+                               content_type='application/vnd.api+json')
+        assert response.status_code == 400
+
+
+def test_post_relationship_missing_id(client, register_routes, computer, person):
+    payload = {
+        'data': [
+            {
+                'type': 'computer',
+            }
+        ]
+    }
+
+    with client:
+        response = client.post('/persons/' + str(person.person_id) + '/relationships/computers?include=computers',
+                               data=json.dumps(payload),
+                               content_type='application/vnd.api+json')
+        assert response.status_code == 400
+
+
+def test_post_relationship_wrong_type(client, register_routes, computer, person):
+    payload = {
+        'data': [
+            {
+                'type': 'error',
+                'id': str(computer.id)
+            }
+        ]
+    }
+
+    with client:
+        response = client.post('/persons/' + str(person.person_id) + '/relationships/computers?include=computers',
+                               data=json.dumps(payload),
+                               content_type='application/vnd.api+json')
+        assert response.status_code == 409
+
+
+def test_patch_relationship_no_data(client, register_routes, computer, person):
+    with client:
+        response = client.patch('/persons/' + str(person.person_id) + '/relationships/computers?include=computers',
+                                data=json.dumps(dict()),
+                                content_type='application/vnd.api+json')
+        assert response.status_code == 400
+
+
+def test_patch_relationship_not_list_missing_type(client, register_routes, computer, person):
+    payload = {
+        'data': {
+            'id': str(person.person_id)
+        }
+    }
+
+    with client:
+        response = client.patch('/computers/' + str(computer.id) + '/relationships/owner',
+                                data=json.dumps(payload),
+                                content_type='application/vnd.api+json')
+        assert response.status_code == 400
+
+
+def test_patch_relationship_not_list_missing_id(client, register_routes, computer, person):
+    payload = {
+        'data': {
+            'type': 'person'
+        }
+    }
+
+    with client:
+        response = client.patch('/computers/' + str(computer.id) + '/relationships/owner',
+                                data=json.dumps(payload),
+                                content_type='application/vnd.api+json')
+        assert response.status_code == 400
+
+
+def test_patch_relationship_not_list_wrong_type(client, register_routes, computer, person):
+    payload = {
+        'data': {
+            'type': 'error',
+            'id': str(person.person_id)
+        }
+    }
+
+    with client:
+        response = client.patch('/computers/' + str(computer.id) + '/relationships/owner',
+                                data=json.dumps(payload),
+                                content_type='application/vnd.api+json')
+        assert response.status_code == 409
+
+
+def test_patch_relationship_missing_type(client, register_routes, computer, person):
+    payload = {
+        'data': [
+            {
+                'id': str(computer.id)
+            }
+        ]
+    }
+
+    with client:
+        response = client.patch('/persons/' + str(person.person_id) + '/relationships/computers?include=computers',
+                                data=json.dumps(payload),
+                                content_type='application/vnd.api+json')
+        assert response.status_code == 400
+
+
+def test_patch_relationship_missing_id(client, register_routes, computer, person):
+    payload = {
+        'data': [
+            {
+                'type': 'computer',
+            }
+        ]
+    }
+
+    with client:
+        response = client.patch('/persons/' + str(person.person_id) + '/relationships/computers?include=computers',
+                                data=json.dumps(payload),
+                                content_type='application/vnd.api+json')
+        assert response.status_code == 400
+
+
+def test_patch_relationship_wrong_type(client, register_routes, computer, person):
+    payload = {
+        'data': [
+            {
+                'type': 'error',
+                'id': str(computer.id)
+            }
+        ]
+    }
+
+    with client:
+        response = client.patch('/persons/' + str(person.person_id) + '/relationships/computers?include=computers',
+                                data=json.dumps(payload),
+                                content_type='application/vnd.api+json')
+        assert response.status_code == 409
+
+
+def test_delete_relationship_no_data(client, register_routes, computer, person):
+    with client:
+        response = client.delete('/persons/' + str(person.person_id) + '/relationships/computers?include=computers',
+                                 data=json.dumps(dict()),
+                                 content_type='application/vnd.api+json')
+        assert response.status_code == 400
+
+
+def test_delete_relationship_not_list_missing_type(client, register_routes, computer, person):
+    payload = {
+        'data': {
+            'id': str(person.person_id)
+        }
+    }
+
+    with client:
+        response = client.delete('/computers/' + str(computer.id) + '/relationships/owner',
+                                 data=json.dumps(payload),
+                                 content_type='application/vnd.api+json')
+        assert response.status_code == 400
+
+
+def test_delete_relationship_not_list_missing_id(client, register_routes, computer, person):
+    payload = {
+        'data': {
+            'type': 'person'
+        }
+    }
+
+    with client:
+        response = client.delete('/computers/' + str(computer.id) + '/relationships/owner',
+                                 data=json.dumps(payload),
+                                 content_type='application/vnd.api+json')
+        assert response.status_code == 400
+
+
+def test_delete_relationship_not_list_wrong_type(client, register_routes, computer, person):
+    payload = {
+        'data': {
+            'type': 'error',
+            'id': str(person.person_id)
+        }
+    }
+
+    with client:
+        response = client.delete('/computers/' + str(computer.id) + '/relationships/owner',
+                                 data=json.dumps(payload),
+                                 content_type='application/vnd.api+json')
+        assert response.status_code == 409
+
+
+def test_delete_relationship_missing_type(client, register_routes, computer, person):
+    payload = {
+        'data': [
+            {
+                'id': str(computer.id)
+            }
+        ]
+    }
+
+    with client:
+        response = client.delete('/persons/' + str(person.person_id) + '/relationships/computers?include=computers',
+                                 data=json.dumps(payload),
+                                 content_type='application/vnd.api+json')
+        assert response.status_code == 400
+
+
+def test_delete_relationship_missing_id(client, register_routes, computer, person):
+    payload = {
+        'data': [
+            {
+                'type': 'computer',
+            }
+        ]
+    }
+
+    with client:
+        response = client.delete('/persons/' + str(person.person_id) + '/relationships/computers?include=computers',
+                                 data=json.dumps(payload),
+                                 content_type='application/vnd.api+json')
+        assert response.status_code == 400
+
+
+def test_delete_relationship_wrong_type(client, register_routes, computer, person):
+    payload = {
+        'data': [
+            {
+                'type': 'error',
+                'id': str(computer.id)
+            }
+        ]
+    }
+
+    with client:
+        response = client.delete('/persons/' + str(person.person_id) + '/relationships/computers?include=computers',
+                                 data=json.dumps(payload),
+                                 content_type='application/vnd.api+json')
+        assert response.status_code == 409
