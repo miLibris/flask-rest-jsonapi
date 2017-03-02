@@ -49,18 +49,33 @@ class BaseDataLayer(object):
         """
         raise NotImplementedError
 
-    def delete_object(self, *args, **kwargs):
+    def delete_object(self, obj, **view_kwargs):
         """Delete an item through the data layer
+
+        :param DeclarativeMeta obj: an object
+        :param dict view_kwargs: kwargs from the resource view
         """
         raise NotImplementedError
 
-    def create_relationship(self, *args, **kwargs):
+    def create_relationship(self, json_data, relationship_field, related_id_field, **view_kwargs):
         """Create a relationship
+
+        :param dict json_data: the request params
+        :param str relationship_field: the model attribut used for relationship
+        :param str related_id_field: the identifier field of the related model
+        :param dict view_kwargs: kwargs from the resource view
+        :return boolean: True if relationship have changed else False
         """
         raise NotImplementedError
 
-    def get_relationship(self, *args, **kwargs):
+    def get_relationship(self, relationship_field, related_type_, related_id_field, **view_kwargs):
         """Get information about a relationship
+
+        :param str relationship_field: the model attribut used for relationship
+        :param str related_type_: the related resource type
+        :param str related_id_field: the identifier field of the related model
+        :param dict view_kwargs: kwargs from the resource view
+        :return tuple: the object and related object(s)
         """
         raise NotImplementedError
 

@@ -2,7 +2,7 @@
 
 import json
 
-from flask_rest_jsonapi.exceptions import BadRequest, InvalidFilters, InvalidInclude
+from flask_rest_jsonapi.exceptions import BadRequest, InvalidFilters
 
 
 class QueryStringManager(object):
@@ -160,7 +160,4 @@ class QueryStringManager(object):
         :return list: a list of include information
         """
         include_param = self.qs.get('include')
-        try:
-            return include_param.split(',') if include_param else []
-        except Exception:
-            raise InvalidInclude("Parse error")
+        return include_param.split(',') if include_param else []

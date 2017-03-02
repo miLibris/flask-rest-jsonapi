@@ -11,7 +11,8 @@ from flask import Blueprint, make_response
 from marshmallow_jsonapi.flask import Schema, Relationship
 from marshmallow_jsonapi import fields
 
-from flask_rest_jsonapi import Api, ResourceList, ResourceDetail, Relationship as ResourceRelationship, JsonApiException
+from flask_rest_jsonapi import Api, ResourceList, ResourceDetail, Relationship as ResourceRelationship,\
+    JsonApiException, QueryStringManager as QSManager
 from flask_rest_jsonapi.data_layers.alchemy import SqlalchemyDataLayer
 from flask_rest_jsonapi.data_layers.base import BaseDataLayer
 
@@ -63,6 +64,17 @@ def session(engine):
 @pytest.fixture()
 def person(session, person_model):
     person_ = person_model(name='test')
+    session_ = session
+    session_.add(person_)
+    session_.commit()
+    yield person_
+    session_.delete(person_)
+    session_.commit()
+
+
+@pytest.fixture()
+def person_2(session, person_model):
+    person_ = person_model(name='test2')
     session_ = session
     session_.add(person_)
     session_.commit()
@@ -187,6 +199,7 @@ def person_computers(session, person_model, dummy_decorator, person_schema):
             post_decorators = [dummy_decorator]
             patch_decorators = [dummy_decorator]
             delete_decorators = [dummy_decorator]
+            relationship_mapping = {'computers': {'relationship_field': 'computers', 'id_field': 'id'}}
     yield PersonComputersRelationship
 
 
@@ -224,62 +237,6 @@ def person_list_without_schema(session, person_model):
     yield PersonList
 
 
-@pytest.fixture(scope="module")
-def not_implemented_data_layer():
-    class NotImplementedDataLayer(BaseDataLayer):
-        def configure(self, meta):
-            pass
-    yield NotImplementedDataLayer
-
-
-@pytest.fixture(scope="module")
-def not_implemented_data_layer_bis():
-    class NotImplementedDataLayer(BaseDataLayer):
-        def get_object(self, **view_kwargs):
-            pass
-
-        def configure(self, meta):
-            pass
-    yield NotImplementedDataLayer
-
-
-@pytest.fixture(scope="module")
-def person_list_wrong_data_layer(session, person_model, person_schema, not_implemented_data_layer):
-    class PersonList(ResourceList):
-        schema = person_schema
-        data_layer_kwargs = {'model': person_model, 'session': session}
-
-        class Meta:
-            data_layer = not_implemented_data_layer
-    yield PersonList
-
-
-@pytest.fixture(scope="module")
-def person_detail_wrong_data_layer(session, person_model, person_schema, not_implemented_data_layer):
-    class PersonDetail(ResourceDetail):
-        schema = person_schema
-        data_layer_kwargs = {'model': person_model,
-                             'session': session,
-                             'url_field': 'person_id'}
-
-        class Meta:
-            data_layer = not_implemented_data_layer
-    yield PersonDetail
-
-
-@pytest.fixture(scope="module")
-def person_detail_wrong_data_layer_bis(session, person_model, person_schema, not_implemented_data_layer_bis):
-    class PersonDetail(ResourceDetail):
-        schema = person_schema
-        data_layer_kwargs = {'model': person_model,
-                             'session': session,
-                             'url_field': 'person_id'}
-
-        class Meta:
-            data_layer = not_implemented_data_layer_bis
-    yield PersonDetail
-
-
 def query_(self, **view_kwargs):
     if view_kwargs.get('person_id') is not None:
         return self.session.query(computer_model).join(person_model).filter_by(person_id=view_kwargs['person_id'])
@@ -294,7 +251,6 @@ def computer_list(session, computer_model, computer_schema):
 
         class Meta:
             query = query_
-            not_allowed_methods = ['POST']
             relationship_mapping = {'person': {'relationship_field': 'owner', 'id_field': 'person_id'}}
     yield ComputerList
 
@@ -305,6 +261,9 @@ def computer_detail(session, computer_model, dummy_decorator, computer_schema):
         schema = computer_schema
         data_layer_kwargs = {'model': computer_model,
                              'session': session}
+
+        class Meta:
+            not_allowed_methods = ['DELETE']
     yield ComputerDetail
 
 
@@ -326,8 +285,7 @@ def api_blueprint(client):
 @pytest.fixture(scope="module")
 def register_routes(client, app, api_blueprint, person_list, person_detail, person_computers,
                     person_list_raise_jsonapiexception, person_list_raise_exception, person_list_response,
-                    person_list_without_schema, person_list_wrong_data_layer, person_detail_wrong_data_layer,
-                    person_detail_wrong_data_layer_bis, computer_list, computer_detail, computer_owner):
+                    person_list_without_schema, computer_list, computer_detail, computer_owner):
     api = Api(api_blueprint)
     api.route(person_list, 'person_list', '/persons')
     api.route(person_detail, 'person_detail', '/persons/<int:person_id>')
@@ -337,9 +295,6 @@ def register_routes(client, app, api_blueprint, person_list, person_detail, pers
     api.route(person_list_raise_exception, 'person_list_exception', '/persons_exception')
     api.route(person_list_response, 'person_list_response', '/persons_response')
     api.route(person_list_without_schema, 'person_list_without_schema', '/persons_without_schema')
-    api.route(person_list_wrong_data_layer, 'person_list_wrong_data_layer', '/persons_wrong_dl')
-    api.route(person_detail_wrong_data_layer, 'person_detail_wrong_data_layer', '/persons_wrong_dl/<int:person_id>')
-    api.route(person_detail_wrong_data_layer_bis, 'person_detail_wrong_dl_bis', '/persons_wrong_dl_bis/<int:person_id>')
     api.route(computer_list, 'computer_list', '/computers', '/persons/<int:person_id>/computers')
     api.route(computer_list, 'computer_detail', '/computers/<int:id>')
     api.route(computer_owner, 'computer_owner', '/computers/<int:id>/relationships/owner')
@@ -347,11 +302,11 @@ def register_routes(client, app, api_blueprint, person_list, person_detail, pers
 
 
 # test good cases
-def test_get_list(client, register_routes):
+def test_get_list(client, register_routes, person, person_2):
     with client:
-        querystring = urlencode({'page[number]': 3,
+        querystring = urlencode({'page[number]': 1,
                                  'page[size]': 1,
-                                 'fields[person]': 'name',
+                                 'fields[person]': 'name,birth_date',
                                  'sort': '-name',
                                  'include': 'computers.owner',
                                  'filters': json.dumps(
@@ -426,6 +381,29 @@ def test_post_list(client, register_routes, computer):
         assert response.status_code == 201
 
 
+def test_post_list_single(client, register_routes, person):
+    payload = {
+        'data': {
+            'type': 'computer',
+            'attributes': {
+                'serial': '1'
+            },
+            'relationships': {
+                'owner': {
+                    'data': {
+                        'type': 'person',
+                        'id': str(person.person_id)
+                    }
+                }
+            }
+        }
+    }
+
+    with client:
+        response = client.post('/computers', data=json.dumps(payload), content_type='application/vnd.api+json')
+        assert response.status_code == 201
+
+
 def test_get_detail(client, register_routes, person):
     with client:
         response = client.get('/persons/' + str(person.person_id), content_type='application/vnd.api+json')
@@ -489,6 +467,13 @@ def test_get_relationship_single(session, client, register_routes, computer, per
     computer.owner = person
     session_.commit()
 
+    with client:
+        response = client.get('/computers/' + str(computer.id) + '/relationships/owner',
+                              content_type='application/vnd.api+json')
+        assert response.status_code == 200
+
+
+def test_get_relationship_single_empty(session, client, register_routes, computer):
     with client:
         response = client.get('/computers/' + str(computer.id) + '/relationships/owner',
                               content_type='application/vnd.api+json')
@@ -683,6 +668,20 @@ def test_get_list_invalid_filters(client, register_routes):
         assert response.status_code == 400
 
 
+def test_get_list_invalid_filters_parsing(client, register_routes):
+    with client:
+        querystring = urlencode({'filters': 'error'})
+        response = client.get('/persons' + '?' + querystring, content_type='application/vnd.api+json')
+        assert response.status_code == 400
+
+
+def test_get_list_invalid_page(client, register_routes):
+    with client:
+        querystring = urlencode({'page[number]': 'error'})
+        response = client.get('/persons' + '?' + querystring, content_type='application/vnd.api+json')
+        assert response.status_code == 400
+
+
 def test_get_list_invalid_sort(client, register_routes):
     with client:
         querystring = urlencode({'sort': 'error'})
@@ -692,7 +691,7 @@ def test_get_list_invalid_sort(client, register_routes):
 
 def test_get_detail_object_not_found(client, register_routes):
     with client:
-        response = client.get('/persons/2', content_type='application/vnd.api+json')
+        response = client.get('/persons/3', content_type='application/vnd.api+json')
         assert response.status_code == 404
 
 
@@ -701,7 +700,7 @@ def test_post_relationship_related_object_not_found(client, register_routes, per
         'data': [
             {
                 'type': 'computer',
-                'id': '1'
+                'id': '2'
             }
         ]
     }
@@ -734,78 +733,6 @@ def test_not_implemented_data_layer(session, person_model, full_not_implemented_
 
             class Meta:
                 data_layer = full_not_implemented_data_layer
-
-
-def test_get_list_wrong_dl(client, register_routes):
-    with client:
-        response = client.get('/persons_wrong_dl', content_type='application/vnd.api+json')
-        assert response.status_code == 500
-
-
-def test_post_list_wrong_dl(client, register_routes, computer):
-    payload = {
-        'data': {
-            'type': 'person',
-            'attributes': {
-                'name': 'test'
-            },
-            'relationships': {
-                'computers': {
-                    'data': [
-                        {
-                            'type': 'computer',
-                            'id': str(computer.id)
-                        }
-                    ]
-                }
-            }
-        }
-    }
-
-    with client:
-        response = client.post('/persons_wrong_dl', data=json.dumps(payload), content_type='application/vnd.api+json')
-        assert response.status_code == 500
-
-
-def test_get_detail_wrong_dl(client, register_routes, person):
-    with client:
-        response = client.get('/persons_wrong_dl/' + str(person.person_id), content_type='application/vnd.api+json')
-        assert response.status_code == 500
-
-
-def test_patch_detail_wrong_dl(client, register_routes, computer, person):
-    payload = {
-        'data': {
-            'id': str(person.person_id),
-            'type': 'person',
-            'attributes': {
-                'name': 'test2'
-            },
-            'relationships': {
-                'computers': {
-                    'data': [
-                        {
-                            'type': 'computer',
-                            'id': str(computer.id)
-                        }
-                    ]
-                }
-            }
-        }
-    }
-
-    with client:
-        response = client.patch('/persons_wrong_dl_bis/' + str(person.person_id),
-                                data=json.dumps(payload),
-                                content_type='application/vnd.api+json')
-        assert response.status_code == 500
-
-
-def test_delete_detail_wrong_dl(client, register_routes, person):
-    with client:
-        response = client.delete('/persons_wrong_dl_bis/' + str(person.person_id),
-                                 content_type='application/vnd.api+json')
-        assert response.status_code == 500
 
 
 def test_api(app, person_list):
@@ -1359,3 +1286,30 @@ def test_delete_relationship_wrong_type(client, register_routes, computer, perso
                                  data=json.dumps(payload),
                                  content_type='application/vnd.api+json')
         assert response.status_code == 409
+
+
+def test_base_data_layer():
+    base_dl = BaseDataLayer()
+    with pytest.raises(NotImplementedError):
+        base_dl.create_object(None, None, **dict())
+    with pytest.raises(NotImplementedError):
+        base_dl.get_object(**dict())
+    with pytest.raises(NotImplementedError):
+        base_dl.get_collection(None, **dict())
+    with pytest.raises(NotImplementedError):
+        base_dl.update_object(None, None, None, **dict())
+    with pytest.raises(NotImplementedError):
+        base_dl.delete_object(None, **dict())
+    with pytest.raises(NotImplementedError):
+        base_dl.create_relationship(None, None, None, **dict())
+    with pytest.raises(NotImplementedError):
+        base_dl.get_relationship(None, None, None, **dict())
+    with pytest.raises(NotImplementedError):
+        base_dl.update_relationship(None, None, None, **dict())
+    with pytest.raises(NotImplementedError):
+        base_dl.delete_relationship(None, None, None, **dict())
+
+
+def test_qs_manager():
+    with pytest.raises(ValueError):
+        QSManager([])

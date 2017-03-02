@@ -1,6 +1,10 @@
 # -*- coding: utf-8 -*-
 
-from flask import abort, request
+import json
+
+from flask import request, make_response
+
+from flask_rest_jsonapi.exceptions import JsonApiException
 
 
 def not_allowed_method(f):
@@ -10,7 +14,7 @@ def not_allowed_method(f):
     :return callable: the wrapped function
     """
     def wrapped_f(*args, **kwargs):
-        abort(405)
+        raise JsonApiException('', "Acces to this method have been disallowed", title="MethodNotAllowed", status=405)
     return wrapped_f
 
 
@@ -22,9 +26,19 @@ def check_headers(f):
     """
     def wrapped_f(*args, **kwargs):
         if request.headers['Content-Type'] != 'application/vnd.api+json':
-            abort(415)
+            error = json.dumps({'jsonapi': {'version': '1.0'},
+                                'errors': [{'source': '',
+                                            'detail': "Content-Type header must be application/vnd.api+json",
+                                            'title': 'InvalidContentTypeHeader',
+                                            'status': 415}]})
+            return make_response(error, 415, {'Content-Type': 'application/vnd.api+json'})
         if request.headers.get('Accept') and request.headers['Accept'] != 'application/vnd.api+json':
-            abort(406)
+            error = json.dumps({'jsonapi': {'version': '1.0'},
+                                'errors': [{'source': '',
+                                            'detail': "Accept header must be application/vnd.api+json",
+                                            'title': 'InvalidAcceptHeader',
+                                            'status': 406}]})
+            return make_response(error, 406, {'Content-Type': 'application/vnd.api+json'})
         return f(*args, **kwargs)
     return wrapped_f
 
