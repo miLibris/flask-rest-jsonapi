@@ -11,8 +11,8 @@ from flask import Blueprint, make_response
 from marshmallow_jsonapi.flask import Schema, Relationship
 from marshmallow_jsonapi import fields
 
-from flask_rest_jsonapi import Api, ResourceList, ResourceDetail, Relationship as ResourceRelationship,\
-    JsonApiException, QueryStringManager as QSManager
+from flask_rest_jsonapi import Api, ResourceList, ResourceDetail, ResourceRelationship, JsonApiException,\
+    QueryStringManager as QSManager
 from flask_rest_jsonapi.data_layers.alchemy import SqlalchemyDataLayer
 from flask_rest_jsonapi.data_layers.base import BaseDataLayer
 
