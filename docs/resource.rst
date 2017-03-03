@@ -1,10 +1,11 @@
 Resource
 ========
 
-Flask-Rest-JSONAPI provides 2 resource class helpers:
+Flask-REST-JSONAPI provides 3 resource class helpers:
 
     - ResourceList
     - ResourceDetail
+    - ResourceRelationship
 
 .. Note::
     If you forget to set one of the required attributes of a resource class, the library will raise an Exception to
