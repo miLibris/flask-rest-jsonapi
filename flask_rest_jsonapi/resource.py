@@ -312,7 +312,7 @@ class ResourceDetail(with_metaclass(ResourceDetailMeta, Resource)):
         return 'Object successful deleted', 204
 
 
-class Relationship(with_metaclass(ResourceRelationshipMeta, Resource)):
+class ResourceRelationship(with_metaclass(ResourceRelationshipMeta, Resource)):
 
     @check_method_requirements
     def get(self, *args, **kwargs):
