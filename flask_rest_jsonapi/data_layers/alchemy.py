@@ -21,17 +21,16 @@ class SqlalchemyDataLayer(BaseDataLayer):
         super(SqlalchemyDataLayer, self).__init__(*args, **kwargs)
 
         if not hasattr(self, 'session'):
-            raise Exception("You must provide a session in data_layer_kwargs to use sqlalchemy data layer in %s"
-                            % self.resource.__name__)
+            raise Exception("You must provide a session in data_layer_kwargs to use sqlalchemy data layer in {}"
+                            .format(self.resource.__name__))
         if not hasattr(self, 'model'):
-            raise Exception("You must provide a model in data_layer_kwargs to use sqlalchemy data layer in %s"
-                            % self.resource.__name__)
+            raise Exception("You must provide a model in data_layer_kwargs to use sqlalchemy data layer in {}"
+                            .format(self.resource.__name__))
 
-    def create_object(self, data, opts, **view_kwargs):
+    def create_object(self, data, **view_kwargs):
         """Create an object through sqlalchemy
 
         :param dict data: the data validated by marshmallow
-        :param opts: meta options from the resource class
         :param dict view_kwargs: kwargs from the resource view
         :return DeclarativeMeta: an object from sqlalchemy
         """
@@ -39,7 +38,7 @@ class SqlalchemyDataLayer(BaseDataLayer):
 
         relationship_fields = get_relationships(self.resource.schema)
         obj = self.model(**{key: value for (key, value) in data.items() if key not in relationship_fields})
-        self.apply_relationships(data, opts, obj)
+        self.apply_relationships(data, obj)
 
         self.session.add(obj)
         try:
@@ -60,7 +59,7 @@ class SqlalchemyDataLayer(BaseDataLayer):
         try:
             filter_field = getattr(self.model, id_field)
         except Exception:
-            raise Exception("Unable to find attribut: %s on model: %s" % (id_field, self.model.__name__))
+            raise Exception("{} has no attribut {}".format(self.model.__name__), id_field)
 
         url_field = getattr(self, 'url_field', 'id')
         filter_value = view_kwargs[url_field]
@@ -68,7 +67,8 @@ class SqlalchemyDataLayer(BaseDataLayer):
         try:
             obj = self.session.query(self.model).filter(filter_field == filter_value).one()
         except NoResultFound:
-            raise ObjectNotFound('', "Could not find %s.%s=%s object" % (self.model.__name__, id_field, filter_value))
+            raise ObjectNotFound('',
+                                 "Could not find {}.{}={} object".format(self.model.__name__, id_field, filter_value))
 
         return obj
 
@@ -93,12 +93,11 @@ class SqlalchemyDataLayer(BaseDataLayer):
 
         return object_count, query.all()
 
-    def update_object(self, obj, data, opts, **view_kwargs):
+    def update_object(self, obj, data, **view_kwargs):
         """Update an object through sqlalchemy
 
         :param DeclarativeMeta obj: an object from sqlalchemy
         :param dict data: the data validated by marshmallow
-        :param opts: meta options from the resource class
         :param dict view_kwargs: kwargs from the resource view
         :return boolean: True if object have changed else False
         """
@@ -113,7 +112,7 @@ class SqlalchemyDataLayer(BaseDataLayer):
                     update = True
                 setattr(obj, field, data[field])
 
-        update_relationship = self.apply_relationships(data, opts, obj)
+        update_relationship = self.apply_relationships(data, obj)
 
         if update_relationship is True:
             update = True
@@ -153,7 +152,7 @@ class SqlalchemyDataLayer(BaseDataLayer):
         obj = self.get_object(**view_kwargs)
 
         if not hasattr(obj, relationship_field):
-            raise RelationNotFound('', "%s has no attribut %s" % (obj.__class__.__name__, relationship_field))
+            raise RelationNotFound('', "{} has no attribut {}".format(obj.__class__.__name__, relationship_field))
 
         related_model = getattr(obj.__class__, relationship_field).property.mapper.class_
 
@@ -199,7 +198,7 @@ class SqlalchemyDataLayer(BaseDataLayer):
         obj = self.get_object(**view_kwargs)
 
         if not hasattr(obj, relationship_field):
-            raise RelationNotFound('', "%s has no attribut %s" % (obj.__class__.__name__, relationship_field))
+            raise RelationNotFound('', "{} has no attribut {}".format(obj.__class__.__name__, relationship_field))
 
         related_objects = getattr(obj, relationship_field)
 
@@ -224,7 +223,7 @@ class SqlalchemyDataLayer(BaseDataLayer):
         obj = self.get_object(**view_kwargs)
 
         if not hasattr(obj, relationship_field):
-            raise RelationNotFound('', "%s has no attribut %s" % (obj.__class__.__name__, relationship_field))
+            raise RelationNotFound('', "{} has no attribut {}".format(obj.__class__.__name__, relationship_field))
 
         related_model = getattr(obj.__class__, relationship_field).property.mapper.class_
 
@@ -273,7 +272,7 @@ class SqlalchemyDataLayer(BaseDataLayer):
         obj = self.get_object(**view_kwargs)
 
         if not hasattr(obj, relationship_field):
-            raise RelationNotFound('', "%s has no attribut %s" % (obj.__class__.__name__, relationship_field))
+            raise RelationNotFound('', "{} has no attribut {}".format(obj.__class__.__name__, relationship_field))
 
         related_model = getattr(obj.__class__, relationship_field).property.mapper.class_
 
@@ -312,17 +311,16 @@ class SqlalchemyDataLayer(BaseDataLayer):
                                          .filter(getattr(related_model, related_id_field) == obj['id'])\
                                          .one()
         except NoResultFound:
-            raise RelatedObjectNotFound('', "Could not find %s.%s=%s object" % (related_model.__name__,
-                                                                                related_id_field,
-                                                                                obj['id']))
+            raise RelatedObjectNotFound('', "Could not find {}.{}={} object".format(related_model.__name__,
+                                                                                    related_id_field,
+                                                                                    obj['id']))
 
         return related_object
 
-    def apply_relationships(self, data, opts, obj):
+    def apply_relationships(self, data, obj):
         """Apply relationship provided by data to obj
 
         :param dict data: data provided by the client
-        :param opts: options of the resource
         :param DeclarativeMeta obj: the sqlalchemy object to plug relationships to
         :return boolean: True if relationship have changed else False
         """
@@ -332,16 +330,13 @@ class SqlalchemyDataLayer(BaseDataLayer):
             if key in relationship_fields:
                 relationship_field = key
 
-                if hasattr(opts, 'relationship_mapping') and\
-                        opts.relationship_mapping.get(key, {}).get('relationship_field') is not None:
-                    relationship_field = opts.relationship_mapping[key]['relationship_field']
-
-                related_model = getattr(obj.__class__, key).property.mapper.class_
                 related_id_field = self.resource.schema._declared_fields[relationship_field].id_field
 
-                if hasattr(opts, 'relationship_mapping') and\
-                        opts.relationship_mapping.get(key, {}).get('id_field') is not None:
-                    related_id_field = opts.relationship_mapping[key]['id_field']
+                if hasattr(self.resource.opts, 'schema_to_model') and\
+                        self.resource.opts.schema_to_model.get(key) is not None:
+                    relationship_field = self.resource.opts.schema_to_model[relationship_field]
+
+                related_model = getattr(obj.__class__, relationship_field).property.mapper.class_
 
                 if isinstance(data[key], list):
                     related_objects = []
@@ -381,7 +376,7 @@ class SqlalchemyDataLayer(BaseDataLayer):
         :return Query: the sorted query
         """
         if filter_info:
-            filters = create_filters(model, filter_info)
+            filters = create_filters(model, filter_info, self.resource)
             query = query.filter(*filters)
 
         return query
@@ -397,7 +392,7 @@ class SqlalchemyDataLayer(BaseDataLayer):
         order_objects = []
         for sort_opt in sort_info:
             if not hasattr(self.model, sort_opt['field']):
-                raise InvalidSort("%s has no attribut %s" % (self.model.__name__, sort_opt['field']))
+                raise InvalidSort("{} has no attribut {}".format(self.model.__name__, sort_opt['field']))
             field = text(sort_opt['field'])
             order = expressions[sort_opt['order']]
             order_objects.append(order(field))

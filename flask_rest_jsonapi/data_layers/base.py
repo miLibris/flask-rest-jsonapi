@@ -11,11 +11,10 @@ class BaseDataLayer(object):
         for key, value in kwargs.items():
             setattr(self, key, value)
 
-    def create_object(self, data, opts, **view_kwargs):
+    def create_object(self, data, **view_kwargs):
         """Create an object
 
         :param dict data: the data validated by marshmallow
-        :param opts: meta options from the resource class
         :param dict view_kwargs: kwargs from the resource view
         :return DeclarativeMeta: an object
         """
@@ -38,12 +37,11 @@ class BaseDataLayer(object):
         """
         raise NotImplementedError
 
-    def update_object(self, obj, data, opts, **view_kwargs):
+    def update_object(self, obj, data, **view_kwargs):
         """Update an object
 
         :param DeclarativeMeta obj: an object
         :param dict data: the data validated by marshmallow
-        :param opts: meta options from the resource class
         :param dict view_kwargs: kwargs from the resource view
         :return boolean: True if object have changed else False
         """

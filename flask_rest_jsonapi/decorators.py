@@ -65,17 +65,17 @@ def check_method_requirements(f):
     def wrapped_f(self, *args, **kwargs):
         cls = type(self)
         method_name = f.__name__
-        error_message = "You must provide %(error_field)s in %(cls)s to get access to the default %(method)s method"
+        error_message = "You must provide {error_field} in {cls} to get access to the default {method} method"
         error_data = {'cls': cls.__name__, 'method': method_name}
 
         if not hasattr(self, 'data_layer'):
             error_data.update({'error_field': 'a data layer class'})
-            raise Exception(error_message % error_data)
+            raise Exception(error_message.format(**error_data))
 
         if method_name != 'delete':
             if not hasattr(self, 'schema'):
                 error_data.update({'error_field': 'a schema class'})
-                raise Exception(error_message % error_data)
+                raise Exception(error_message.format(**error_data))
 
         return f(self, *args, **kwargs)
 

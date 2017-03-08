@@ -16,7 +16,7 @@ from flask_rest_jsonapi.querystring import QueryStringManager as QSManager
 from flask_rest_jsonapi.pagination import add_pagination_links
 from flask_rest_jsonapi.exceptions import InvalidType, BadRequest, JsonApiException, RelationNotFound
 from flask_rest_jsonapi.decorators import not_allowed_method, check_headers, check_method_requirements, add_headers
-from flask_rest_jsonapi.schema import compute_schema
+from flask_rest_jsonapi.schema import compute_schema, get_relationships
 from flask_rest_jsonapi.data_layers.base import BaseDataLayer
 from flask_rest_jsonapi.data_layers.alchemy import SqlalchemyDataLayer
 
@@ -32,11 +32,12 @@ class ResourceMeta(MethodViewType):
 
         alternative_data_layer_cls = getattr(meta, 'data_layer', None)
         if alternative_data_layer_cls is not None and BaseDataLayer not in inspect.getmro(alternative_data_layer_cls):
-            raise Exception("You must provide a data layer class inherited from BaseDataLayer in %s resource" % name)
+            raise Exception("You must provide a data layer class inherited from BaseDataLayer in {} resource"
+                            .format(name))
 
         if nmspc.get('data_layer_kwargs') is not None:
             if not isinstance(nmspc['data_layer_kwargs'], dict):
-                raise Exception("You must provide data_layer_kwargs as dictionary in %s resource" % name)
+                raise Exception("You must provide data_layer_kwargs as dictionary in {} resource".format(name))
             else:
                 data_layer_cls = getattr(meta, 'data_layer', SqlalchemyDataLayer)
                 data_layer_kwargs = nmspc.get('data_layer_kwargs', dict())
@@ -129,7 +130,7 @@ class Resource(MethodView):
         meth = getattr(self, request.method.lower(), None)
         if meth is None and request.method == 'HEAD':
             meth = getattr(self, 'get', None)
-        assert meth is not None, 'Unimplemented method %r' % request.method
+        assert meth is not None, 'Unimplemented method {}'.format(request.method)
 
         try:
             resp = meth(*args, **kwargs)
@@ -137,11 +138,11 @@ class Resource(MethodView):
             return make_response(json.dumps(jsonapi_errors([e.to_dict()])),
                                  e.status,
                                  {'Content-Type': 'application/vnd.api+json'})
-        except Exception as e:
-            exc = JsonApiException('', str(e))
-            return make_response(json.dumps(jsonapi_errors([exc.to_dict()])),
-                                 exc.status,
-                                 {'Content-Type': 'application/vnd.api+json'})
+#        except Exception as e:
+#            exc = JsonApiException('', str(e))
+#            return make_response(json.dumps(jsonapi_errors([exc.to_dict()])),
+#                                 exc.status,
+#                                 {'Content-Type': 'application/vnd.api+json'})
 
         if isinstance(resp, Response):
             return resp
@@ -174,7 +175,7 @@ class ResourceList(with_metaclass(ResourceListMeta, Resource)):
     def get(self, *args, **kwargs):
         """Retrieve a collection of objects
         """
-        qs = QSManager(request.args)
+        qs = QSManager(request.args, self.schema)
 
         object_count, objects = self.data_layer.get_collection(qs, **kwargs)
 
@@ -202,7 +203,7 @@ class ResourceList(with_metaclass(ResourceListMeta, Resource)):
         """
         json_data = request.get_json()
 
-        qs = QSManager(request.args)
+        qs = QSManager(request.args, self.schema)
 
         schema = compute_schema(self.schema,
                                 getattr(self.opts, 'schema_post_kwargs', dict()),
@@ -230,7 +231,7 @@ class ResourceList(with_metaclass(ResourceListMeta, Resource)):
                 error['title'] = "Validation error"
             return errors, 422
 
-        obj = self.data_layer.create_object(data, self.opts, **kwargs)
+        obj = self.data_layer.create_object(data, **kwargs)
 
         return schema.dump(obj).data, 201
 
@@ -243,7 +244,7 @@ class ResourceDetail(with_metaclass(ResourceDetailMeta, Resource)):
         """
         obj = self.data_layer.get_object(**kwargs)
 
-        qs = QSManager(request.args)
+        qs = QSManager(request.args, self.schema)
 
         schema = compute_schema(self.schema,
                                 getattr(self.opts, 'schema_get_kwargs', dict()),
@@ -260,7 +261,7 @@ class ResourceDetail(with_metaclass(ResourceDetailMeta, Resource)):
         """
         json_data = request.get_json()
 
-        qs = QSManager(request.args)
+        qs = QSManager(request.args, self.schema)
         schema_kwargs = getattr(self.opts, 'schema_patch_kwargs', dict())
         schema_kwargs.update({'partial': True})
 
@@ -296,7 +297,7 @@ class ResourceDetail(with_metaclass(ResourceDetailMeta, Resource)):
             raise BadRequest('/data/id', 'Value of id does not match the resource identifier in url')
 
         obj = self.data_layer.get_object(**kwargs)
-        updated = self.data_layer.update_object(obj, data, self.opts, **kwargs)
+        updated = self.data_layer.update_object(obj, data, **kwargs)
 
         result = schema.dump(obj)
 
@@ -335,7 +336,7 @@ class ResourceRelationship(with_metaclass(ResourceRelationshipMeta, Resource)):
                             'related': url_for(related_view, **related_view_kwargs)},
                   'data': data}
 
-        qs = QSManager(request.args)
+        qs = QSManager(request.args, self.schema)
         if qs.include:
             schema = compute_schema(self.schema, dict(), qs, qs.include)
 
@@ -372,7 +373,7 @@ class ResourceRelationship(with_metaclass(ResourceRelationshipMeta, Resource)):
 
         obj_, updated = self.data_layer.create_relationship(json_data, relationship_field, related_id_field, **kwargs)
 
-        qs = QSManager(request.args)
+        qs = QSManager(request.args, self.schema)
         schema = compute_schema(self.schema, dict(), qs, qs.include)
 
         status_code = 200 if updated is True else 204
@@ -407,7 +408,7 @@ class ResourceRelationship(with_metaclass(ResourceRelationshipMeta, Resource)):
 
         obj_, updated = self.data_layer.update_relationship(json_data, relationship_field, related_id_field, **kwargs)
 
-        qs = QSManager(request.args)
+        qs = QSManager(request.args, self.schema)
         schema = compute_schema(self.schema, dict(), qs, qs.include)
 
         status_code = 200 if updated is True else 204
@@ -442,7 +443,7 @@ class ResourceRelationship(with_metaclass(ResourceRelationshipMeta, Resource)):
 
         obj_, updated = self.data_layer.delete_relationship(json_data, relationship_field, related_id_field, **kwargs)
 
-        qs = QSManager(request.args)
+        qs = QSManager(request.args, self.schema)
         schema = compute_schema(self.schema, dict(), qs, qs.include)
 
         status_code = 200 if updated is True else 204
@@ -452,11 +453,16 @@ class ResourceRelationship(with_metaclass(ResourceRelationshipMeta, Resource)):
     def _get_relationship_data(self):
         """Get useful data for relationship management
         """
-        relationship_field = getattr(self.opts, 'relationship_field', request.base_url.split('/')[-1])
-        try:
-            related_type_ = self.schema._declared_fields[relationship_field].type_
-        except KeyError:
-            raise RelationNotFound('', "%s has no attribut %s" % (self.schema.__name__, relationship_field))
+        relationship_field = request.base_url.split('/')[-1]
+
+        if relationship_field not in get_relationships(self.schema):
+            raise RelationNotFound('', "{} has no attribut {}".format(self.schema.__name__, relationship_field))
+
+        related_type_ = self.schema._declared_fields[relationship_field].type_
         related_id_field = self.schema._declared_fields[relationship_field].id_field
+
+        if hasattr(self.opts, 'schema_to_model') and\
+                self.opts.schema_to_model.get(relationship_field) is not None:
+            relationship_field = self.opts.schema_to_model[relationship_field]
 
         return relationship_field, related_type_, related_id_field
