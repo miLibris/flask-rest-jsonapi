@@ -309,7 +309,7 @@ def test_get_list(client, register_routes, person, person_2):
                                  'fields[person]': 'name,birth_date',
                                  'sort': '-name',
                                  'include': 'computers.owner',
-                                 'filters': json.dumps(
+                                 'filter': json.dumps(
                                      [
                                          {
                                              'and': [
@@ -661,16 +661,9 @@ def test_get_list_invalid_include(client, register_routes):
         assert response.status_code == 400
 
 
-def test_get_list_invalid_filters(client, register_routes):
-    with client:
-        querystring = urlencode({'filters': json.dumps({})})
-        response = client.get('/persons' + '?' + querystring, content_type='application/vnd.api+json')
-        assert response.status_code == 400
-
-
 def test_get_list_invalid_filters_parsing(client, register_routes):
     with client:
-        querystring = urlencode({'filters': 'error'})
+        querystring = urlencode({'filter': 'error'})
         response = client.get('/persons' + '?' + querystring, content_type='application/vnd.api+json')
         assert response.status_code == 400
 
@@ -749,42 +742,42 @@ def test_api_resources(app, person_list):
 
 def test_get_list_invalid_filters_val(client, register_routes):
     with client:
-        querystring = urlencode({'filters': json.dumps([{'name': 'computers', 'op': 'any'}])})
+        querystring = urlencode({'filter': json.dumps([{'name': 'computers', 'op': 'any'}])})
         response = client.get('/persons' + '?' + querystring, content_type='application/vnd.api+json')
         assert response.status_code == 400
 
 
 def test_get_list_name(client, register_routes):
     with client:
-        querystring = urlencode({'filters': json.dumps([{'name': 'computers__serial', 'op': 'any', 'val': '1'}])})
+        querystring = urlencode({'filter': json.dumps([{'name': 'computers__serial', 'op': 'any', 'val': '1'}])})
         response = client.get('/persons' + '?' + querystring, content_type='application/vnd.api+json')
         assert response.status_code == 200
 
 
 def test_get_list_no_name(client, register_routes):
     with client:
-        querystring = urlencode({'filters': json.dumps([{'op': 'any', 'val': '1'}])})
+        querystring = urlencode({'filter': json.dumps([{'op': 'any', 'val': '1'}])})
         response = client.get('/persons' + '?' + querystring, content_type='application/vnd.api+json')
         assert response.status_code == 400
 
 
 def test_get_list_no_op(client, register_routes):
     with client:
-        querystring = urlencode({'filters': json.dumps([{'name': 'computers__serial', 'val': '1'}])})
+        querystring = urlencode({'filter': json.dumps([{'name': 'computers__serial', 'val': '1'}])})
         response = client.get('/persons' + '?' + querystring, content_type='application/vnd.api+json')
         assert response.status_code == 400
 
 
 def test_get_list_attr_error(client, register_routes):
     with client:
-        querystring = urlencode({'filters': json.dumps([{'name': 'error', 'op': 'eq', 'val': '1'}])})
+        querystring = urlencode({'filter': json.dumps([{'name': 'error', 'op': 'eq', 'val': '1'}])})
         response = client.get('/persons' + '?' + querystring, content_type='application/vnd.api+json')
         assert response.status_code == 400
 
 
 def test_get_list_field_error(client, register_routes):
     with client:
-        querystring = urlencode({'filters': json.dumps([{'name': 'name', 'op': 'eq', 'field': 'error'}])})
+        querystring = urlencode({'filter': json.dumps([{'name': 'name', 'op': 'eq', 'field': 'error'}])})
         response = client.get('/persons' + '?' + querystring, content_type='application/vnd.api+json')
         assert response.status_code == 400
 
@@ -1291,13 +1284,13 @@ def test_delete_relationship_wrong_type(client, register_routes, computer, perso
 def test_base_data_layer():
     base_dl = BaseDataLayer()
     with pytest.raises(NotImplementedError):
-        base_dl.create_object(None, None, **dict())
+        base_dl.create_object(None, **dict())
     with pytest.raises(NotImplementedError):
         base_dl.get_object(**dict())
     with pytest.raises(NotImplementedError):
         base_dl.get_collection(None, **dict())
     with pytest.raises(NotImplementedError):
-        base_dl.update_object(None, None, None, **dict())
+        base_dl.update_object(None, None, **dict())
     with pytest.raises(NotImplementedError):
         base_dl.delete_object(None, **dict())
     with pytest.raises(NotImplementedError):
@@ -1312,4 +1305,4 @@ def test_base_data_layer():
 
 def test_qs_manager():
     with pytest.raises(ValueError):
-        QSManager([])
+        QSManager([], None)

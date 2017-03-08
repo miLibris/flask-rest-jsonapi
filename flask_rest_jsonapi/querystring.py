@@ -2,7 +2,7 @@
 
 import json
 
-from flask_rest_jsonapi.exceptions import BadRequest, InvalidFilters
+from flask_rest_jsonapi.exceptions import BadRequest, InvalidFilters, InvalidSort
 
 
 class QueryStringManager(object):
@@ -17,7 +17,7 @@ class QueryStringManager(object):
         'include'
     )
 
-    def __init__(self, querystring):
+    def __init__(self, querystring, schema):
         """Initialization instance
 
         :param dict querystring: query string dict from request.args
@@ -26,6 +26,7 @@ class QueryStringManager(object):
             raise ValueError('QueryStringManager require a dict-like object query_string parameter')
 
         self.qs = querystring
+        self.schema = schema
 
     def _get_key_values(self, name):
         """Return a dict containing key / values items for a given key, used for items like filters, page, etc.
@@ -68,15 +69,12 @@ class QueryStringManager(object):
 
         :return list: filter information
         """
-        filters = self.qs.get('filters')
+        filters = self.qs.get('filter')
         if filters is not None:
             try:
                 filters = json.loads(filters)
             except (ValueError, TypeError):
                 raise InvalidFilters("Parse error")
-
-            if not isinstance(filters, list):
-                raise InvalidFilters("Must be a list")
 
         return filters
 
@@ -102,10 +100,12 @@ class QueryStringManager(object):
         # check values type
         result = self._get_key_values('page')
         for key, value in result.items():
+            if key not in ('number', 'size'):
+                raise BadRequest({'parameter': 'page'}, "{} is not a valid parameter of pagination".format(key))
             try:
                 int(value)
             except ValueError:
-                raise BadRequest({'parameter': 'page[%s]' % key}, "Parse error")
+                raise BadRequest({'parameter': 'page[{}]'.format(key)}, "Parse error")
 
         return result
 
@@ -147,6 +147,10 @@ class QueryStringManager(object):
             sorting_results = []
             for sort_field in self.qs['sort'].split(','):
                 field = sort_field.replace('-', '')
+                if field not in self.schema._declared_fields:
+                    raise InvalidSort("{} has no attribut {}".format(self.schema.__name__, field))
+                if self.schema._declared_fields[field].attribute is not None:
+                    field = self.schema._declared_fields[field].attribute
                 order = 'desc' if sort_field.startswith('-') else 'asc'
                 sorting_results.append({'field': field, 'order': order})
                 return sorting_results

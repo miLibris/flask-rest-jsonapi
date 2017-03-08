@@ -1,60 +1,58 @@
 # -*- coding: utf-8 -*-
 
-from sqlalchemy import and_, or_
+from sqlalchemy import and_, or_, not_
 
 from flask_rest_jsonapi.exceptions import InvalidFilters
+from flask_rest_jsonapi.schema import get_relationships
 
 
-def create_filters(model, filter_info):
+def create_filters(model, filter_info, resource):
     """Apply filters from filters information to base query
 
     :param DeclarativeMeta model: the model of the node
     :param dict filter_info: current node filter information
+    :param Resource resource: the resource
     """
     filters = []
     for filter_ in filter_info:
-        filters.append(Node(model, filter_).resolve())
+        filters.append(Node(model, filter_, resource.opts, resource.schema).resolve())
 
     return filters
 
 
 class Node(object):
 
-    def __init__(self, model, filter_):
+    def __init__(self, model, filter_, opts, schema):
         self.model = model
         self.filter_ = filter_
+        self.opts = opts
+        self.schema = schema
 
     def resolve(self):
         if 'or' not in self.filter_ and 'and' not in self.filter_:
             if self.val is None and self.field is None:
-                raise InvalidFilters("Can't find value of field in a filter")
+                raise InvalidFilters("Can't find value or field in a filter")
 
-            value = None
+            value = self.value
 
             if isinstance(self.val, dict):
-                related_model = self.get_related_model(self.name)
-                value = Node(related_model, self.val).resolve()
+                value = Node(self.related_model, self.val, self.opts, self.related_schema).resolve()
 
-            if '__' in self.name:
-                column = self.get_column(self.model, self.name.split('__')[0])
-                operator = self.get_operator(column, self.op)
-                value = self.get_value(self.model, self.field, self.val)
-                value = {self.name.split('__')[1]: value}
-            else:
-                column = self.get_column(self.model, self.name)
-                operator = self.get_operator(column, self.op)
-                if value is None:
-                    value = self.get_value(self.model, self.field, self.val)
+            if '__' in self.filter_.get('name', ''):
+                value = self.value
+                value = {self.filter_['name'].split('__')[1]: value}
 
             if isinstance(value, dict):
-                return getattr(column, operator)(**value)
+                return getattr(self.column, self.operator)(**value)
             else:
-                return getattr(column, operator)(value)
+                return getattr(self.column, self.operator)(value)
 
         if 'or' in self.filter_:
-            return or_(Node(self.model, filt).resolve() for filt in self.filter_['or'])
+            return or_(Node(self.model, filt, self.opts, self.schema).resolve() for filt in self.filter_['or'])
         if 'and' in self.filter_:
-            return and_(Node(self.model, filt).resolve() for filt in self.filter_['and'])
+            return and_(Node(self.model, filt, self.opts, self.schema).resolve() for filt in self.filter_['and'])
+        if 'not' in self.filter_:
+            return not_(Node(self.model, self.filter_['not'], self.opts, self.schema).resolve())
 
     @property
     def name(self):
@@ -62,10 +60,18 @@ class Node(object):
 
         :return str: the name of the field to filter on
         """
-        try:
-            return self.filter_['name']
-        except KeyError:
+        name = self.filter_.get('name')
+
+        if name is None:
             raise InvalidFilters("Can't find name of a filter")
+
+        if '__' in name:
+            name = name.split('__')[0]
+
+        if name not in self.schema._declared_fields:
+            raise InvalidFilters("{} has no attribut {}".format(self.schema.__name__, name))
+
+        return name
 
     @property
     def op(self):
@@ -94,51 +100,77 @@ class Node(object):
         """
         return self.filter_.get('field')
 
-    @staticmethod
-    def get_column(model, field):
+    @property
+    def column(self):
         """Get the column object
 
         :param DeclarativeMeta model: the model
         :param str field: the field
         :return InstrumentedAttribute: the column to filter on
         """
-        try:
-            return getattr(model, field)
-        except AttributeError:
-            raise InvalidFilters("%s has no attribute %s in a filter" % (model.__name__, field))
+        field = self.name
 
-    @staticmethod
-    def get_operator(column, operator):
+        if self.schema._declared_fields[field].attribute is not None:
+            field = self.schema._declared_fields[field].attribute
+
+        try:
+            return getattr(self.model, field)
+        except AttributeError:
+            raise InvalidFilters("{} has no attribute {} in a filter".format(self.model.__name__, field))
+
+    @property
+    def operator(self):
         """Get the function operator from his name
 
         :return callable: a callable to make operation on a column
         """
-        operators = (operator, operator + '_', '__' + operator + '__')
+        operators = (self.op, self.op + '_', '__' + self.op + '__')
 
         for op in operators:
-            if hasattr(column, op):
+            if hasattr(self.column, op):
                 return op
 
-        raise InvalidFilters("%s has no operator %s in a filter" % (column.key, op))
+        raise InvalidFilters("{} has no operator {} in a filter".format(self.column.key, self.op))
 
-    @staticmethod
-    def get_value(model, field, value):
+    @property
+    def value(self):
         """Get the value to filter on
 
         :return: the value to filter on
         """
-        if field is not None:
+        if self.field is not None:
             try:
-                return getattr(model, field)
+                return getattr(self.model, self.field)
             except AttributeError:
-                raise InvalidFilters("%s has no attribute %s in a filter" % (model.__name__, field))
+                raise InvalidFilters("{} has no attribute {} in a filter".format(self.model.__name__, self.field))
 
-        return value
+        return self.val
 
-    def get_related_model(self, relationship_field):
+    @property
+    def related_model(self):
         """Get the related model of a relationship field
 
-        :param str relationship_field: the relationship field
         :return DeclarativeMeta: the related model
         """
+        relationship_field = self.name
+
+        if relationship_field not in get_relationships(self.schema):
+            raise InvalidFilters("{} has no relationship attribut {}".format(self.schema.__name__, relationship_field))
+
+        if hasattr(self.opts, 'schema_to_model') and self.opts.schema_to_model.get(relationship_field) is not None:
+            relationship_field = self.opts.schema_to_model[relationship_field]
+
         return getattr(self.model, relationship_field).property.mapper.class_
+
+    @property
+    def related_schema(self):
+        """Get the related schema of a relationship field
+
+        :return Schema: the related schema
+        """
+        relationship_field = self.name
+
+        if relationship_field not in get_relationships(self.schema):
+            raise InvalidFilters("{} has no relationship attribut {}".format(self.schema.__name__, relationship_field))
+
+        return self.schema._declared_fields[relationship_field].schema.__class__
