@@ -1,7 +1,5 @@
 # -*- coding: utf-8 -*-
 
-import types
-
 from sqlalchemy.orm.exc import NoResultFound
 from sqlalchemy.orm.collections import InstrumentedList
 from sqlalchemy.sql.expression import desc, asc, text
@@ -47,6 +45,8 @@ class SqlalchemyDataLayer(BaseDataLayer):
             self.session.rollback()
             raise JsonApiException({'pointer': '/data'}, "Object creation error: " + str(e))
 
+        self.after_create_object(obj, data, **view_kwargs)
+
         return obj
 
     def get_object(self, **view_kwargs):
@@ -55,6 +55,8 @@ class SqlalchemyDataLayer(BaseDataLayer):
         :params dict view_kwargs: kwargs from the resource view
         :return DeclarativeMeta: an object from sqlalchemy
         """
+        self.before_get_object(**view_kwargs)
+
         id_field = getattr(self, 'id_field', inspect(self.model).primary_key[0].name)
         try:
             filter_field = getattr(self.model, id_field)
@@ -70,6 +72,8 @@ class SqlalchemyDataLayer(BaseDataLayer):
             raise ObjectNotFound('',
                                  "Could not find {}.{}={} object".format(self.model.__name__, id_field, filter_value))
 
+        self.after_get_object(obj, **view_kwargs)
+
         return obj
 
     def get_collection(self, qs, **view_kwargs):
@@ -79,6 +83,8 @@ class SqlalchemyDataLayer(BaseDataLayer):
         :param dict view_kwargs: kwargs from the resource view
         :return tuple: the number of object and the list of objects
         """
+        self.before_get_collection(qs, **view_kwargs)
+
         query = self.query(**view_kwargs)
 
         if qs.filters:
@@ -91,7 +97,11 @@ class SqlalchemyDataLayer(BaseDataLayer):
 
         query = self.paginate_query(query, qs.pagination)
 
-        return object_count, query.all()
+        collection = query.all()
+
+        self.after_get_collection(collection, qs, **view_kwargs)
+
+        return object_count, collection
 
     def update_object(self, obj, data, **view_kwargs):
         """Update an object through sqlalchemy
@@ -103,19 +113,19 @@ class SqlalchemyDataLayer(BaseDataLayer):
         """
         self.before_update_object(obj, data, **view_kwargs)
 
-        update = False
+        updated = False
 
         relationship_fields = get_relationships(self.resource.schema)
         for field in data:
             if hasattr(obj, field) and field not in relationship_fields:
                 if getattr(obj, field) != data[field]:
-                    update = True
+                    updated = True
                 setattr(obj, field, data[field])
 
-        update_relationship = self.apply_relationships(data, obj)
+        updated_relationship = self.apply_relationships(data, obj)
 
-        if update_relationship is True:
-            update = True
+        if updated_relationship is True:
+            updated = True
 
         try:
             self.session.commit()
@@ -123,7 +133,9 @@ class SqlalchemyDataLayer(BaseDataLayer):
             self.session.rollback()
             raise JsonApiException({'pointer': '/data'}, "Update object error: " + str(e))
 
-        return update
+        self.after_update_object(obj, data, **view_kwargs)
+
+        return updated
 
     def delete_object(self, obj, **view_kwargs):
         """Delete an object through sqlalchemy
@@ -140,6 +152,8 @@ class SqlalchemyDataLayer(BaseDataLayer):
             self.session.rollback()
             raise JsonApiException('', "Delete object error: " + str(e))
 
+        self.after_delete_object(obj, **view_kwargs)
+
     def create_relationship(self, json_data, relationship_field, related_id_field, **view_kwargs):
         """Create a relationship
 
@@ -149,6 +163,8 @@ class SqlalchemyDataLayer(BaseDataLayer):
         :param dict view_kwargs: kwargs from the resource view
         :return boolean: True if relationship have changed else False
         """
+        self.before_create_relationship(json_data, relationship_field, related_id_field, **view_kwargs)
+
         obj = self.get_object(**view_kwargs)
 
         if not hasattr(obj, relationship_field):
@@ -184,6 +200,8 @@ class SqlalchemyDataLayer(BaseDataLayer):
             self.session.rollback()
             raise JsonApiException('', "Create relationship error: " + str(e))
 
+        self.after_create_relationship(obj, updated, json_data, relationship_field, related_id_field, **view_kwargs)
+
         return obj, updated
 
     def get_relationship(self, relationship_field, related_type_, related_id_field, **view_kwargs):
@@ -195,6 +213,8 @@ class SqlalchemyDataLayer(BaseDataLayer):
         :param dict view_kwargs: kwargs from the resource view
         :return tuple: the object and related object(s)
         """
+        self.before_get_relationship(relationship_field, related_type_, related_id_field, **view_kwargs)
+
         obj = self.get_object(**view_kwargs)
 
         if not hasattr(obj, relationship_field):
@@ -204,6 +224,9 @@ class SqlalchemyDataLayer(BaseDataLayer):
 
         if related_objects is None:
             return obj, related_objects
+
+        self.after_get_relationship(obj, related_objects, relationship_field, related_type_, related_id_field,
+                                    **view_kwargs)
 
         if isinstance(related_objects, InstrumentedList):
             return obj,\
@@ -220,6 +243,8 @@ class SqlalchemyDataLayer(BaseDataLayer):
         :param dict view_kwargs: kwargs from the resource view
         :return boolean: True if relationship have changed else False
         """
+        self.before_update_relationship(json_data, relationship_field, related_id_field, **view_kwargs)
+
         obj = self.get_object(**view_kwargs)
 
         if not hasattr(obj, relationship_field):
@@ -259,6 +284,8 @@ class SqlalchemyDataLayer(BaseDataLayer):
             self.session.rollback()
             raise JsonApiException('', "Update relationship error: " + str(e))
 
+        self.after_update_relationship(obj, updated, json_data, relationship_field, related_id_field, **view_kwargs)
+
         return obj, updated
 
     def delete_relationship(self, json_data, relationship_field, related_id_field, **view_kwargs):
@@ -269,6 +296,8 @@ class SqlalchemyDataLayer(BaseDataLayer):
         :param str related_id_field: the identifier field of the related model
         :param dict view_kwargs: kwargs from the resource view
         """
+        self.before_delete_relationship(json_data, relationship_field, related_id_field, **view_kwargs)
+
         obj = self.get_object(**view_kwargs)
 
         if not hasattr(obj, relationship_field):
@@ -295,6 +324,8 @@ class SqlalchemyDataLayer(BaseDataLayer):
         except Exception as e:
             self.session.rollback()
             raise JsonApiException('', "Delete relationship error: " + str(e))
+
+        self.after_delete_relationship(obj, updated, json_data, relationship_field, related_id_field, **view_kwargs)
 
         return obj, updated
 
@@ -421,38 +452,3 @@ class SqlalchemyDataLayer(BaseDataLayer):
         :param dict view_kwargs: kwargs from the resource view
         """
         return self.session.query(self.model)
-
-    def before_create_object(self, data, **view_kwargs):
-        """Provide additional data before object creation
-
-        :param dict data: the data validated by marshmallow
-        :param dict view_kwargs: kwargs from the resource view
-        """
-        pass
-
-    def before_update_object(self, obj, data, **view_kwargs):
-        """Make checks or provide additional data before update object
-
-        :param obj: an object from data layer
-        :param dict data: the data validated by marshmallow
-        :param dict view_kwargs: kwargs from the resource view
-        """
-        pass
-
-    def before_delete_object(self, obj, **view_kwargs):
-        """Make checks before delete object
-
-        :param obj: an object from data layer
-        :param dict view_kwargs: kwargs from the resource view
-        """
-        pass
-
-    def configure(self, meta):
-        """Rewrite default method implemantation of query, before_create_instance, before_update_instance and
-        before_delete_instance ùethods
-
-        :param class meta: information from Meta class used to configure the data layer instance
-        """
-        for obj in ('query', 'before_create_instance', 'before_update_instance', 'before_delete_instance'):
-            if hasattr(meta, obj):
-                setattr(self, obj, types.MethodType(getattr(meta, obj), self))

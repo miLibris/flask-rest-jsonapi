@@ -712,22 +712,6 @@ def test_get_relationship_relationship_field_not_found(client, register_routes, 
         assert response.status_code == 500
 
 
-@pytest.fixture(scope="module")
-def full_not_implemented_data_layer():
-    class FullNotImplementedDataLayer(BaseDataLayer):
-        pass
-    yield FullNotImplementedDataLayer
-
-
-def test_not_implemented_data_layer(session, person_model, full_not_implemented_data_layer):
-    with pytest.raises(NotImplementedError):
-        class PersonList(ResourceList):
-            data_layer_kwargs = {'session': session, 'model': person_model}
-
-            class Meta:
-                data_layer = full_not_implemented_data_layer
-
-
 def test_api(app, person_list):
     api = Api(app)
     api.route(person_list, 'person_list', '/persons', '/person_list')
