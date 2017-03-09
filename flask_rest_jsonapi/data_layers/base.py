@@ -1,7 +1,5 @@
 # -*- coding: utf-8 -*-
 
-import types
-
 
 class BaseDataLayer(object):
 
@@ -311,6 +309,4 @@ class BaseDataLayer(object):
 
         :param class meta: information from Meta class used to configure the data layer instance
         """
-        for obj in self.ADDITIONAL_METHODS:
-            if hasattr(meta, obj):
-                setattr(self, obj, types.MethodType(getattr(meta, obj), self))
+        pass
