@@ -39,7 +39,6 @@ class Node(object):
                 value = Node(self.related_model, self.val, self.opts, self.related_schema).resolve()
 
             if '__' in self.filter_.get('name', ''):
-                value = self.value
                 value = {self.filter_['name'].split('__')[1]: value}
 
             if isinstance(value, dict):
