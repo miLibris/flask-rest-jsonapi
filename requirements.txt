@@ -1,3 +1,4 @@
+six
 Flask
 marshmallow==2.13.1
 marshmallow_jsonapi
