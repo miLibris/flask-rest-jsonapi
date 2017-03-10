@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 
+import types
+
 
 class BaseDataLayer(object):
 
@@ -23,13 +25,16 @@ class BaseDataLayer(object):
                           'before_delete_relationship',
                           'after_delete_relationship')
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, **kwargs):
         """Intialize an data layer instance with kwargs
 
         :param dict kwargs: information about data layer instance
         """
         for key, value in kwargs.items():
             setattr(self, key, value)
+
+        if kwargs.get('methods') is not None:
+            self.bound_additional_methods()
 
     def create_object(self, data, **view_kwargs):
         """Create an object
@@ -123,7 +128,7 @@ class BaseDataLayer(object):
 
         :param dict view_kwargs: kwargs from the resource view
         """
-        pass
+        raise NotImplementedError
 
     def before_create_object(self, data, **view_kwargs):
         """Provide additional data before object creation
@@ -131,7 +136,7 @@ class BaseDataLayer(object):
         :param dict data: the data validated by marshmallow
         :param dict view_kwargs: kwargs from the resource view
         """
-        pass
+        raise NotImplementedError
 
     def after_create_object(self, obj, data, **view_kwargs):
         """Provide additional data after object creation
@@ -140,14 +145,14 @@ class BaseDataLayer(object):
         :param dict data: the data validated by marshmallow
         :param dict view_kwargs: kwargs from the resource view
         """
-        pass
+        raise NotImplementedError
 
     def before_get_object(self, **view_kwargs):
         """Make work before to retrieve an object
 
         :param dict view_kwargs: kwargs from the resource view
         """
-        pass
+        raise NotImplementedError
 
     def after_get_object(self, obj, **view_kwargs):
         """Make work after to retrieve an object
@@ -155,7 +160,7 @@ class BaseDataLayer(object):
         :param obj: an object from data layer
         :param dict view_kwargs: kwargs from the resource view
         """
-        pass
+        raise NotImplementedError
 
     def before_get_collection(self, qs, **view_kwargs):
         """Make work before to retrieve a collection of objects
@@ -163,7 +168,7 @@ class BaseDataLayer(object):
         :param QueryStringManager qs: a querystring manager to retrieve information from url
         :param dict view_kwargs: kwargs from the resource view
         """
-        pass
+        raise NotImplementedError
 
     def after_get_collection(self, collection, qs, **view_kwargs):
         """Make work after to retrieve a collection of objects
@@ -172,7 +177,7 @@ class BaseDataLayer(object):
         :param QueryStringManager qs: a querystring manager to retrieve information from url
         :param dict view_kwargs: kwargs from the resource view
         """
-        pass
+        raise NotImplementedError
 
     def before_update_object(self, obj, data, **view_kwargs):
         """Make checks or provide additional data before update object
@@ -181,7 +186,7 @@ class BaseDataLayer(object):
         :param dict data: the data validated by marshmallow
         :param dict view_kwargs: kwargs from the resource view
         """
-        pass
+        raise NotImplementedError
 
     def after_update_object(self, obj, data, **view_kwargs):
         """Make work after update object
@@ -190,7 +195,7 @@ class BaseDataLayer(object):
         :param dict data: the data validated by marshmallow
         :param dict view_kwargs: kwargs from the resource view
         """
-        pass
+        raise NotImplementedError
 
     def before_delete_object(self, obj, **view_kwargs):
         """Make checks before delete object
@@ -198,7 +203,7 @@ class BaseDataLayer(object):
         :param obj: an object from data layer
         :param dict view_kwargs: kwargs from the resource view
         """
-        pass
+        raise NotImplementedError
 
     def after_delete_object(self, obj, **view_kwargs):
         """Make work after delete object
@@ -206,7 +211,7 @@ class BaseDataLayer(object):
         :param obj: an object from data layer
         :param dict view_kwargs: kwargs from the resource view
         """
-        pass
+        raise NotImplementedError
 
     def before_create_relationship(self, json_data, relationship_field, related_id_field, **view_kwargs):
         """Make work before to create a relationship
@@ -217,7 +222,7 @@ class BaseDataLayer(object):
         :param dict view_kwargs: kwargs from the resource view
         :return boolean: True if relationship have changed else False
         """
-        pass
+        raise NotImplementedError
 
     def after_create_relationship(self, obj, updated, json_data, relationship_field, related_id_field, **view_kwargs):
         """Make work after to create a relationship
@@ -230,7 +235,7 @@ class BaseDataLayer(object):
         :param dict view_kwargs: kwargs from the resource view
         :return boolean: True if relationship have changed else False
         """
-        pass
+        raise NotImplementedError
 
     def before_get_relationship(self, relationship_field, related_type_, related_id_field, **view_kwargs):
         """Make work before to get information about a relationship
@@ -241,7 +246,7 @@ class BaseDataLayer(object):
         :param dict view_kwargs: kwargs from the resource view
         :return tuple: the object and related object(s)
         """
-        pass
+        raise NotImplementedError
 
     def after_get_relationship(self, obj, related_objects, relationship_field, related_type_, related_id_field,
                                **view_kwargs):
@@ -255,7 +260,7 @@ class BaseDataLayer(object):
         :param dict view_kwargs: kwargs from the resource view
         :return tuple: the object and related object(s)
         """
-        pass
+        raise NotImplementedError
 
     def before_update_relationship(self, json_data, relationship_field, related_id_field, **view_kwargs):
         """Make work before to update a relationship
@@ -266,7 +271,7 @@ class BaseDataLayer(object):
         :param dict view_kwargs: kwargs from the resource view
         :return boolean: True if relationship have changed else False
         """
-        pass
+        raise NotImplementedError
 
     def after_update_relationship(self, obj, updated, json_data, relationship_field, related_id_field, **view_kwargs):
         """Make work after to update a relationship
@@ -279,7 +284,7 @@ class BaseDataLayer(object):
         :param dict view_kwargs: kwargs from the resource view
         :return boolean: True if relationship have changed else False
         """
-        pass
+        raise NotImplementedError
 
     def before_delete_relationship(self, json_data, relationship_field, related_id_field, **view_kwargs):
         """Make work before to delete a relationship
@@ -289,7 +294,7 @@ class BaseDataLayer(object):
         :param str related_id_field: the identifier field of the related model
         :param dict view_kwargs: kwargs from the resource view
         """
-        pass
+        raise NotImplementedError
 
     def after_delete_relationship(self, obj, updated, json_data, relationship_field, related_id_field, **view_kwargs):
         """Make work after to delete a relationship
@@ -301,12 +306,12 @@ class BaseDataLayer(object):
         :param str related_id_field: the identifier field of the related model
         :param dict view_kwargs: kwargs from the resource view
         """
-        pass
+        raise NotImplementedError
 
-    def configure(self, meta):
-        """Rewrite default method implemantation of query, before_create_instance, before_update_instance and
-        before_delete_instance ùethods
+    def bound_additional_methods(self):
+        """Bound additional methods to current instance
 
         :param class meta: information from Meta class used to configure the data layer instance
         """
-        pass
+        for key, value in self.methods.items():
+            setattr(self, key, types.MethodType(value, self))

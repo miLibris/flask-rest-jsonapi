@@ -1,4 +1,3 @@
 Flask
 marshmallow_jsonapi
-six
 sqlalchemy

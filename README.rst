@@ -36,9 +36,6 @@ Quickstart
     app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:////tmp/test.db'
     db = SQLAlchemy(app)
 
-    # Create the api
-    api = Api(app)
-
 
     # Create model
     class Person(db.Model):
@@ -46,7 +43,7 @@ Quickstart
         name = db.Column(db.Unicode, unique=True)
         birth_date = db.Column(db.Date)
 
-    # Create the database tables.
+    # Create the database.
     db.create_all()
 
 
@@ -59,30 +56,29 @@ Quickstart
 
         id = fields.Str(dump_only=True)
         name = fields.Str()
-        created = fields.Date()
+        birth_date = fields.Date()
 
 
     # Create resource
     class PersonList(ResourceList):
         schema = PersonSchema
-        data_layer_kwargs = {'session': db.session,
-                             'model': Person}
+        data_layer = {'session': db.session,
+                      'model': Person}
 
 
     class PersonDetail(ResourceDetail):
         schema = PersonSchema
-        data_layer_kwargs = {'session': db.session,
-                             'model': Person}
+        data_layer = {'session': db.session,
+                      'model': Person}
 
-    # Create endpoints
+    # Create the api
+    api = Api(app)
     api.route(PersonList, 'person_list', '/persons')
     api.route(PersonDetail, 'person_detail', '/persons/<int:id>')
 
     # start the flask loop
-    app.run()
-
-
-
+    if __name__ == '__main__':
+        app.run()
 
 This example provides this api:
 
@@ -117,6 +113,8 @@ Documentation
 
 Documentation available here: http://flask-rest-jsonapi.readthedocs.io/en/latest/
 
+Thanks
+======
 
-
-
+Flask, marshmallow, marshmallow_jsonapi, sqlalchemy, Flask-RESTful and Flask-Restless are awesome project. I got
+inspired of these libraries very much to create Flask-REST-JSONAPI so huge thanks to authors and contributors.

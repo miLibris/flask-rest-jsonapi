@@ -4,19 +4,6 @@ import json
 
 from flask import request, make_response
 
-from flask_rest_jsonapi.exceptions import JsonApiException
-
-
-def not_allowed_method(f):
-    """A decorator to disallow method access
-
-    :param callable f: the function to decorate
-    :return callable: the wrapped function
-    """
-    def wrapped_f(*args, **kwargs):
-        raise JsonApiException('', "Acces to this method have been disallowed", title="MethodNotAllowed", status=405)
-    return wrapped_f
-
 
 def check_headers(f):
     """Check headers according to jsonapi reference
@@ -29,14 +16,14 @@ def check_headers(f):
             error = json.dumps({'jsonapi': {'version': '1.0'},
                                 'errors': [{'source': '',
                                             'detail': "Content-Type header must be application/vnd.api+json",
-                                            'title': 'InvalidContentTypeHeader',
+                                            'title': 'InvalidRequestHeader',
                                             'status': 415}]})
             return make_response(error, 415, {'Content-Type': 'application/vnd.api+json'})
         if request.headers.get('Accept') and request.headers['Accept'] != 'application/vnd.api+json':
             error = json.dumps({'jsonapi': {'version': '1.0'},
                                 'errors': [{'source': '',
                                             'detail': "Accept header must be application/vnd.api+json",
-                                            'title': 'InvalidAcceptHeader',
+                                            'title': 'InvalidRequestHeader',
                                             'status': 406}]})
             return make_response(error, 406, {'Content-Type': 'application/vnd.api+json'})
         return f(*args, **kwargs)
@@ -68,7 +55,7 @@ def check_method_requirements(f):
         error_message = "You must provide {error_field} in {cls} to get access to the default {method} method"
         error_data = {'cls': cls.__name__, 'method': method_name}
 
-        if not hasattr(self, 'data_layer'):
+        if not hasattr(self, '_data_layer'):
             error_data.update({'error_field': 'a data layer class'})
             raise Exception(error_message.format(**error_data))
 

@@ -41,17 +41,17 @@ class Api(object):
         """
         resource.view = view
         view_func = resource.as_view(view)
-        options = kwargs.get('url_rule_options') or dict()
+        url_rule_options = kwargs.get('url_rule_options') or dict()
 
         if self.app is not None:
             for url in urls:
-                self.app.add_url_rule(url, view_func=view_func, **options)
+                self.app.add_url_rule(url, view_func=view_func, **url_rule_options)
         elif self.blueprint is not None:
             resource.view = '.'.join([self.blueprint.name, resource.view])
             for url in urls:
-                self.blueprint.add_url_rule(url, view_func=view_func, **options)
+                self.blueprint.add_url_rule(url, view_func=view_func, **url_rule_options)
         else:
             self.resources.append({'resource': resource,
                                    'view': view,
                                    'urls': urls,
-                                   'options': options})
+                                   'url_rule_options': url_rule_options})
