@@ -1,4 +1,5 @@
-Flask
-marshmallow_jsonapi
 six
+Flask
+marshmallow==2.13.1
+marshmallow_jsonapi
 sqlalchemy

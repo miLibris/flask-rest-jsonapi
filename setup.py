@@ -1,7 +1,7 @@
 from setuptools import setup, find_packages
 
 
-__version__ = '0.9.3'
+__version__ = '0.10.0'
 
 
 setup(
@@ -26,9 +26,10 @@ setup(
     packages=find_packages(exclude=['tests']),
     zip_safe=False,
     platforms='any',
-    install_requires=['Flask',
+    install_requires=['six',
+                      'Flask',
+                      'marshmallow==2.13.1',
                       'marshmallow_jsonapi',
-                      'six',
                       'sqlalchemy'],
     setup_requires=['pytest-runner'],
     tests_require=['pytest'],

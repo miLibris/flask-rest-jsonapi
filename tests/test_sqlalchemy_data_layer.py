@@ -31,7 +31,7 @@ def person_model(base):
         person_id = Column(Integer, primary_key=True)
         name = Column(String, nullable=False)
         birth_date = Column(DateTime)
-        computers = relationship("Computer", backref="owner")
+        computers = relationship("Computer", backref="person")
     yield Person
 
 
@@ -138,51 +138,56 @@ def computer_schema():
     yield ComputerSchema
 
 
-def before_create_object_(self, data, **view_kwargs):
-    pass
-
-
-def before_update_object_(self, obj, data, **view_kwargs):
-    pass
-
-
-def before_delete_object_(self, obj, **view_kwargs):
-    pass
+@pytest.fixture(scope="module")
+def before_create_object():
+    def before_create_object_(self, data, **view_kwargs):
+        pass
+    yield before_create_object_
 
 
 @pytest.fixture(scope="module")
-def person_list(session, person_model, dummy_decorator, person_schema):
+def before_update_object():
+    def before_update_object_(self, obj, data, **view_kwargs):
+        pass
+    yield before_update_object_
+
+
+@pytest.fixture(scope="module")
+def before_delete_object():
+    def before_delete_object_(self, pbj, **view_kwargs):
+        pass
+    yield before_delete_object_
+
+
+@pytest.fixture(scope="module")
+def person_list(session, person_model, dummy_decorator, person_schema, before_create_object):
     class PersonList(ResourceList):
         schema = person_schema
-        data_layer_kwargs = {'model': person_model, 'session': session}
-
-        class Meta:
-            data_layer = SqlalchemyDataLayer
-            get_decorators = [dummy_decorator]
-            post_decorators = [dummy_decorator]
-            before_create_object = before_create_object_
-            get_schema_kwargs = dict()
-            post_schema_kwargs = dict()
+        data_layer = {'model': person_model,
+                      'session': session,
+                      'mzthods': {'before_create_object': before_create_object}}
+        get_decorators = [dummy_decorator]
+        post_decorators = [dummy_decorator]
+        get_schema_kwargs = dict()
+        post_schema_kwargs = dict()
     yield PersonList
 
 
 @pytest.fixture(scope="module")
-def person_detail(session, person_model, dummy_decorator, person_schema):
+def person_detail(session, person_model, dummy_decorator, person_schema, before_update_object, before_delete_object):
     class PersonDetail(ResourceDetail):
         schema = person_schema
-        data_layer_kwargs = {'model': person_model,
-                             'session': session,
-                             'url_field': 'person_id'}
-
-        class Meta:
-            get_decorators = [dummy_decorator]
-            patch_decorators = [dummy_decorator]
-            delete_decorators = [dummy_decorator]
-            before_update_object = before_update_object_
-            before_delete_object = before_delete_object_
-            get_schema_kwargs = dict()
-            patch_schema_kwargs = dict()
-            delete_schema_kwargs = dict()
+        data_layer = {'model': person_model,
+                      'session': session,
+                      'url_field': 'person_id',
+                      'methods': {'before_update_object': before_update_object,
+                                  'before_delete_object': before_delete_object}}
+        get_decorators = [dummy_decorator]
+        patch_decorators = [dummy_decorator]
+        delete_decorators = [dummy_decorator]
+        get_schema_kwargs = dict()
+        patch_schema_kwargs = dict()
+        delete_schema_kwargs = dict()
     yield PersonDetail
 
 
@@ -190,16 +195,13 @@ def person_detail(session, person_model, dummy_decorator, person_schema):
 def person_computers(session, person_model, dummy_decorator, person_schema):
     class PersonComputersRelationship(ResourceRelationship):
         schema = person_schema
-        data_layer_kwargs = {'session': session,
-                             'model': person_model,
-                             'url_field': 'person_id'}
-
-        class Meta:
-            get_decorators = [dummy_decorator]
-            post_decorators = [dummy_decorator]
-            patch_decorators = [dummy_decorator]
-            delete_decorators = [dummy_decorator]
-            relationship_mapping = {'computers': {'relationship_field': 'computers', 'id_field': 'id'}}
+        data_layer = {'session': session,
+                      'model': person_model,
+                      'url_field': 'person_id'}
+        get_decorators = [dummy_decorator]
+        post_decorators = [dummy_decorator]
+        patch_decorators = [dummy_decorator]
+        delete_decorators = [dummy_decorator]
     yield PersonComputersRelationship
 
 
@@ -230,28 +232,31 @@ def person_list_response():
 @pytest.fixture(scope="module")
 def person_list_without_schema(session, person_model):
     class PersonList(ResourceList):
-        data_layer_kwargs = {'model': person_model, 'session': session}
+        data_layer = {'model': person_model,
+                      'session': session}
 
         def get(self):
             return make_response('')
     yield PersonList
 
 
-def query_(self, **view_kwargs):
-    if view_kwargs.get('person_id') is not None:
-        return self.session.query(computer_model).join(person_model).filter_by(person_id=view_kwargs['person_id'])
-    return self.session.query(computer_model)
+@pytest.fixture(scope="module")
+def query():
+    def query_(self, **view_kwargs):
+        if view_kwargs.get('person_id') is not None:
+            return self.session.query(computer_model).join(person_model).filter_by(person_id=view_kwargs['person_id'])
+        return self.session.query(computer_model)
+    yield query_
 
 
 @pytest.fixture(scope="module")
-def computer_list(session, computer_model, computer_schema):
+def computer_list(session, computer_model, computer_schema, query):
     class ComputerList(ResourceList):
         schema = computer_schema
-        data_layer_kwargs = {'model': computer_model, 'session': session}
-
-        class Meta:
-            query = query_
-            relationship_mapping = {'person': {'relationship_field': 'owner', 'id_field': 'person_id'}}
+        data_layer = {'model': computer_model,
+                      'session': session,
+                      'methods': {'query': query}}
+        schema_to_model = {'owner': 'person'}
     yield ComputerList
 
 
@@ -259,11 +264,9 @@ def computer_list(session, computer_model, computer_schema):
 def computer_detail(session, computer_model, dummy_decorator, computer_schema):
     class ComputerDetail(ResourceDetail):
         schema = computer_schema
-        data_layer_kwargs = {'model': computer_model,
-                             'session': session}
-
-        class Meta:
-            not_allowed_methods = ['DELETE']
+        data_layer = {'model': computer_model,
+                      'session': session}
+        methods = ['GET', 'PATCH']
     yield ComputerDetail
 
 
@@ -271,8 +274,9 @@ def computer_detail(session, computer_model, dummy_decorator, computer_schema):
 def computer_owner(session, computer_model, dummy_decorator, computer_schema):
     class ComputerOwnerRelationship(ResourceRelationship):
         schema = computer_schema
-        data_layer_kwargs = {'session': session,
-                             'model': computer_model}
+        data_layer = {'session': session,
+                      'model': computer_model}
+        schema_to_model = {'owner': 'person'}
     yield ComputerOwnerRelationship
 
 
@@ -612,14 +616,15 @@ def wrong_data_layer():
 def test_wrong_data_layer_inheritence(wrong_data_layer):
     with pytest.raises(Exception):
         class PersonDetail(ResourceDetail):
-            class Meta:
-                data_layer = wrong_data_layer
+            data_layer = {'class': wrong_data_layer}
+        PersonDetail()
 
 
 def test_wrong_data_layer_kwargs_type():
     with pytest.raises(Exception):
         class PersonDetail(ResourceDetail):
-            data_layer_kwargs = list()
+            data_layer = list()
+        PersonDetail()
 
 
 def test_get_list_jsonapiexception(client, register_routes):
@@ -710,34 +715,6 @@ def test_get_relationship_relationship_field_not_found(client, register_routes, 
         response = client.get('/persons/' + str(person.person_id) + '/relationships/computer',
                               content_type='application/vnd.api+json')
         assert response.status_code == 500
-
-
-@pytest.fixture(scope="module")
-def full_not_implemented_data_layer():
-    class FullNotImplementedDataLayer(BaseDataLayer):
-        pass
-    yield FullNotImplementedDataLayer
-
-
-def test_not_implemented_data_layer(session, person_model, full_not_implemented_data_layer):
-    with pytest.raises(NotImplementedError):
-        class PersonList(ResourceList):
-            data_layer_kwargs = {'session': session, 'model': person_model}
-
-            class Meta:
-                data_layer = full_not_implemented_data_layer
-
-
-def test_api(app, person_list):
-    api = Api(app)
-    api.route(person_list, 'person_list', '/persons', '/person_list')
-    api.init_app()
-
-
-def test_api_resources(app, person_list):
-    api = Api()
-    api.route(person_list, 'person_list', '/persons', '/person_list')
-    api.init_app(app)
 
 
 def test_get_list_invalid_filters_val(client, register_routes):
@@ -1306,3 +1283,15 @@ def test_base_data_layer():
 def test_qs_manager():
     with pytest.raises(ValueError):
         QSManager([], None)
+
+
+def test_api(app, person_list):
+    api = Api(app)
+    api.route(person_list, 'person_list', '/persons', '/person_list')
+    api.init_app()
+
+
+def test_api_resources(app, person_list):
+    api = Api()
+    api.route(person_list, 'person_list', '/persons', '/person_list')
+    api.init_app(app)

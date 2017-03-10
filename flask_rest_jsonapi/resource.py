@@ -1,13 +1,12 @@
 # -*- coding: utf-8 -*-
 
 import inspect
-from six import with_metaclass
 import json
 from copy import copy
 
 from werkzeug.wrappers import Response
-from flask import request, url_for, make_response
-from flask.views import MethodViewType, MethodView
+from flask import request, url_for, make_response, current_app
+from flask.views import MethodView
 from marshmallow_jsonapi.exceptions import IncorrectTypeError
 from marshmallow import ValidationError
 
@@ -15,114 +14,33 @@ from flask_rest_jsonapi.errors import jsonapi_errors
 from flask_rest_jsonapi.querystring import QueryStringManager as QSManager
 from flask_rest_jsonapi.pagination import add_pagination_links
 from flask_rest_jsonapi.exceptions import InvalidType, BadRequest, JsonApiException, RelationNotFound
-from flask_rest_jsonapi.decorators import not_allowed_method, check_headers, check_method_requirements, add_headers
+from flask_rest_jsonapi.decorators import check_headers, check_method_requirements, add_headers
 from flask_rest_jsonapi.schema import compute_schema, get_relationships
 from flask_rest_jsonapi.data_layers.base import BaseDataLayer
 from flask_rest_jsonapi.data_layers.alchemy import SqlalchemyDataLayer
 
 
-class ResourceMeta(MethodViewType):
-
-    def __init__(cls, name, bases, nmspc):
-        super(ResourceMeta, cls).__init__(name, bases, nmspc)
-        meta = nmspc.get('Meta')
-
-        # compute data_layer
-        data_layer = None
-
-        alternative_data_layer_cls = getattr(meta, 'data_layer', None)
-        if alternative_data_layer_cls is not None and BaseDataLayer not in inspect.getmro(alternative_data_layer_cls):
-            raise Exception("You must provide a data layer class inherited from BaseDataLayer in {} resource"
-                            .format(name))
-
-        if nmspc.get('data_layer_kwargs') is not None:
-            if not isinstance(nmspc['data_layer_kwargs'], dict):
-                raise Exception("You must provide data_layer_kwargs as dictionary in {} resource".format(name))
-            else:
-                data_layer_cls = getattr(meta, 'data_layer', SqlalchemyDataLayer)
-                data_layer_kwargs = nmspc.get('data_layer_kwargs', dict())
-                data_layer = data_layer_cls(**data_layer_kwargs)
-                data_layer.configure(meta)
-
-        if data_layer is not None:
-            data_layer.resource = cls
-            cls.data_layer = data_layer
-
-        # disable access to methods according to meta options
-        if meta is not None:
-            not_allowed_methods = getattr(meta, 'not_allowed_methods', [])
-            for method in not_allowed_methods:
-                if hasattr(cls, method.lower()):
-                    setattr(cls, method.lower(), not_allowed_method(getattr(cls, method.lower())))
-
-        # set meta information as opts of the resource class
-        cls.opts = meta
-
-
-class ResourceListMeta(ResourceMeta):
-
-    def __init__(cls, name, bases, nmspc):
-        super(ResourceListMeta, cls).__init__(name, bases, nmspc)
-        meta = nmspc.get('Meta')
-
-        if meta is not None:
-            get_decorators = getattr(meta, 'get_decorators', [])
-            post_decorators = getattr(meta, 'post_decorators', [])
-
-            for get_decorator in get_decorators:
-                cls.get = get_decorator(cls.get)
-
-            for post_decorator in post_decorators:
-                cls.post = post_decorator(cls.post)
-
-
-class ResourceDetailMeta(ResourceMeta):
-
-    def __init__(cls, name, bases, nmspc):
-        super(ResourceDetailMeta, cls).__init__(name, bases, nmspc)
-        meta = nmspc.get('Meta')
-
-        if meta is not None:
-            get_decorators = getattr(meta, 'get_decorators', [])
-            patch_decorators = getattr(meta, 'patch_decorators', [])
-            delete_decorators = getattr(meta, 'delete_decorators', [])
-
-            for get_decorator in get_decorators:
-                cls.get = get_decorator(cls.get)
-
-            for patch_decorator in patch_decorators:
-                cls.patch = patch_decorator(cls.patch)
-
-            for delete_decorator in delete_decorators:
-                cls.delete = delete_decorator(cls.delete)
-
-
-class ResourceRelationshipMeta(ResourceMeta):
-
-    def __init__(cls, name, bases, nmspc):
-        super(ResourceRelationshipMeta, cls).__init__(name, bases, nmspc)
-        meta = nmspc.get('Meta')
-
-        if meta is not None:
-            get_decorators = getattr(meta, 'get_decorators', [])
-            post_decorators = getattr(meta, 'post_decorators', [])
-            patch_decorators = getattr(meta, 'patch_decorators', [])
-            delete_decorators = getattr(meta, 'delete_decorators', [])
-
-            for get_decorator in get_decorators:
-                cls.get = get_decorator(cls.get)
-
-            for post_decorator in post_decorators:
-                cls.post = post_decorator(cls.post)
-
-            for patch_decorator in patch_decorators:
-                cls.patch = patch_decorator(cls.patch)
-
-            for delete_decorator in delete_decorators:
-                cls.delete = delete_decorator(cls.delete)
-
-
 class Resource(MethodView):
+
+    def __new__(cls):
+        if hasattr(cls, 'data_layer'):
+            if not isinstance(cls.data_layer, dict):
+                raise Exception("You must provide a data layer information as dict in {}".format(cls.__name__))
+
+            if cls.data_layer.get('class') is not None and BaseDataLayer not in inspect.getmro(cls.data_layer['class']):
+                raise Exception("You must provide a data layer class inherited from BaseDataLayer in {}"
+                                .format(cls.__name__))
+
+            data_layer_cls = cls.data_layer.get('class', SqlalchemyDataLayer)
+            cls._data_layer = data_layer_cls(**cls.data_layer)
+            cls._data_layer.resource = cls
+
+        for method in ('get', 'post', 'patch', 'delete'):
+            if hasattr(cls, '{}_decorators'.format(method)) and hasattr(cls, method):
+                for decorator in getattr(cls, '{}_decorators'.format(method)):
+                    setattr(cls, method, decorator(getattr(cls, method)))
+
+        return super(Resource, cls).__new__(cls)
 
     decorators = (check_headers, add_headers)
 
@@ -138,11 +56,13 @@ class Resource(MethodView):
             return make_response(json.dumps(jsonapi_errors([e.to_dict()])),
                                  e.status,
                                  {'Content-Type': 'application/vnd.api+json'})
-#        except Exception as e:
-#            exc = JsonApiException('', str(e))
-#            return make_response(json.dumps(jsonapi_errors([exc.to_dict()])),
-#                                 exc.status,
-#                                 {'Content-Type': 'application/vnd.api+json'})
+        except Exception as e:
+            if current_app.config['DEBUG'] is True:
+                raise e
+            exc = JsonApiException('', str(e))
+            return make_response(json.dumps(jsonapi_errors([exc.to_dict()])),
+                                 exc.status,
+                                 {'Content-Type': 'application/vnd.api+json'})
 
         if isinstance(resp, Response):
             return resp
@@ -169,17 +89,18 @@ class Resource(MethodView):
         return make_response(json.dumps(data), status_code, headers)
 
 
-class ResourceList(with_metaclass(ResourceListMeta, Resource)):
+class ResourceList(Resource):
 
     @check_method_requirements
     def get(self, *args, **kwargs):
         """Retrieve a collection of objects
         """
+        self.before_get(*args, **kwargs)
+
         qs = QSManager(request.args, self.schema)
+        object_count, objects = self._data_layer.get_collection(qs, **kwargs)
 
-        object_count, objects = self.data_layer.get_collection(qs, **kwargs)
-
-        schema_kwargs = getattr(self.opts, 'schema_get_kwargs', dict())
+        schema_kwargs = getattr(self, 'get_schema_kwargs', dict())
         schema_kwargs.update({'many': True})
 
         schema = compute_schema(self.schema,
@@ -187,26 +108,29 @@ class ResourceList(with_metaclass(ResourceListMeta, Resource)):
                                 qs,
                                 qs.include)
 
-        result = schema.dump(objects)
+        result = schema.dump(objects).data
 
-        view_kwargs = request.view_args if getattr(self.opts, 'view_kwargs', None) is True else dict()
-        add_pagination_links(result.data,
+        view_kwargs = request.view_args if getattr(self, 'view_kwargs', None) is True else dict()
+        add_pagination_links(result,
                              object_count,
                              qs,
                              url_for(self.view, **view_kwargs))
 
-        return result.data
+        self.after_get(result)
+        return result
 
     @check_method_requirements
     def post(self, *args, **kwargs):
         """Create an object
         """
+        self.before_post(*args, **kwargs)
+
         json_data = request.get_json()
 
         qs = QSManager(request.args, self.schema)
 
         schema = compute_schema(self.schema,
-                                getattr(self.opts, 'schema_post_kwargs', dict()),
+                                getattr(self, 'post_schema_kwargs', dict()),
                                 qs,
                                 qs.include)
 
@@ -231,38 +155,57 @@ class ResourceList(with_metaclass(ResourceListMeta, Resource)):
                 error['title'] = "Validation error"
             return errors, 422
 
-        obj = self.data_layer.create_object(data, **kwargs)
+        obj = self._data_layer.create_object(data, **kwargs)
 
-        return schema.dump(obj).data, 201
+        result = schema.dump(obj).data
+        self.after_post(result)
+        return result, 201
+
+    def before_get(self, *args, **kwargs):
+        pass
+
+    def after_get(self, result):
+        pass
+
+    def before_post(self, *args, **kwargs):
+        pass
+
+    def after_post(self, result):
+        pass
 
 
-class ResourceDetail(with_metaclass(ResourceDetailMeta, Resource)):
+class ResourceDetail(Resource):
 
     @check_method_requirements
     def get(self, *args, **kwargs):
         """Get object details
         """
-        obj = self.data_layer.get_object(**kwargs)
+        self.before_get(*args, **kwargs)
+
+        obj = self._data_layer.get_object(**kwargs)
 
         qs = QSManager(request.args, self.schema)
 
         schema = compute_schema(self.schema,
-                                getattr(self.opts, 'schema_get_kwargs', dict()),
+                                getattr(self, 'get_schema_kwargs', dict()),
                                 qs,
                                 qs.include)
 
-        result = schema.dump(obj)
+        result = schema.dump(obj).data
 
-        return result.data
+        self.after_get(result)
+        return result
 
     @check_method_requirements
     def patch(self, *args, **kwargs):
         """Update an object
         """
+        self.before_patch(*args, **kwargs)
+
         json_data = request.get_json()
 
         qs = QSManager(request.args, self.schema)
-        schema_kwargs = getattr(self.opts, 'schema_patch_kwargs', dict())
+        schema_kwargs = getattr(self, 'patch_schema_kwargs', dict())
         schema_kwargs.update({'partial': True})
 
         schema = compute_schema(self.schema,
@@ -293,37 +236,66 @@ class ResourceDetail(with_metaclass(ResourceDetailMeta, Resource)):
 
         if 'id' not in json_data['data']:
             raise BadRequest('/data/id', 'Missing id in "data" node')
-        if json_data['data']['id'] != str(kwargs[getattr(self.data_layer, 'url_field', 'id')]):
+        if json_data['data']['id'] != str(kwargs[self.data_layer.get('url_field', 'id')]):
             raise BadRequest('/data/id', 'Value of id does not match the resource identifier in url')
 
-        obj = self.data_layer.get_object(**kwargs)
-        updated = self.data_layer.update_object(obj, data, **kwargs)
+        obj = self._data_layer.get_object(**kwargs)
+        updated = self._data_layer.update_object(obj, data, **kwargs)
 
-        result = schema.dump(obj)
+        result = schema.dump(obj).data
 
         status_code = 200 if updated is True else 204
-        return result.data, status_code
+        self.after_patch(result)
+        return result, status_code
 
     @check_method_requirements
     def delete(self, *args, **kwargs):
         """Delete an object
         """
-        obj = self.data_layer.get_object(**kwargs)
-        self.data_layer.delete_object(obj, **kwargs)
-        return 'Object successful deleted', 204
+        self.before_delete(*args, **kwargs)
+
+        obj = self._data_layer.get_object(**kwargs)
+        self._data_layer.delete_object(obj, **kwargs)
+
+        result = {'meta': 'Object successful deleted'}
+        self.after_delete(result)
+        return result, 204
+
+    def before_get(self, *args, **kwargs):
+        pass
+
+    def after_get(self, result):
+        pass
+
+    def before_patch(self, *args, **kwargs):
+        pass
+
+    def after_patch(self, result):
+        pass
+
+    def before_delete(self, *args, **kwargs):
+        pass
+
+    def after_delete(self, result):
+        pass
 
 
-class ResourceRelationship(with_metaclass(ResourceRelationshipMeta, Resource)):
+class ResourceRelationship(Resource):
 
     @check_method_requirements
     def get(self, *args, **kwargs):
         """Get a relationship details
         """
-        relationship_field, related_type_, related_id_field = self._get_relationship_data()
+        self.before_get(*args, **kwargs)
+
+        relationship_field, model_relationship_field, related_type_, related_id_field = self._get_relationship_data()
         related_view = self.schema._declared_fields[relationship_field].related_view
         related_view_kwargs = self.schema._declared_fields[relationship_field].related_view_kwargs
 
-        obj, data = self.data_layer.get_relationship(relationship_field, related_type_, related_id_field, **kwargs)
+        obj, data = self._data_layer.get_relationship(model_relationship_field,
+                                                      related_type_,
+                                                      related_id_field,
+                                                      **kwargs)
 
         for key, value in copy(related_view_kwargs).items():
             if isinstance(value, str) and value.startswith('<') and value.endswith('>'):
@@ -343,15 +315,18 @@ class ResourceRelationship(with_metaclass(ResourceRelationshipMeta, Resource)):
             serialized_obj = schema.dump(obj)
             result['included'] = serialized_obj.data.get('included', dict())
 
+        self.after_get(result)
         return result
 
     @check_method_requirements
     def post(self, *args, **kwargs):
         """Add / create relationship(s)
         """
+        self.before_post(*args, **kwargs)
+
         json_data = request.get_json()
 
-        relationship_field, related_type_, related_id_field = self._get_relationship_data()
+        relationship_field, model_relationship_field, related_type_, related_id_field = self._get_relationship_data()
 
         if 'data' not in json_data:
             raise BadRequest('/data', 'You must provide data with a "data" route node')
@@ -371,22 +346,28 @@ class ResourceRelationship(with_metaclass(ResourceRelationshipMeta, Resource)):
                 if obj['type'] != related_type_:
                     raise InvalidType('/data/type', 'The type provided does not match the resource type')
 
-        obj_, updated = self.data_layer.create_relationship(json_data, relationship_field, related_id_field, **kwargs)
+        obj_, updated = self._data_layer.create_relationship(json_data,
+                                                             model_relationship_field,
+                                                             related_id_field,
+                                                             **kwargs)
 
         qs = QSManager(request.args, self.schema)
         schema = compute_schema(self.schema, dict(), qs, qs.include)
 
         status_code = 200 if updated is True else 204
-
-        return schema.dump(obj_), status_code
+        result = schema.dump(obj_).data
+        self.after_post(result)
+        return result, status_code
 
     @check_method_requirements
     def patch(self, *args, **kwargs):
         """Update a relationship
         """
+        self.before_patch(*args, **kwargs)
+
         json_data = request.get_json()
 
-        relationship_field, related_type_, related_id_field = self._get_relationship_data()
+        relationship_field, model_relationship_field, related_type_, related_id_field = self._get_relationship_data()
 
         if 'data' not in json_data:
             raise BadRequest('/data', 'You must provide data with a "data" route node')
@@ -406,22 +387,28 @@ class ResourceRelationship(with_metaclass(ResourceRelationshipMeta, Resource)):
                 if obj['type'] != related_type_:
                     raise InvalidType('/data/type', 'The type provided does not match the resource type')
 
-        obj_, updated = self.data_layer.update_relationship(json_data, relationship_field, related_id_field, **kwargs)
+        obj_, updated = self._data_layer.update_relationship(json_data,
+                                                             model_relationship_field,
+                                                             related_id_field,
+                                                             **kwargs)
 
         qs = QSManager(request.args, self.schema)
         schema = compute_schema(self.schema, dict(), qs, qs.include)
 
         status_code = 200 if updated is True else 204
-
-        return schema.dump(obj_), status_code
+        result = schema.dump(obj_).data
+        self.after_patch(result)
+        return result, status_code
 
     @check_method_requirements
     def delete(self, *args, **kwargs):
         """Delete relationship(s)
         """
+        self.before_delete(*args, **kwargs)
+
         json_data = request.get_json()
 
-        relationship_field, related_type_, related_id_field = self._get_relationship_data()
+        relationship_field, model_relationship_field, related_type_, related_id_field = self._get_relationship_data()
 
         if 'data' not in json_data:
             raise BadRequest('/data', 'You must provide data with a "data" route node')
@@ -441,14 +428,18 @@ class ResourceRelationship(with_metaclass(ResourceRelationshipMeta, Resource)):
                 if obj['type'] != related_type_:
                     raise InvalidType('/data/type', 'The type provided does not match the resource type')
 
-        obj_, updated = self.data_layer.delete_relationship(json_data, relationship_field, related_id_field, **kwargs)
+        obj_, updated = self._data_layer.delete_relationship(json_data,
+                                                             model_relationship_field,
+                                                             related_id_field,
+                                                             **kwargs)
 
         qs = QSManager(request.args, self.schema)
         schema = compute_schema(self.schema, dict(), qs, qs.include)
 
         status_code = 200 if updated is True else 204
-
-        return schema.dump(obj_), status_code
+        result = schema.dump(obj_).data
+        self.after_delete(result)
+        return result, status_code
 
     def _get_relationship_data(self):
         """Get useful data for relationship management
@@ -461,8 +452,33 @@ class ResourceRelationship(with_metaclass(ResourceRelationshipMeta, Resource)):
         related_type_ = self.schema._declared_fields[relationship_field].type_
         related_id_field = self.schema._declared_fields[relationship_field].id_field
 
-        if hasattr(self.opts, 'schema_to_model') and\
-                self.opts.schema_to_model.get(relationship_field) is not None:
-            relationship_field = self.opts.schema_to_model[relationship_field]
+        if hasattr(self, 'schema_to_model') and self.schema_to_model.get(relationship_field) is not None:
+            model_relationship_field = self.schema_to_model[relationship_field]
+        else:
+            model_relationship_field = relationship_field
 
-        return relationship_field, related_type_, related_id_field
+        return relationship_field, model_relationship_field, related_type_, related_id_field
+
+    def before_get(self, *args, **kwargs):
+        pass
+
+    def after_get(self, result):
+        pass
+
+    def before_post(self, *args, **kwargs):
+        pass
+
+    def after_post(self, result):
+        pass
+
+    def before_patch(self, *args, **kwargs):
+        pass
+
+    def after_patch(self, result):
+        pass
+
+    def before_delete(self, *args, **kwargs):
+        pass
+
+    def after_delete(self, result):
+        pass

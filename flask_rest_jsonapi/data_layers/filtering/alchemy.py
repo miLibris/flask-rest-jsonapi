@@ -15,17 +15,17 @@ def create_filters(model, filter_info, resource):
     """
     filters = []
     for filter_ in filter_info:
-        filters.append(Node(model, filter_, resource.opts, resource.schema).resolve())
+        filters.append(Node(model, filter_, resource, resource.schema).resolve())
 
     return filters
 
 
 class Node(object):
 
-    def __init__(self, model, filter_, opts, schema):
+    def __init__(self, model, filter_, resource, schema):
         self.model = model
         self.filter_ = filter_
-        self.opts = opts
+        self.resource = resource
         self.schema = schema
 
     def resolve(self):
@@ -36,10 +36,9 @@ class Node(object):
             value = self.value
 
             if isinstance(self.val, dict):
-                value = Node(self.related_model, self.val, self.opts, self.related_schema).resolve()
+                value = Node(self.related_model, self.val, self.resource, self.related_schema).resolve()
 
             if '__' in self.filter_.get('name', ''):
-                value = self.value
                 value = {self.filter_['name'].split('__')[1]: value}
 
             if isinstance(value, dict):
@@ -48,11 +47,11 @@ class Node(object):
                 return getattr(self.column, self.operator)(value)
 
         if 'or' in self.filter_:
-            return or_(Node(self.model, filt, self.opts, self.schema).resolve() for filt in self.filter_['or'])
+            return or_(Node(self.model, filt, self.resource, self.schema).resolve() for filt in self.filter_['or'])
         if 'and' in self.filter_:
-            return and_(Node(self.model, filt, self.opts, self.schema).resolve() for filt in self.filter_['and'])
+            return and_(Node(self.model, filt, self.resource, self.schema).resolve() for filt in self.filter_['and'])
         if 'not' in self.filter_:
-            return not_(Node(self.model, self.filter_['not'], self.opts, self.schema).resolve())
+            return not_(Node(self.model, self.filter_['not'], self.resource, self.schema).resolve())
 
     @property
     def name(self):
@@ -157,8 +156,9 @@ class Node(object):
         if relationship_field not in get_relationships(self.schema):
             raise InvalidFilters("{} has no relationship attribut {}".format(self.schema.__name__, relationship_field))
 
-        if hasattr(self.opts, 'schema_to_model') and self.opts.schema_to_model.get(relationship_field) is not None:
-            relationship_field = self.opts.schema_to_model[relationship_field]
+        if hasattr(self.resource, 'schema_to_model') and\
+                self.resource.schema_to_model.get(relationship_field) is not None:
+            relationship_field = self.resource.schema_to_model[relationship_field]
 
         return getattr(self.model, relationship_field).property.mapper.class_
 
