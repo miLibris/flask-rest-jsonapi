@@ -5,9 +5,8 @@ python:
   - '3.5'
   - 'pypy'
 install:
-  - pip install -r requirements.txt --upgrade
-  - pip install coveralls coverage pymongo
-  - pip install pytest --upgrade
+  - pip install -r requirements.txt
+  - pip install coveralls coverage
 script:
   - python setup.py install
   - coverage run --source flask_rest_jsonapi -m pytest -v
