@@ -24,32 +24,33 @@ def add_pagination_links(data, object_count, querystring, base_url):
     if all_qs_args:
         links['self'] += '?' + urlencode(all_qs_args)
 
-    if querystring.pagination.get('size') != '0':
-        links['first'] = links['last'] = base_url
-
-        try:
-            del all_qs_args['page[number]']
-        except KeyError:
-            pass
-
-        # compute first link
-        if all_qs_args:
-            links['first'] += '?' + urlencode(all_qs_args)
-
+    if querystring.pagination.get('size') != '0' and object_count > 1:
         # compute last link
         page_size = int(querystring.pagination.get('size', 0)) or DEFAULT_PAGE_SIZE
         last_page = int(ceil(object_count / page_size))
-        if last_page > 0:
+
+        if last_page > 1:
+            links['first'] = links['last'] = base_url
+
+            try:
+                del all_qs_args['page[number]']
+            except KeyError:
+                pass
+
+            # compute first link
+            if all_qs_args:
+                links['first'] += '?' + urlencode(all_qs_args)
+
             all_qs_args.update({'page[number]': last_page})
             links['last'] += '?' + urlencode(all_qs_args)
 
-        # compute previous and next link
-        current_page = int(querystring.pagination.get('number', 0)) or 1
-        if current_page > 1:
-            all_qs_args.update({'page[number]': current_page - 1})
-            links['prev'] = '?'.join((base_url, urlencode(all_qs_args)))
-        if current_page < last_page:
-            all_qs_args.update({'page[number]': current_page + 1})
-            links['next'] = '?'.join((base_url, urlencode(all_qs_args)))
+            # compute previous and next link
+            current_page = int(querystring.pagination.get('number', 0)) or 1
+            if current_page > 1:
+                all_qs_args.update({'page[number]': current_page - 1})
+                links['prev'] = '?'.join((base_url, urlencode(all_qs_args)))
+            if current_page < last_page:
+                all_qs_args.update({'page[number]': current_page + 1})
+                links['next'] = '?'.join((base_url, urlencode(all_qs_args)))
 
     data['links'] = links

@@ -113,19 +113,12 @@ class SqlalchemyDataLayer(BaseDataLayer):
         """
         self.before_update_object(obj, data, **view_kwargs)
 
-        updated = False
-
         relationship_fields = get_relationships(self.resource.schema)
         for field in data:
             if hasattr(obj, field) and field not in relationship_fields:
-                if getattr(obj, field) != data[field]:
-                    updated = True
                 setattr(obj, field, data[field])
 
-        updated_relationship = self.apply_relationships(data, obj)
-
-        if updated_relationship is True:
-            updated = True
+        self.apply_relationships(data, obj)
 
         try:
             self.session.commit()
@@ -134,8 +127,6 @@ class SqlalchemyDataLayer(BaseDataLayer):
             raise JsonApiException({'pointer': '/data'}, "Update object error: " + str(e))
 
         self.after_update_object(obj, data, **view_kwargs)
-
-        return updated
 
     def delete_object(self, obj, **view_kwargs):
         """Delete an object through sqlalchemy

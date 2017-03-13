@@ -14,7 +14,7 @@ from flask_rest_jsonapi.errors import jsonapi_errors
 from flask_rest_jsonapi.querystring import QueryStringManager as QSManager
 from flask_rest_jsonapi.pagination import add_pagination_links
 from flask_rest_jsonapi.exceptions import InvalidType, BadRequest, JsonApiException, RelationNotFound
-from flask_rest_jsonapi.decorators import check_headers, check_method_requirements, add_headers
+from flask_rest_jsonapi.decorators import check_headers, check_method_requirements
 from flask_rest_jsonapi.schema import compute_schema, get_relationships
 from flask_rest_jsonapi.data_layers.base import BaseDataLayer
 from flask_rest_jsonapi.data_layers.alchemy import SqlalchemyDataLayer
@@ -35,6 +35,10 @@ class Resource(MethodView):
             cls._data_layer = data_layer_cls(**cls.data_layer)
             cls._data_layer.resource = cls
 
+        for method in getattr(cls, 'methods', ('GET', 'POST', 'PATCH', 'DELETE')):
+            if hasattr(cls, method.lower()):
+                setattr(cls, method.lower(), check_headers(getattr(cls, method.lower())))
+
         for method in ('get', 'post', 'patch', 'delete'):
             if hasattr(cls, '{}_decorators'.format(method)) and hasattr(cls, method):
                 for decorator in getattr(cls, '{}_decorators'.format(method)):
@@ -42,44 +46,45 @@ class Resource(MethodView):
 
         return super(Resource, cls).__new__(cls)
 
-    decorators = (check_headers, add_headers)
-
     def dispatch_request(self, *args, **kwargs):
-        meth = getattr(self, request.method.lower(), None)
-        if meth is None and request.method == 'HEAD':
-            meth = getattr(self, 'get', None)
-        assert meth is not None, 'Unimplemented method {}'.format(request.method)
+        method = getattr(self, request.method.lower(), None)
+        if method is None and request.method == 'HEAD':
+            method = getattr(self, 'get', None)
+        assert method is not None, 'Unimplemented method {}'.format(request.method)
+
+        headers = {'Content-Type': 'application/vnd.api+json'}
 
         try:
-            resp = meth(*args, **kwargs)
+            response = method(*args, **kwargs)
         except JsonApiException as e:
             return make_response(json.dumps(jsonapi_errors([e.to_dict()])),
                                  e.status,
-                                 {'Content-Type': 'application/vnd.api+json'})
+                                 headers)
         except Exception as e:
             if current_app.config['DEBUG'] is True:
                 raise e
             exc = JsonApiException('', str(e))
             return make_response(json.dumps(jsonapi_errors([exc.to_dict()])),
                                  exc.status,
-                                 {'Content-Type': 'application/vnd.api+json'})
+                                 headers)
 
-        if isinstance(resp, Response):
-            return resp
+        if isinstance(response, Response):
+            response.headers.add('Content-Type', 'application/vnd.api+json')
+            return response
 
-        if not isinstance(resp, tuple):
-            if isinstance(resp, dict):
-                resp.update({'jsonapi': {'version': '1.0'}})
-            return make_response(json.dumps(resp), 200, {'Content-Type': 'application/vnd.api+json'})
+        if not isinstance(response, tuple):
+            if isinstance(response, dict):
+                response.update({'jsonapi': {'version': '1.0'}})
+            return make_response(json.dumps(response), 200, headers)
 
         try:
-            data, status_code, headers = resp
+            data, status_code, headers = response
+            headers.update({'Content-Type': 'application/vnd.api+json'})
         except ValueError:
             pass
 
         try:
-            data, status_code = resp
-            headers = {'Content-Type': 'application/vnd.api+json'}
+            data, status_code = response
         except ValueError:
             pass
 
@@ -159,7 +164,7 @@ class ResourceList(Resource):
 
         result = schema.dump(obj).data
         self.after_post(result)
-        return result, 201
+        return result, 201, {'Location': result['data']['links']['self']}
 
     def before_get(self, *args, **kwargs):
         pass
@@ -240,13 +245,12 @@ class ResourceDetail(Resource):
             raise BadRequest('/data/id', 'Value of id does not match the resource identifier in url')
 
         obj = self._data_layer.get_object(**kwargs)
-        updated = self._data_layer.update_object(obj, data, **kwargs)
+        self._data_layer.update_object(obj, data, **kwargs)
 
         result = schema.dump(obj).data
 
-        status_code = 200 if updated is True else 204
         self.after_patch(result)
-        return result, status_code
+        return result
 
     @check_method_requirements
     def delete(self, *args, **kwargs):
@@ -259,7 +263,7 @@ class ResourceDetail(Resource):
 
         result = {'meta': 'Object successful deleted'}
         self.after_delete(result)
-        return result, 204
+        return result
 
     def before_get(self, *args, **kwargs):
         pass
@@ -304,7 +308,7 @@ class ResourceRelationship(Resource):
                     tmp_obj = getattr(tmp_obj, field)
                 related_view_kwargs[key] = tmp_obj
 
-        result = {'links': {'self': url_for(self.view, **kwargs),
+        result = {'links': {'self': request.base_url,
                             'related': url_for(related_view, **related_view_kwargs)},
                   'data': data}
 
@@ -352,10 +356,15 @@ class ResourceRelationship(Resource):
                                                              **kwargs)
 
         qs = QSManager(request.args, self.schema)
-        schema = compute_schema(self.schema, dict(), qs, qs.include)
+        includes = qs.include
+        if relationship_field not in qs.include:
+            includes.append(relationship_field)
+        schema = compute_schema(self.schema, dict(), qs, includes)
 
         status_code = 200 if updated is True else 204
         result = schema.dump(obj_).data
+        if result.get('links', {}).get('self') is not None:
+            result['links']['self'] = request.base_url
         self.after_post(result)
         return result, status_code
 
@@ -393,10 +402,15 @@ class ResourceRelationship(Resource):
                                                              **kwargs)
 
         qs = QSManager(request.args, self.schema)
-        schema = compute_schema(self.schema, dict(), qs, qs.include)
+        includes = qs.include
+        if relationship_field not in qs.include:
+            includes.append(relationship_field)
+        schema = compute_schema(self.schema, dict(), qs, includes)
 
         status_code = 200 if updated is True else 204
         result = schema.dump(obj_).data
+        if result.get('links', {}).get('self') is not None:
+            result['links']['self'] = request.base_url
         self.after_patch(result)
         return result, status_code
 
@@ -434,10 +448,15 @@ class ResourceRelationship(Resource):
                                                              **kwargs)
 
         qs = QSManager(request.args, self.schema)
-        schema = compute_schema(self.schema, dict(), qs, qs.include)
+        includes = qs.include
+        if relationship_field not in qs.include:
+            includes.append(relationship_field)
+        schema = compute_schema(self.schema, dict(), qs, includes)
 
         status_code = 200 if updated is True else 204
         result = schema.dump(obj_).data
+        if result.get('links', {}).get('self') is not None:
+            result['links']['self'] = request.base_url
         self.after_delete(result)
         return result, status_code
 
