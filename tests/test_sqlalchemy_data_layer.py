@@ -445,7 +445,7 @@ def test_patch_detail(client, register_routes, computer, person):
 def test_delete_detail(client, register_routes, person):
     with client:
         response = client.delete('/persons/' + str(person.person_id), content_type='application/vnd.api+json')
-        assert response.status_code == 204
+        assert response.status_code == 200
 
 
 def test_get_relationship(session, client, register_routes, computer, person):
@@ -596,7 +596,7 @@ def test_get_list_response(client, register_routes):
 # test errors
 def test_wrong_content_type(client, register_routes):
     with client:
-        response = client.get('/persons')
+        response = client.post('/persons')
         assert response.status_code == 415
 
 
