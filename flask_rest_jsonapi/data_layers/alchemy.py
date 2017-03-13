@@ -346,7 +346,6 @@ class SqlalchemyDataLayer(BaseDataLayer):
         :param DeclarativeMeta obj: the sqlalchemy object to plug relationships to
         :return boolean: True if relationship have changed else False
         """
-        updated = False
         relationship_fields = get_relationships(self.resource.schema)
         for key, value in data.items():
             if key in relationship_fields:
@@ -359,33 +358,21 @@ class SqlalchemyDataLayer(BaseDataLayer):
 
                 related_model = getattr(obj.__class__, relationship_field).property.mapper.class_
 
-                if isinstance(data[key], list):
+                if isinstance(value, list):
                     related_objects = []
 
-                    for identifier in data[key]:
+                    for identifier in value:
                         related_object = self.get_related_object(related_model, related_id_field, {'id': identifier})
                         related_objects.append(related_object)
-
-                    obj_ids = {getattr(obj__, related_id_field) for obj__ in getattr(obj, relationship_field)}
-                    new_obj_ids = {getattr(related_object, related_id_field) for related_object in related_objects}
-                    if obj_ids != new_obj_ids:
-                        updated = True
 
                     setattr(obj, relationship_field, related_objects)
                 else:
                     related_object = None
 
-                    if data[key] is not None:
-                        related_object = self.get_related_object(related_model, related_id_field, {'id': data[key]})
-
-                    obj_id = getattr(getattr(obj, relationship_field), related_id_field, None)
-                    new_obj_id = getattr(related_object, related_id_field, None)
-                    if obj_id != new_obj_id:
-                        updated = True
+                    if value is not None:
+                        related_object = self.get_related_object(related_model, related_id_field, {'id': value})
 
                     setattr(obj, relationship_field, related_object)
-
-        return updated
 
     def filter_query(self, query, filter_info, model):
         """Filter query according to jsonapi 1.0
