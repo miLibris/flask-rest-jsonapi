@@ -1,7 +1,7 @@
-.. _pagination:
+.. _sparse_fieldset:
 
-Pagination
-==========
+Sparse fieldset
+===============
 
 .. currentmodule:: flask_rest_jsonapi
 
