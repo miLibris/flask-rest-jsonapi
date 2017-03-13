@@ -1,7 +1,7 @@
-.. _pagination:
+.. _include_related:
 
-Pagination
-==========
+Include relared document(s)
+===========================
 
 .. currentmodule:: flask_rest_jsonapi
 

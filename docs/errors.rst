@@ -1,7 +1,7 @@
-.. _pagination:
+.. _errors:
 
-Pagination
-==========
+Errors
+======
 
 .. currentmodule:: flask_rest_jsonapi
 

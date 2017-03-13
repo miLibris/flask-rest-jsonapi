@@ -1,101 +1,76 @@
-.. jsonapi-utils documentation master file, created by
-   sphinx-quickstart on Fri Oct 21 14:33:15 2016.
-   You can adapt this file completely to your liking, but it should at least
-   contain the root `toctree` directive.
+Flask-REST-JSONAPI
+==================
 
-Welcome to Flask-REST-JSONAPI documentation !
-=============================================
+.. module:: flask_rest_jsonapi
 
-Flask-REST-JSONAPI is a library to help you build REST apis.
-It is built around:
-    - `jsonapi <http://jsonapi.org/>`_: a specification for building apis in json
-    - `flask <http://flask.pocoo.org/>`_: a microframework for Python based on Werkzeug
-    - `marshmallow-jsonapi <https://marshmallow-jsonapi.readthedocs.io/en/latest/>`_: JSON API 1.0 formatting with
-      `marshmallow <https://marshmallow.readthedocs.io/en/latest/>`_
-    - `sqlalchemy <http://www.sqlalchemy.org/>`_: SQLAlchemy is the Python SQL toolkit and Object Relational Mapper that
-      gives application developers the full power and flexibility of SQL.
-    - `mongodb <https://www.mongodb.com/>`_: a free and open-source cross-platform document-oriented database program
+**Flask-REST-JSONAPI** is an extension for Flask that adds support for quickly building REST APIs with hudge flexibility
+around JSONAPI 1.0 specification. It is design to fit the complexity of real life environnement so Flask-REST-JSONAPI
+helps you to create a logicial abstraction of your data called "resource" and can interface any kind of ORMs or data
+storage.
 
-I have created this library because I was looking for the best way to implement a REST api. The jsonapi specification is
-a very strong specification about interactions between the api and the caller and I think it is a very good one.
+Main concepts
+-------------
 
-There is a lot of very good REST libraries based on Flask like `Flask-RESTful <https://github.com/flask-restful/flask-restful>`_
-or `Flask-Restless <https://github.com/jfinkels/flask-restless>`_ but I would like to combine the flexibility of Flask-RESTful
-with the simplicity of Flask-Restless and the power of Marshmallow and SQLAlchemy around a strong and shareable communication
-protocol: jsonapi.
+.. image:: img/schema.png
+   :width: 120px
+   :alt: Architecture
 
-Moreover, most Flask frameworks only support SQLAlchemy so I would like to create an generic
-abstraction to communicate with any data provider: the data layer system.
-Current available data layers are:
-    - SQLAlchemy
-    - MongoDB
-You can easily create and use your own data layer to communicate with the data provider of your choice. Read the data
-layer section to learn more.
+* `JSON API 1.0 specification <http://jsonapi.org/>`_: it is a very popular specification about client server
+interactions for REST JSON API. It helps you to work in team because it is a very precise and sharable. Thanks to this
+specification your server will offer lot a features for clients like a strong structure of request and response,
+filtering, pagination, sparse fieldsets, including related resources, great error formatting etc.
 
-Here is a quick example:
+* Logical data abstration: you usually need to expose resources to clients that don't fit your data table architecture.
+For example sometimes you don't want to expose all attributes of a table or compute additional attribut for a resource
+or create a resource that use data from multiple data storage. Flask-REST-JSONAPI helps you to create a logical
+abstraction of your data with `Marshmallow <https://marshmallow.readthedocs.io/en/latest/>`_ /
+`marshmallow-jsonapi <https://marshmallow-jsonapi.readthedocs.io/>`_ so you can expose your data through a very flexible
+way.
 
-.. code:: python
+* Data layer: the data layer is a CRUD interface between your resource manager and your data. Thanks to it you can use
+any data storage or ORMs. There is an already full featured data layer that use SQLAlchemy ORM but you can create and
+use your own custom data layer to use data from your own data storage or create a data layer that use multiple data
+storage. You can even create a data layer that send notifications or make any custom work during CRUD operations.
 
-    from flask import Flask
-    from flask_rest_jsonapi import Api, ResourceDetail
-
-    app = Flask(__name__)
-    api = Api(app)
-
-
-    class HelloWorld(ResourceDetail):
-        def get(self):
-            return "Hello world"
-
-    api.detail_route('index', '/', resource_cls=HelloWorld)
-
-    if __name__ == '__main__':
-      app.run(debug=True)
-
-Save this file as api.py
-
-Launch local server:
-
-.. code:: bash
-
-    $ python api.py
-     * Running on http://127.0.0.1:5000/ (Press CTRL+C to quit)
-     * Restarting with stat
-
-
-Now you can try this:
-
-.. code:: bash
-
-    $ curl "http://127.0.0.1:5000/" -H "Content-Type: application/vnd.api+json"\
-      -H "Accept: application/vnd.api+json"
-    "Hello world"
-
-.. Note::
-   All code examples in this tutorial are based on a classic blog example with topic and post.
-
-
-Contents
+Features
 --------
+
+Flask-REST-JSONAPI has lot of features:
+
+* Powerful filtering
+* Pagination
+* Sorting
+* Sparse fieldsets
+* Include related documents
+* Relationship management
+
+
+User's Guide
+------------
+
+This part of the documentation will show you how to get started in using
+Flask-REST-JSONAPI with Flask.
 
 .. toctree::
    :maxdepth: 2
-   :glob:
 
-   install
-   resource
-   data_layer
-   sorting
-   fields_restriction
+   installation
+   quickstart
    filtering
    pagination
+   sorting
+   sparse_fieldset
+   include_related
+   resource
+   data_layer
    routing
-   tutorial
+   errors
 
-
-
-Api reference
+API Reference
 -------------
+
+If you are looking for information on a specific function, class or
+method, this part of the documentation is for you.
 
 * :ref:`genindex`
 * :ref:`modindex`
