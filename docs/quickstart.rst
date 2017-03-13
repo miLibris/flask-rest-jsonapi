@@ -17,20 +17,30 @@ First example
 
 An example of Flask-REST-JSONAPI API looks like this ::
 
+    # -*- coding: utf-8 -*-
+
     from flask import Flask
     from flask_rest_jsonapi import Api, ResourceDetail, ResourceList, ResourceRelationship
     from flask_sqlalchemy import SQLAlchemy
     from marshmallow_jsonapi.flask import Schema, Relationship
     from marshmallow_jsonapi import fields
 
+    # Create the Flask application
+    app = Flask(__name__)
+    app.config['DEBUG'] = True
+
+
     # Initialize SQLAlchemy
-    db = SQLAlchemy()
+    app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:////tmp/test.db'
+    db = SQLAlchemy(app)
+
 
     # Create data storage
     class Person(db.Model):
         id = db.Column(db.Integer, primary_key=True)
         name = db.Column(db.String)
         birth_date = db.Column(db.Date)
+
 
     class Computer(db.Model):
         id = db.Column(db.Integer, primary_key=True)
@@ -57,8 +67,9 @@ An example of Flask-REST-JSONAPI API looks like this ::
                                  related_view='computer_list',
                                  related_view_kwargs={'id': '<id>'},
                                  many=True,
-                                 schema='CoputerSchema',
+                                 schema='ComputerSchema',
                                  type_='computer')
+
 
     class ComputerSchema(Schema):
         class Meta:
@@ -76,15 +87,18 @@ An example of Flask-REST-JSONAPI API looks like this ::
         data_layer = {'session': db.session,
                       'model': Person}
 
+
     class PersonDetail(ResourceDetail):
         schema = PersonSchema
         data_layer = {'session': db.session,
                       'model': Person}
 
+
     class PersonRelationship(ResourceRelationship):
         schema = PersonSchema
         data_layer = {'session': db.session,
                       'model': Person}
+
 
     class ComputerList(ResourceList):
         def query(self, **view_kwargs):
@@ -104,6 +118,7 @@ An example of Flask-REST-JSONAPI API looks like this ::
                       'methods': {'query': query,
                                   'before_create_object': before_create_object}}
 
+
     class ComputerDetail(ResourceDetail):
         schema = ComputerSchema
         data_layer = {'session': db.session,
@@ -111,21 +126,12 @@ An example of Flask-REST-JSONAPI API looks like this ::
 
 
     # Create endpoints
-    api = Api()
+    api = Api(app)
     api.route(PersonList, 'person_list', '/persons')
     api.route(PersonDetail, 'person_detail', '/persons/<int:id>')
-    api.route(PersonRelationship, 'person_computers', '/persons/<int:id>/relationship/computers')
+    api.route(PersonRelationship, 'person_computers', '/persons/<int:id>/relationships/computers')
     api.route(ComputerList, 'computer_list', '/computers', '/persons/<int:id>/computers')
     api.route(ComputerDetail, 'computer_detail', '/computers/<int:id>')
-
-
-    # Create the Flask application and initialize SQLAlchemy and Api
-    app = Flask(__name__)
-    app.config['DEBUG'] = True
-    app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:////tmp/test.db'
-    db.init_app(app)
-    api.init_app(app)
-
 
     if __name__ == '__main__':
         # Start application
