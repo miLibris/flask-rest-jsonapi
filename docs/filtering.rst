@@ -36,7 +36,7 @@ Example with field:
     GET /persons?filter=[{"name":"name","op":"eq","field":"birth_date"}] HTTP/1.1
     Accept: application/vnd.api+json
 
-In this example, we want to retrieve persons that name is equal to his bith_date. I know that this example is absurd but it is just to explain the syntax of this kind of filter.
+In this example, we want to retrieve persons that name is equal to his birth_date. I know, this example is absurd but it is just to explain the syntax of this kind of filter.
 
 If you want to filter through relationships you can do that:
 
