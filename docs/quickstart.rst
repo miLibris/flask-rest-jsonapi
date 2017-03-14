@@ -300,7 +300,7 @@ Request:
     {
       "data": {
         "type": "computer",
-        "id": "1"
+        "id": "1",
         "attributes": {
           "serial": "Amstrad 2"
         }
@@ -359,9 +359,12 @@ Response:
 Relationships
 -------------
 
-Now let's use relationships tools. First, create 3 computers called Halo, Nestor and Comodor like in previous example.
-Done ?
-Ok. So let's continue this tutorial. We assume that Halo has id: 2, Nestor id: 3 and Comodor has id 4.
+| Now let's use relationships tools. First, create 3 computers called Halo, Nestor and Comodor like in previous example.
+|
+| Done ?
+| Ok. So let's continue this tutorial.
+|
+| We assume that Halo has id: 2, Nestor id: 3 and Comodor has id: 4.
 
 Create a person with related computer
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -403,7 +406,7 @@ Response:
 
     {
       "data": {
-        "type": "person"
+        "type": "person",
         "id": "1",
         "attributes": {
           "birth_date": "1990-12-18",
@@ -429,7 +432,7 @@ Response:
       },
       "included": [
         {
-          "type": "computer"
+          "type": "computer",
           "id": "2",
           "attributes": {
             "serial": "Amstrad"
@@ -453,7 +456,7 @@ You can see that I have added the querystring parameter "include" to the url
 
     POST /persons?include=computers HTTP/1.1
 
-Thanks to this parameter related computers details are included to the result. If you want to learn more: include_related_
+Thanks to this parameter, related computers details are included to the result. If you want to learn more: :ref:`include_related_objects`
 
 Update relationships between a person and computers
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -497,7 +500,7 @@ Response:
 
     {
       "data": {
-        "type": "person"
+        "type": "person",
         "id": "1",
         "attributes": {
           "birth_date": "1990-10-18",
@@ -523,7 +526,7 @@ Response:
       },
       "included": [
         {
-          "type": "computer"
+          "type": "computer",
           "id": "3",
           "attributes": {
             "serial": "Nestor"

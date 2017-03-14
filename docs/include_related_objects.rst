@@ -1,7 +1,7 @@
-.. _include_related:
+.. _include_related_objects:
 
-Include related document(s)
-===========================
+Include related objects
+=======================
 
 .. currentmodule:: flask_rest_jsonapi
 
