@@ -117,5 +117,4 @@ Documentation available here: http://flask-rest-jsonapi.readthedocs.io/en/latest
 Thanks
 ======
 
-Flask, marshmallow, marshmallow_jsonapi, sqlalchemy, Flask-RESTful and Flask-Restless are awesome project. I got
-inspired of these libraries very much to create Flask-REST-JSONAPI so huge thanks to authors and contributors.
+Flask, marshmallow, marshmallow_jsonapi, sqlalchemy, Flask-RESTful and Flask-Restless are awesome project. These librairies give me inspiration to create Flask-REST-JSONAPI so huge thanks to authors and contributors.

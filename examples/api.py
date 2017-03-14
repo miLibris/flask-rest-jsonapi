@@ -1,8 +1,9 @@
 # -*- coding: utf-8 -*-
 
 from flask import Flask
-from flask_rest_jsonapi import Api, ResourceDetail, ResourceList, ResourceRelationship
+from flask_rest_jsonapi import Api, ResourceDetail, ResourceList, ResourceRelationship, JsonApiException
 from flask_sqlalchemy import SQLAlchemy
+from sqlalchemy.orm.exc import NoResultFound
 from marshmallow_jsonapi.flask import Schema, Relationship
 from marshmallow_jsonapi import fields
 
@@ -90,8 +91,15 @@ class ComputerList(ResourceList):
 
     def before_create_object(self, data, **view_kwargs):
         if view_kwargs.get('id') is not None:
-            person = self.session.query(Person).filter_by(id=view_kwargs['id']).one()
-            data['person'] = person
+            try:
+                person = self.session.query(Person).filter_by(id=view_kwargs['id']).one()
+            except NoResultFound:
+                raise JsonApiException({'parameter': 'id'},
+                                       'Person: {} not found'.format(view_kwargs['id']),
+                                       title='ObjectNotFound',
+                                       status='404')
+            else:
+                data['person_id'] = person.id
 
     schema = ComputerSchema
     data_layer = {'session': db.session,
