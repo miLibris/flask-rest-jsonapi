@@ -11,7 +11,7 @@ You can sort result with querystring parameter called sort
 
     Urls examples are not urlencoded for a better readability
 
-Example
+Example:
 
 .. sourcecode:: http
 
@@ -21,7 +21,7 @@ Example
 Muliple sort
 ------------
 
-You can sort on multiple fields like that
+You can sort on multiple fields like that:
 
 .. sourcecode:: http
 
@@ -31,7 +31,7 @@ You can sort on multiple fields like that
 Descendant sort
 ---------------
 
-You can make desc sort with the character "-" like that
+You can make desc sort with the character "-" like that:
 
 .. sourcecode:: http
 

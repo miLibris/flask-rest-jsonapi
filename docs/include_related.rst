@@ -7,7 +7,7 @@ Include related document(s)
 
 You can include related object(s) details to response with the querystring parameter called include. You can use "include" parameter on any kind of url (classical CRUD url or relationships url) and any kind of http methods as long as method return data.
 
-Example
+Example:
 
 .. sourcecode:: http
 
@@ -16,7 +16,7 @@ Example
 
 You can even use relationships with include
 
-Example
+Example:
 
 .. sourcecode:: http
 

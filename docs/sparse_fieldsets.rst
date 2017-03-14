@@ -1,7 +1,7 @@
-.. _sparse_fieldset:
+.. _sparse_fieldsets:
 
-Sparse fieldset
-===============
+Sparse fieldsets
+================
 
 .. currentmodule:: flask_rest_jsonapi
 
@@ -15,7 +15,7 @@ The syntax of a fields is like that ::
 
     ?fields[<resource_type>]=<list of fields to return>
 
-Example
+Example:
 
 .. sourcecode:: http
 
@@ -24,7 +24,7 @@ Example
 
 You can manage returned fields for the entire response even for included objects
 
-Example
+Example:
 
 If you don't want to compute relationships links for included computers of a person you can do something like that
 
@@ -35,7 +35,7 @@ If you don't want to compute relationships links for included computers of a per
 
 And of course you can combine both
 
-Example
+Example:
 
 .. sourcecode:: http
 
