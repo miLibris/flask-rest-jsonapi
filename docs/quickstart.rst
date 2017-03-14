@@ -12,7 +12,7 @@ In this section you will learn basic usage of Flask-REST-JSONAPI around a small 
 First example
 -------------
 
-An example of Flask-REST-JSONAPI API looks like this
+An example of Flask-REST-JSONAPI API looks like this:
 
 .. code-block:: python
 
@@ -143,28 +143,43 @@ An example of Flask-REST-JSONAPI API looks like this
         # Start application
         app.run(debug=True)
 
-This example provides this api
+This example provides this api:
 
-========================================  ======  ================  =====================================================
-url                                       method  endpoint          action
-========================================  ======  ================  =====================================================
-/persons                                  GET     person_list       Retrieve a collection of persons
-/persons                                  POST    person_list       Create a person
-/persons/<int:id>                         GET     person_detail     Retrieve details of a person
-/persons/<int:id>                         PATCH   person_detail     Update a person
-/persons/<int:id>                         DELETE  person_detail     Delete a person
-/persons/<int:id>/relationship/computers  GET     person_computers  Retrieve relationships between a person and computers
-/persons/<int:id>/relationship/computers  POST    person_computers  Create relationships between a person and computers
-/persons/<int:id>/relationship/computers  PATCH   person_computers  Update relationships between a person and computers
-/persons/<int:id>/relationship/computers  DELETE  person_computers  Delete relationships between a person and computers
-/computers                                GET     computer_list     Retrieve a collection of computers
-/computers                                POST    computer_list     Create a computer
-/persons/<int:id>/computers               GET     computer_list     Retrieve a collection computers related to a person
-/persons/<int:id>/computers               POST    computer_list     Create a computer related to a person
-/computers/<int:id>                       GET     computer_detail   Retrieve details of a computer
-/computers/<int:id>                       PATCH   computer_detail   Update a computer
-/computers/<int:id>                       DELETE  computer_detail   Delete a computer
-========================================  ======  ================  =====================================================
++------------------------------------------+--------+------------------+-------------------------------------------------------+
+| url                                      | method | endpoint         | action                                                |
++==========================================+========+==================+=======================================================+
+| /persons                                 | GET    | person_list      | Retrieve a collection of persons                      |
++------------------------------------------+--------+------------------+-------------------------------------------------------+
+| /persons                                 | POST   | person_list      | Create a person                                       |
++------------------------------------------+--------+------------------+-------------------------------------------------------+
+| /persons/<int:id>                        | GET    | person_detail    | Retrieve details of a person                          |
++------------------------------------------+--------+------------------+-------------------------------------------------------+
+| /persons/<int:id>                        | PATCH  | person_detail    | Update a person                                       |
++------------------------------------------+--------+------------------+-------------------------------------------------------+
+| /persons/<int:id>                        | DELETE | person_detail    | Delete a person                                       |
++------------------------------------------+--------+------------------+-------------------------------------------------------+
+| /persons/<int:id>/relationship/computers | GET    | person_computers | Retrieve relationships between a person and computers |
++------------------------------------------+--------+------------------+-------------------------------------------------------+
+| /persons/<int:id>/relationship/computers | POST   | person_computers | Create relationships between a person and computers   |
++------------------------------------------+--------+------------------+-------------------------------------------------------+
+| /persons/<int:id>/relationship/computers | PATCH  | person_computers | Update relationships between a person and computers   |
++------------------------------------------+--------+------------------+-------------------------------------------------------+
+| /persons/<int:id>/relationship/computers | DELETE | person_computers | Delete relationships between a person and computers   |
++------------------------------------------+--------+------------------+-------------------------------------------------------+
+| /computers                               | GET    | computer_list    | Retrieve a collection of computers                    |
++------------------------------------------+--------+------------------+-------------------------------------------------------+
+| /computers                               | POST   | computer_list    | Create a computer                                     |
++------------------------------------------+--------+------------------+-------------------------------------------------------+
+| /persons/<int:id>/computers              | GET    | computer_list    | Retrieve a collection computers related to a person   |
++------------------------------------------+--------+------------------+-------------------------------------------------------+
+| /persons/<int:id>/computers              | POST   | computer_list    | Create a computer related to a person                 |
++------------------------------------------+--------+------------------+-------------------------------------------------------+
+| /computers/<int:id>                      | GET    | computer_detail  | Retrieve details of a computer                        |
++------------------------------------------+--------+------------------+-------------------------------------------------------+
+| /computers/<int:id>                      | PATCH  | computer_detail  | Update a computer                                     |
++------------------------------------------+--------+------------------+-------------------------------------------------------+
+| /computers/<int:id>                      | DELETE | computer_detail  | Delete a computer                                     |
++------------------------------------------+--------+------------------+-------------------------------------------------------+
 
 .. warning::
 
@@ -190,7 +205,7 @@ Classical CRUD operations
 Create a computer
 ~~~~~~~~~~~~~~~~~
 
-Request
+Request:
 
 .. sourcecode:: http
 
@@ -207,7 +222,7 @@ Request
       }
     }
 
-Response
+Response:
 
 .. sourcecode:: http
 
@@ -236,14 +251,14 @@ Response
 List computers
 ~~~~~~~~~~~~~~
 
-Request
+Request:
 
 .. sourcecode:: http
 
     GET /computers HTTP/1.1
     Accept: application/vnd.api+json
 
-Response
+Response:
 
 .. sourcecode:: http
 
@@ -274,7 +289,7 @@ Response
 Update the computer
 ~~~~~~~~~~~~~~~~~~~
 
-Request
+Request:
 
 .. sourcecode:: http
 
@@ -292,7 +307,7 @@ Request
       }
     }
 
-Request
+Response:
 
 .. sourcecode:: http
 
@@ -318,14 +333,14 @@ Request
 Delete the computer
 ~~~~~~~~~~~~~~~~~~~
 
-Request
+Request:
 
 .. sourcecode:: http
 
     DELETE /computers/1 HTTP/1.1
     Accept: application/vnd.api+json
 
-Response
+Response:
 
 .. sourcecode:: http
 
@@ -351,7 +366,7 @@ Ok. So let's continue this tutorial. We assume that Halo has id: 2, Nestor id: 3
 Create a person with related computer
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Request
+Request:
 
 .. sourcecode:: http
 
@@ -379,7 +394,7 @@ Request
       }
     }
 
-Response
+Response:
 
 .. sourcecode:: http
 
@@ -438,15 +453,14 @@ You can see that I have added the querystring parameter "include" to the url
 
     POST /persons?include=computers HTTP/1.1
 
-Thanks to this parameter related computers details are included to the result. If you want to learn more:
-include_related_
+Thanks to this parameter related computers details are included to the result. If you want to learn more: include_related_
 
 Update relationships between a person and computers
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Now John sell his Amstrad and buy a new computer called Nestor (id: 3). So we want to link this new computer to John. John have also made a mistake in his birth_date so let's update this 2 things in the same time.
 
-Request
+Request:
 
 .. sourcecode:: http
 
@@ -474,7 +488,7 @@ Request
       }
     }
 
-Response
+Response:
 
 .. sourcecode:: http
 
@@ -532,7 +546,7 @@ Add computer to a person
 
 Now John buy a new computer called Comodor so let's link it to John.
 
-Request
+Request:
 
 .. sourcecode:: http
 
@@ -549,7 +563,7 @@ Request
       ]
     }
 
-Response
+Response:
 
 .. sourcecode:: http
 
@@ -622,7 +636,7 @@ Remove relationship between a computer and a person
 
 Now John sell his old Nestor computer so let's unlink it from John.
 
-Request
+Request:
 
 .. sourcecode:: http
 
@@ -639,7 +653,7 @@ Request
       ]
     }
 
-Response
+Response:
 
 .. sourcecode:: http
 
@@ -647,47 +661,47 @@ Response
     Content-Type: application/vnd.api+json
 
     {
-    "data": {
-        "type": "person",
-        "id": "1",
-        "attributes": {
-            "name": "John",
-            "birth_date": "1990-10-18"
-        },
-        "links": {
-            "self": "/persons/1"
-        },
-        "relationships": {
-            "computers": {
-                "data": [
-                    {
-                        "id": "4",
-                        "type": "computer"
-                    }
-                ],
-                "links": {
-                    "related": "/persons/1/computers",
-                    "self": "/persons/1/relationships/computers"
-                }
-            }
-        }
-    },
-    "included": [
-        {
-            "type": "computer",
-            "id": "4",
-            "attributes": {
-                "serial": "Comodor"
-            },
-            "links": {
-                "self": "/computers/4"
-            }
-        }
-    ],
-    "jsonapi": {
-        "version": "1.0"
-    },
-    "links": {
-        "self": "/persons/1/relationships/computers"
+      "data": {
+          "type": "person",
+          "id": "1",
+          "attributes": {
+              "name": "John",
+              "birth_date": "1990-10-18"
+          },
+          "links": {
+              "self": "/persons/1"
+          },
+          "relationships": {
+              "computers": {
+                  "data": [
+                      {
+                          "id": "4",
+                          "type": "computer"
+                      }
+                  ],
+                  "links": {
+                      "related": "/persons/1/computers",
+                      "self": "/persons/1/relationships/computers"
+                  }
+              }
+          }
+      },
+      "included": [
+          {
+              "type": "computer",
+              "id": "4",
+              "attributes": {
+                  "serial": "Comodor"
+              },
+              "links": {
+                  "self": "/computers/4"
+              }
+          }
+      ],
+      "jsonapi": {
+          "version": "1.0"
+      },
+      "links": {
+          "self": "/persons/1/relationships/computers"
+      }
     }
-}

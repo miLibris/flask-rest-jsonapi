@@ -14,7 +14,7 @@ When you use the default implementation of get method on a ResourceList your res
 Size
 ----
 
-You can control the page size like that
+You can control the page size like that:
 
 .. sourcecode:: http
 
@@ -24,7 +24,7 @@ You can control the page size like that
 Number
 ------
 
-You can control the page size like that
+You can control the page size like that:
 
 .. sourcecode:: http
 
