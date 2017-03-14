@@ -5,17 +5,16 @@ Quickstart
 
 .. currentmodule:: flask_rest_jsonapi
 
-It's time to write your first REST API. This guide assumes you have a working understanding of
-`Flask <http://flask.pocoo.org>`_, and that you have already installed both Flask and Flask-REST-JSONAPI.  If not, then
-follow the steps in the :ref:`installation` section.
+It's time to write your first REST API. This guide assumes you have a working understanding of `Flask <http://flask.pocoo.org>`_, and that you have already installed both Flask and Flask-REST-JSONAPI. If not, then follow the steps in the :ref:`installation` section.
 
-In this section you will learn basic usage of Flask-REST-JSONAPI around a small tutorial that use the SQLAlchemy data
-layer. This tutorial show you an example of a person and his computers.
+In this section you will learn basic usage of Flask-REST-JSONAPI around a small tutorial that use the SQLAlchemy data layer. This tutorial show you an example of a person and his computers.
 
 First example
 -------------
 
-An example of Flask-REST-JSONAPI API looks like this ::
+An example of Flask-REST-JSONAPI API looks like this
+
+.. code-block:: python
 
     # -*- coding: utf-8 -*-
 
@@ -104,13 +103,20 @@ An example of Flask-REST-JSONAPI API looks like this ::
         def query(self, **view_kwargs):
             query_ = self.session.query(Computer)
             if view_kwargs.get('id') is not None:
-                query_ = query_.join(Person).filter(Person.id == view_kwargs['id'])
+                query_ = query_.join(Person).filter_by(id=view_kwargs['id'])
             return query_
 
         def before_create_object(self, data, **view_kwargs):
             if view_kwargs.get('id') is not None:
-                person = self.session.query(Person).filter_by(id=view_kwargs['id']).one()
-                data['person'] = person
+                try:
+                    person = self.session.query(Person).filter_by(id=view_kwargs['id']).one()
+                except NoResultFound:
+                    raise JsonApiException({'parameter': 'id'},
+                                           'Person: {} not found'.format(view_kwargs['id']),
+                                           title='ObjectNotFound',
+                                           status='404')
+                else:
+                    data['person_id'] = person.id
 
         schema = ComputerSchema
         data_layer = {'session': db.session,
@@ -137,7 +143,7 @@ An example of Flask-REST-JSONAPI API looks like this ::
         # Start application
         app.run(debug=True)
 
-This example provides this api ::
+This example provides this api
 
 ========================================  ======  ================  =====================================================
 url                                       method  endpoint          action
@@ -170,13 +176,13 @@ Save this as api.py and run it using your Python interpreter. Note that we've en
 `Flask debugging <http://flask.pocoo.org/docs/quickstart/#debug-mode>`_ mode to provide code reloading and better error
 messages. ::
 
-.. warning::
-
-    Debug mode should never be used in a production environment!
-
     $ python api.py
      * Running on http://127.0.0.1:5000/
      * Restarting with reloader
+
+.. warning::
+
+    Debug mode should never be used in a production environment!
 
 Classical CRUD operations
 -------------------------
@@ -184,7 +190,7 @@ Classical CRUD operations
 Create a computer
 ~~~~~~~~~~~~~~~~~
 
-Request ::
+Request
 
 .. sourcecode:: http
 
@@ -201,7 +207,7 @@ Request ::
       }
     }
 
-Response ::
+Response
 
 .. sourcecode:: http
 
@@ -230,14 +236,14 @@ Response ::
 List computers
 ~~~~~~~~~~~~~~
 
-Request ::
+Request
 
 .. sourcecode:: http
 
     GET /computers HTTP/1.1
     Accept: application/vnd.api+json
 
-Response ::
+Response
 
 .. sourcecode:: http
 
@@ -268,7 +274,7 @@ Response ::
 Update the computer
 ~~~~~~~~~~~~~~~~~~~
 
-Request ::
+Request
 
 .. sourcecode:: http
 
@@ -286,7 +292,9 @@ Request ::
       }
     }
 
-Request ::
+Request
+
+.. sourcecode:: http
 
     HTTP/1.1 200 OK
     Content-Type: application/vnd.api+json
@@ -310,14 +318,14 @@ Request ::
 Delete the computer
 ~~~~~~~~~~~~~~~~~~~
 
-Request ::
+Request
 
 .. sourcecode:: http
 
     DELETE /computers/1 HTTP/1.1
     Accept: application/vnd.api+json
 
-Response ::
+Response
 
 .. sourcecode:: http
 
@@ -343,7 +351,7 @@ Ok. So let's continue this tutorial. We assume that Halo has id: 2, Nestor id: 3
 Create a person with related computer
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Request ::
+Request
 
 .. sourcecode:: http
 
@@ -371,7 +379,7 @@ Request ::
       }
     }
 
-Response ::
+Response
 
 .. sourcecode:: http
 
@@ -424,7 +432,7 @@ Response ::
       }
     }
 
-You can see that I have added the querystring parameter "include" to the url ::
+You can see that I have added the querystring parameter "include" to the url
 
 .. sourcecode:: http
 
@@ -436,10 +444,9 @@ include_related_
 Update relationships between a person and computers
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Now John sell his Amstrad and buy a new computer called Nestor (id: 3). So we want to link this new computer to John.
-John have also made a mistake in his birth_date so let's update this 2 things in the same time.
+Now John sell his Amstrad and buy a new computer called Nestor (id: 3). So we want to link this new computer to John. John have also made a mistake in his birth_date so let's update this 2 things in the same time.
 
-Request ::
+Request
 
 .. sourcecode:: http
 
@@ -467,7 +474,12 @@ Request ::
       }
     }
 
-Request ::
+Response
+
+.. sourcecode:: http
+
+    HTTP/1.1 200 OK
+    Content-Type: application/vnd.api+json
 
     {
       "data": {
@@ -520,7 +532,7 @@ Add computer to a person
 
 Now John buy a new computer called Comodor so let's link it to John.
 
-Request ::
+Request
 
 .. sourcecode:: http
 
@@ -537,7 +549,12 @@ Request ::
       ]
     }
 
-Response ::
+Response
+
+.. sourcecode:: http
+
+    HTTP/1.1 200 OK
+    Content-Type: application/vnd.api+json
 
     {
       "data": {
@@ -605,7 +622,7 @@ Remove relationship between a computer and a person
 
 Now John sell his old Nestor computer so let's unlink it from John.
 
-Request ::
+Request
 
 .. sourcecode:: http
 
@@ -622,7 +639,12 @@ Request ::
       ]
     }
 
-Response ::
+Response
+
+.. sourcecode:: http
+
+    HTTP/1.1 200 OK
+    Content-Type: application/vnd.api+json
 
     {
     "data": {
