@@ -128,7 +128,15 @@ html_theme = 'alabaster'
 # further.  For a list of options available for each theme, see the
 # documentation.
 #
-# html_theme_options = {}
+html_theme_options = {
+    'github_user': 'akira-dev',
+    'github_repo': 'flask-rest-jsonapi',
+    'github_banner': true,
+    'travis_button': true,
+    'show_related': true,
+    'page_width': 1080px,
+    'fixed_sidebar': true
+}
 
 # Add any paths that contain custom themes here, relative to this directory.
 # html_theme_path = []
