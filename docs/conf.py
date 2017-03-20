@@ -134,7 +134,7 @@ html_theme_options = {
     'github_banner': true,
     'travis_button': true,
     'show_related': true,
-    'page_width': 1080px,
+    'page_width': '1080px',
     'fixed_sidebar': true
 }
 
