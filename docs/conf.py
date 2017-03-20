@@ -129,14 +129,14 @@ html_theme = 'alabaster'
 # documentation.
 #
 html_theme_options = {
-    'github_user': 'akira-dev',
+    'github_user': 'miLibris',
     'github_repo': 'flask-rest-jsonapi',
     'github_banner': True,
     'travis_button': True,
     'show_related': True,
     'page_width': '1080px',
     'fixed_sidebar': True,
-    'code_font_size': '0.6em'
+    'code_font_size': '0.7em'
 }
 
 # Add any paths that contain custom themes here, relative to this directory.
