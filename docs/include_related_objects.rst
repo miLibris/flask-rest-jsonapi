@@ -11,8 +11,6 @@ This features will add an additional key in result named "included"
 
 Example:
 
-.. sourcecode:: http
-
 Request:
 
     GET /persons/1?include=computers HTTP/1.1
@@ -80,8 +78,6 @@ Response:
 You can even follow relationships with include
 
 Example:
-
-.. sourcecode:: http
 
 Request:
 

@@ -106,8 +106,6 @@ You can also use boolean combinaison of operations:
     ] HTTP/1.1
     Accept: application/vnd.api+json
 
-Availables operators depend on field type
-
 Common available operators:
 
 * any: used to filter on to many relationships

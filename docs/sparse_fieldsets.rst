@@ -46,4 +46,4 @@ Example:
 
 .. warning::
 
-    If you want to use both "fields" and "include" don't forget to specify the name of the relation in fields; if you don't the include wont work.
+    If you want to use both "fields" and "include" don't forget to specify the name of the relationship in fields; if you don't the include wont work.

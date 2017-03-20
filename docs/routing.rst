@@ -5,7 +5,7 @@ Routing
 
 .. currentmodule:: flask_rest_jsonapi
 
-The routing system is very simple and fits this pattern:
+The routing system is very simple and fits this pattern ::
 
     api.route(<Resource manager>, <endpoint name>, <url_1>, <url_2>, ...)
 
