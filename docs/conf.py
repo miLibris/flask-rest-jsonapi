@@ -135,7 +135,8 @@ html_theme_options = {
     'travis_button': true,
     'show_related': true,
     'page_width': '1080px',
-    'fixed_sidebar': true
+    'fixed_sidebar': true,
+    'code_font_size': '0.6em'
 }
 
 # Add any paths that contain custom themes here, relative to this directory.
