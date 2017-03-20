@@ -3,7 +3,7 @@
 from sqlalchemy import and_, or_, not_
 
 from flask_rest_jsonapi.exceptions import InvalidFilters
-from flask_rest_jsonapi.schema import get_relationships
+from flask_rest_jsonapi.schema import get_relationships, get_model_field
 
 
 def create_filters(model, filter_info, resource):
@@ -68,7 +68,7 @@ class Node(object):
             name = name.split('__')[0]
 
         if name not in self.schema._declared_fields:
-            raise InvalidFilters("{} has no attribut {}".format(self.schema.__name__, name))
+            raise InvalidFilters("{} has no attribute {}".format(self.schema.__name__, name))
 
         return name
 
@@ -109,13 +109,12 @@ class Node(object):
         """
         field = self.name
 
-        if self.schema._declared_fields[field].attribute is not None:
-            field = self.schema._declared_fields[field].attribute
+        model_field = get_model_field(self.schema, field)
 
         try:
-            return getattr(self.model, field)
+            return getattr(self.model, model_field)
         except AttributeError:
-            raise InvalidFilters("{} has no attribute {} in a filter".format(self.model.__name__, field))
+            raise InvalidFilters("{} has no attribute {} in a filter".format(self.model.__name__, model_field))
 
     @property
     def operator(self):
@@ -153,14 +152,12 @@ class Node(object):
         """
         relationship_field = self.name
 
-        if relationship_field not in get_relationships(self.schema):
-            raise InvalidFilters("{} has no relationship attribut {}".format(self.schema.__name__, relationship_field))
+        if relationship_field not in get_relationships(self.schema).values():
+            raise InvalidFilters("{} has no relationship attribute {}".format(self.schema.__name__, relationship_field))
 
-        if hasattr(self.resource, 'schema_to_model') and\
-                self.resource.schema_to_model.get(relationship_field) is not None:
-            relationship_field = self.resource.schema_to_model[relationship_field]
+        relationship_model_field = get_model_field(self.schema, relationship_field)
 
-        return getattr(self.model, relationship_field).property.mapper.class_
+        return getattr(self.model, relationship_model_field).property.mapper.class_
 
     @property
     def related_schema(self):
@@ -170,7 +167,7 @@ class Node(object):
         """
         relationship_field = self.name
 
-        if relationship_field not in get_relationships(self.schema):
-            raise InvalidFilters("{} has no relationship attribut {}".format(self.schema.__name__, relationship_field))
+        if relationship_field not in get_relationships(self.schema).values():
+            raise InvalidFilters("{} has no relationship attribute {}".format(self.schema.__name__, relationship_field))
 
         return self.schema._declared_fields[relationship_field].schema.__class__

@@ -7,7 +7,7 @@ from sqlalchemy.inspection import inspect
 
 from flask_rest_jsonapi.constants import DEFAULT_PAGE_SIZE
 from flask_rest_jsonapi.data_layers.base import BaseDataLayer
-from flask_rest_jsonapi.exceptions import ObjectNotFound, RelationNotFound, RelatedObjectNotFound, JsonApiException,\
+from flask_rest_jsonapi.exceptions import RelationNotFound, RelatedObjectNotFound, JsonApiException,\
     InvalidSort
 from flask_rest_jsonapi.data_layers.filtering.alchemy import create_filters
 from flask_rest_jsonapi.schema import get_relationships
@@ -15,8 +15,8 @@ from flask_rest_jsonapi.schema import get_relationships
 
 class SqlalchemyDataLayer(BaseDataLayer):
 
-    def __init__(self, **kwargs):
-        super(SqlalchemyDataLayer, self).__init__(**kwargs)
+    def __init__(self, kwargs):
+        super(SqlalchemyDataLayer, self).__init__(kwargs)
 
         if not hasattr(self, 'session'):
             raise Exception("You must provide a session in data_layer_kwargs to use sqlalchemy data layer in {}"
@@ -25,14 +25,14 @@ class SqlalchemyDataLayer(BaseDataLayer):
             raise Exception("You must provide a model in data_layer_kwargs to use sqlalchemy data layer in {}"
                             .format(self.resource.__name__))
 
-    def create_object(self, data, **view_kwargs):
+    def create_object(self, data, view_kwargs):
         """Create an object through sqlalchemy
 
         :param dict data: the data validated by marshmallow
         :param dict view_kwargs: kwargs from the resource view
         :return DeclarativeMeta: an object from sqlalchemy
         """
-        self.before_create_object(data, **view_kwargs)
+        self.before_create_object(data, view_kwargs)
 
         relationship_fields = get_relationships(self.resource.schema)
         obj = self.model(**{key: value for (key, value) in data.items() if key not in relationship_fields})
@@ -45,23 +45,23 @@ class SqlalchemyDataLayer(BaseDataLayer):
             self.session.rollback()
             raise JsonApiException({'pointer': '/data'}, "Object creation error: " + str(e))
 
-        self.after_create_object(obj, data, **view_kwargs)
+        self.after_create_object(obj, data, view_kwargs)
 
         return obj
 
-    def get_object(self, **view_kwargs):
+    def get_object(self, view_kwargs):
         """Retrieve an object through sqlalchemy
 
         :params dict view_kwargs: kwargs from the resource view
         :return DeclarativeMeta: an object from sqlalchemy
         """
-        self.before_get_object(**view_kwargs)
+        self.before_get_object(view_kwargs)
 
         id_field = getattr(self, 'id_field', inspect(self.model).primary_key[0].name)
         try:
             filter_field = getattr(self.model, id_field)
         except Exception:
-            raise Exception("{} has no attribut {}".format(self.model.__name__), id_field)
+            raise Exception("{} has no attribute {}".format(self.model.__name__), id_field)
 
         url_field = getattr(self, 'url_field', 'id')
         filter_value = view_kwargs[url_field]
@@ -69,23 +69,22 @@ class SqlalchemyDataLayer(BaseDataLayer):
         try:
             obj = self.session.query(self.model).filter(filter_field == filter_value).one()
         except NoResultFound:
-            raise ObjectNotFound('',
-                                 "Could not find {}.{}={} object".format(self.model.__name__, id_field, filter_value))
+            obj = None
 
-        self.after_get_object(obj, **view_kwargs)
+        self.after_get_object(obj, view_kwargs)
 
         return obj
 
-    def get_collection(self, qs, **view_kwargs):
+    def get_collection(self, qs, view_kwargs):
         """Retrieve a collection of objects through sqlalchemy
 
         :param QueryStringManager qs: a querystring manager to retrieve information from url
         :param dict view_kwargs: kwargs from the resource view
         :return tuple: the number of object and the list of objects
         """
-        self.before_get_collection(qs, **view_kwargs)
+        self.before_get_collection(qs, view_kwargs)
 
-        query = self.query(**view_kwargs)
+        query = self.query(view_kwargs)
 
         if qs.filters:
             query = self.filter_query(query, qs.filters, self.model)
@@ -99,11 +98,11 @@ class SqlalchemyDataLayer(BaseDataLayer):
 
         collection = query.all()
 
-        self.after_get_collection(collection, qs, **view_kwargs)
+        self.after_get_collection(collection, qs, view_kwargs)
 
         return object_count, collection
 
-    def update_object(self, obj, data, **view_kwargs):
+    def update_object(self, obj, data, view_kwargs):
         """Update an object through sqlalchemy
 
         :param DeclarativeMeta obj: an object from sqlalchemy
@@ -111,12 +110,12 @@ class SqlalchemyDataLayer(BaseDataLayer):
         :param dict view_kwargs: kwargs from the resource view
         :return boolean: True if object have changed else False
         """
-        self.before_update_object(obj, data, **view_kwargs)
+        self.before_update_object(obj, data, view_kwargs)
 
         relationship_fields = get_relationships(self.resource.schema)
-        for field in data:
-            if hasattr(obj, field) and field not in relationship_fields:
-                setattr(obj, field, data[field])
+        for key, value in data.items():
+            if hasattr(obj, key) and key not in relationship_fields:
+                setattr(obj, key, value)
 
         self.apply_relationships(data, obj)
 
@@ -126,15 +125,15 @@ class SqlalchemyDataLayer(BaseDataLayer):
             self.session.rollback()
             raise JsonApiException({'pointer': '/data'}, "Update object error: " + str(e))
 
-        self.after_update_object(obj, data, **view_kwargs)
+        self.after_update_object(obj, data, view_kwargs)
 
-    def delete_object(self, obj, **view_kwargs):
+    def delete_object(self, obj, view_kwargs):
         """Delete an object through sqlalchemy
 
         :param DeclarativeMeta item: an item from sqlalchemy
         :param dict view_kwargs: kwargs from the resource view
         """
-        self.before_delete_object(obj, **view_kwargs)
+        self.before_delete_object(obj, view_kwargs)
 
         self.session.delete(obj)
         try:
@@ -143,23 +142,23 @@ class SqlalchemyDataLayer(BaseDataLayer):
             self.session.rollback()
             raise JsonApiException('', "Delete object error: " + str(e))
 
-        self.after_delete_object(obj, **view_kwargs)
+        self.after_delete_object(obj, view_kwargs)
 
-    def create_relationship(self, json_data, relationship_field, related_id_field, **view_kwargs):
+    def create_relationship(self, json_data, relationship_field, related_id_field, view_kwargs):
         """Create a relationship
 
         :param dict json_data: the request params
-        :param str relationship_field: the model attribut used for relationship
+        :param str relationship_field: the model attribute used for relationship
         :param str related_id_field: the identifier field of the related model
         :param dict view_kwargs: kwargs from the resource view
         :return boolean: True if relationship have changed else False
         """
-        self.before_create_relationship(json_data, relationship_field, related_id_field, **view_kwargs)
+        self.before_create_relationship(json_data, relationship_field, related_id_field, view_kwargs)
 
-        obj = self.get_object(**view_kwargs)
+        obj = self.get_object(view_kwargs)
 
         if not hasattr(obj, relationship_field):
-            raise RelationNotFound('', "{} has no attribut {}".format(obj.__class__.__name__, relationship_field))
+            raise RelationNotFound('', "{} has no attribute {}".format(obj.__class__.__name__, relationship_field))
 
         related_model = getattr(obj.__class__, relationship_field).property.mapper.class_
 
@@ -191,25 +190,25 @@ class SqlalchemyDataLayer(BaseDataLayer):
             self.session.rollback()
             raise JsonApiException('', "Create relationship error: " + str(e))
 
-        self.after_create_relationship(obj, updated, json_data, relationship_field, related_id_field, **view_kwargs)
+        self.after_create_relationship(obj, updated, json_data, relationship_field, related_id_field, view_kwargs)
 
         return obj, updated
 
-    def get_relationship(self, relationship_field, related_type_, related_id_field, **view_kwargs):
+    def get_relationship(self, relationship_field, related_type_, related_id_field, view_kwargs):
         """Get a relationship
 
-        :param str relationship_field: the model attribut used for relationship
+        :param str relationship_field: the model attribute used for relationship
         :param str related_type_: the related resource type
         :param str related_id_field: the identifier field of the related model
         :param dict view_kwargs: kwargs from the resource view
         :return tuple: the object and related object(s)
         """
-        self.before_get_relationship(relationship_field, related_type_, related_id_field, **view_kwargs)
+        self.before_get_relationship(relationship_field, related_type_, related_id_field, view_kwargs)
 
-        obj = self.get_object(**view_kwargs)
+        obj = self.get_object(view_kwargs)
 
         if not hasattr(obj, relationship_field):
-            raise RelationNotFound('', "{} has no attribut {}".format(obj.__class__.__name__, relationship_field))
+            raise RelationNotFound('', "{} has no attribute {}".format(obj.__class__.__name__, relationship_field))
 
         related_objects = getattr(obj, relationship_field)
 
@@ -217,7 +216,7 @@ class SqlalchemyDataLayer(BaseDataLayer):
             return obj, related_objects
 
         self.after_get_relationship(obj, related_objects, relationship_field, related_type_, related_id_field,
-                                    **view_kwargs)
+                                    view_kwargs)
 
         if isinstance(related_objects, InstrumentedList):
             return obj,\
@@ -225,21 +224,21 @@ class SqlalchemyDataLayer(BaseDataLayer):
         else:
             return obj, {'type': related_type_, 'id': getattr(related_objects, related_id_field)}
 
-    def update_relationship(self, json_data, relationship_field, related_id_field, **view_kwargs):
+    def update_relationship(self, json_data, relationship_field, related_id_field, view_kwargs):
         """Update a relationship
 
         :param dict json_data: the request params
-        :param str relationship_field: the model attribut used for relationship
+        :param str relationship_field: the model attribute used for relationship
         :param str related_id_field: the identifier field of the related model
         :param dict view_kwargs: kwargs from the resource view
         :return boolean: True if relationship have changed else False
         """
-        self.before_update_relationship(json_data, relationship_field, related_id_field, **view_kwargs)
+        self.before_update_relationship(json_data, relationship_field, related_id_field, view_kwargs)
 
-        obj = self.get_object(**view_kwargs)
+        obj = self.get_object(view_kwargs)
 
         if not hasattr(obj, relationship_field):
-            raise RelationNotFound('', "{} has no attribut {}".format(obj.__class__.__name__, relationship_field))
+            raise RelationNotFound('', "{} has no attribute {}".format(obj.__class__.__name__, relationship_field))
 
         related_model = getattr(obj.__class__, relationship_field).property.mapper.class_
 
@@ -275,24 +274,24 @@ class SqlalchemyDataLayer(BaseDataLayer):
             self.session.rollback()
             raise JsonApiException('', "Update relationship error: " + str(e))
 
-        self.after_update_relationship(obj, updated, json_data, relationship_field, related_id_field, **view_kwargs)
+        self.after_update_relationship(obj, updated, json_data, relationship_field, related_id_field, view_kwargs)
 
         return obj, updated
 
-    def delete_relationship(self, json_data, relationship_field, related_id_field, **view_kwargs):
+    def delete_relationship(self, json_data, relationship_field, related_id_field, view_kwargs):
         """Delete a relationship
 
         :param dict json_data: the request params
-        :param str relationship_field: the model attribut used for relationship
+        :param str relationship_field: the model attribute used for relationship
         :param str related_id_field: the identifier field of the related model
         :param dict view_kwargs: kwargs from the resource view
         """
-        self.before_delete_relationship(json_data, relationship_field, related_id_field, **view_kwargs)
+        self.before_delete_relationship(json_data, relationship_field, related_id_field, view_kwargs)
 
-        obj = self.get_object(**view_kwargs)
+        obj = self.get_object(view_kwargs)
 
         if not hasattr(obj, relationship_field):
-            raise RelationNotFound('', "{} has no attribut {}".format(obj.__class__.__name__, relationship_field))
+            raise RelationNotFound('', "{} has no attribute {}".format(obj.__class__.__name__, relationship_field))
 
         related_model = getattr(obj.__class__, relationship_field).property.mapper.class_
 
@@ -316,7 +315,7 @@ class SqlalchemyDataLayer(BaseDataLayer):
             self.session.rollback()
             raise JsonApiException('', "Delete relationship error: " + str(e))
 
-        self.after_delete_relationship(obj, updated, json_data, relationship_field, related_id_field, **view_kwargs)
+        self.after_delete_relationship(obj, updated, json_data, relationship_field, related_id_field, view_kwargs)
 
         return obj, updated
 
@@ -349,14 +348,8 @@ class SqlalchemyDataLayer(BaseDataLayer):
         relationship_fields = get_relationships(self.resource.schema)
         for key, value in data.items():
             if key in relationship_fields:
-                relationship_field = key
-
-                related_id_field = self.resource.schema._declared_fields[relationship_field].id_field
-
-                if hasattr(self.resource, 'schema_to_model') and self.resource.schema_to_model.get(key) is not None:
-                    relationship_field = self.resource.schema_to_model[relationship_field]
-
-                related_model = getattr(obj.__class__, relationship_field).property.mapper.class_
+                related_model = getattr(obj.__class__, key).property.mapper.class_
+                related_id_field = self.resource.schema._declared_fields[relationship_fields[key]].id_field
 
                 if isinstance(value, list):
                     related_objects = []
@@ -365,14 +358,14 @@ class SqlalchemyDataLayer(BaseDataLayer):
                         related_object = self.get_related_object(related_model, related_id_field, {'id': identifier})
                         related_objects.append(related_object)
 
-                    setattr(obj, relationship_field, related_objects)
+                    setattr(obj, key, related_objects)
                 else:
                     related_object = None
 
                     if value is not None:
                         related_object = self.get_related_object(related_model, related_id_field, {'id': value})
 
-                    setattr(obj, relationship_field, related_object)
+                    setattr(obj, key, related_object)
 
     def filter_query(self, query, filter_info, model):
         """Filter query according to jsonapi 1.0
@@ -400,7 +393,7 @@ class SqlalchemyDataLayer(BaseDataLayer):
         order_objects = []
         for sort_opt in sort_info:
             if not hasattr(self.model, sort_opt['field']):
-                raise InvalidSort("{} has no attribut {}".format(self.model.__name__, sort_opt['field']))
+                raise InvalidSort("{} has no attribute {}".format(self.model.__name__, sort_opt['field']))
             field = text(sort_opt['field'])
             order = expressions[sort_opt['order']]
             order_objects.append(order(field))
@@ -423,14 +416,14 @@ class SqlalchemyDataLayer(BaseDataLayer):
 
         return query
 
-    def query(self, **view_kwargs):
+    def query(self, view_kwargs):
         """Construct the base query to retrieve wanted data
 
         :param dict view_kwargs: kwargs from the resource view
         """
         return self.session.query(self.model)
 
-    def before_create_object(self, data, **view_kwargs):
+    def before_create_object(self, data, view_kwargs):
         """Provide additional data before object creation
 
         :param dict data: the data validated by marshmallow
@@ -438,7 +431,7 @@ class SqlalchemyDataLayer(BaseDataLayer):
         """
         pass
 
-    def after_create_object(self, obj, data, **view_kwargs):
+    def after_create_object(self, obj, data, view_kwargs):
         """Provide additional data after object creation
 
         :param obj: an object from data layer
@@ -447,14 +440,14 @@ class SqlalchemyDataLayer(BaseDataLayer):
         """
         pass
 
-    def before_get_object(self, **view_kwargs):
+    def before_get_object(self, view_kwargs):
         """Make work before to retrieve an object
 
         :param dict view_kwargs: kwargs from the resource view
         """
         pass
 
-    def after_get_object(self, obj, **view_kwargs):
+    def after_get_object(self, obj, view_kwargs):
         """Make work after to retrieve an object
 
         :param obj: an object from data layer
@@ -462,7 +455,7 @@ class SqlalchemyDataLayer(BaseDataLayer):
         """
         pass
 
-    def before_get_collection(self, qs, **view_kwargs):
+    def before_get_collection(self, qs, view_kwargs):
         """Make work before to retrieve a collection of objects
 
         :param QueryStringManager qs: a querystring manager to retrieve information from url
@@ -470,7 +463,7 @@ class SqlalchemyDataLayer(BaseDataLayer):
         """
         pass
 
-    def after_get_collection(self, collection, qs, **view_kwargs):
+    def after_get_collection(self, collection, qs, view_kwargs):
         """Make work after to retrieve a collection of objects
 
         :param iterable collection: the collection of objects
@@ -479,7 +472,7 @@ class SqlalchemyDataLayer(BaseDataLayer):
         """
         pass
 
-    def before_update_object(self, obj, data, **view_kwargs):
+    def before_update_object(self, obj, data, view_kwargs):
         """Make checks or provide additional data before update object
 
         :param obj: an object from data layer
@@ -488,7 +481,7 @@ class SqlalchemyDataLayer(BaseDataLayer):
         """
         pass
 
-    def after_update_object(self, obj, data, **view_kwargs):
+    def after_update_object(self, obj, data, view_kwargs):
         """Make work after update object
 
         :param obj: an object from data layer
@@ -497,7 +490,7 @@ class SqlalchemyDataLayer(BaseDataLayer):
         """
         pass
 
-    def before_delete_object(self, obj, **view_kwargs):
+    def before_delete_object(self, obj, view_kwargs):
         """Make checks before delete object
 
         :param obj: an object from data layer
@@ -505,7 +498,7 @@ class SqlalchemyDataLayer(BaseDataLayer):
         """
         pass
 
-    def after_delete_object(self, obj, **view_kwargs):
+    def after_delete_object(self, obj, view_kwargs):
         """Make work after delete object
 
         :param obj: an object from data layer
@@ -513,34 +506,34 @@ class SqlalchemyDataLayer(BaseDataLayer):
         """
         pass
 
-    def before_create_relationship(self, json_data, relationship_field, related_id_field, **view_kwargs):
+    def before_create_relationship(self, json_data, relationship_field, related_id_field, view_kwargs):
         """Make work before to create a relationship
 
         :param dict json_data: the request params
-        :param str relationship_field: the model attribut used for relationship
+        :param str relationship_field: the model attribute used for relationship
         :param str related_id_field: the identifier field of the related model
         :param dict view_kwargs: kwargs from the resource view
         :return boolean: True if relationship have changed else False
         """
         pass
 
-    def after_create_relationship(self, obj, updated, json_data, relationship_field, related_id_field, **view_kwargs):
+    def after_create_relationship(self, obj, updated, json_data, relationship_field, related_id_field, view_kwargs):
         """Make work after to create a relationship
 
         :param obj: an object from data layer
         :param bool updated: True if object was updated else False
         :param dict json_data: the request params
-        :param str relationship_field: the model attribut used for relationship
+        :param str relationship_field: the model attribute used for relationship
         :param str related_id_field: the identifier field of the related model
         :param dict view_kwargs: kwargs from the resource view
         :return boolean: True if relationship have changed else False
         """
         pass
 
-    def before_get_relationship(self, relationship_field, related_type_, related_id_field, **view_kwargs):
+    def before_get_relationship(self, relationship_field, related_type_, related_id_field, view_kwargs):
         """Make work before to get information about a relationship
 
-        :param str relationship_field: the model attribut used for relationship
+        :param str relationship_field: the model attribute used for relationship
         :param str related_type_: the related resource type
         :param str related_id_field: the identifier field of the related model
         :param dict view_kwargs: kwargs from the resource view
@@ -549,12 +542,12 @@ class SqlalchemyDataLayer(BaseDataLayer):
         pass
 
     def after_get_relationship(self, obj, related_objects, relationship_field, related_type_, related_id_field,
-                               **view_kwargs):
+                               view_kwargs):
         """Make work after to get information about a relationship
 
         :param obj: an object from data layer
         :param iterable related_objects: related objects of the object
-        :param str relationship_field: the model attribut used for relationship
+        :param str relationship_field: the model attribute used for relationship
         :param str related_type_: the related resource type
         :param str related_id_field: the identifier field of the related model
         :param dict view_kwargs: kwargs from the resource view
@@ -562,47 +555,47 @@ class SqlalchemyDataLayer(BaseDataLayer):
         """
         pass
 
-    def before_update_relationship(self, json_data, relationship_field, related_id_field, **view_kwargs):
+    def before_update_relationship(self, json_data, relationship_field, related_id_field, view_kwargs):
         """Make work before to update a relationship
 
         :param dict json_data: the request params
-        :param str relationship_field: the model attribut used for relationship
+        :param str relationship_field: the model attribute used for relationship
         :param str related_id_field: the identifier field of the related model
         :param dict view_kwargs: kwargs from the resource view
         :return boolean: True if relationship have changed else False
         """
         pass
 
-    def after_update_relationship(self, obj, updated, json_data, relationship_field, related_id_field, **view_kwargs):
+    def after_update_relationship(self, obj, updated, json_data, relationship_field, related_id_field, view_kwargs):
         """Make work after to update a relationship
 
         :param obj: an object from data layer
         :param bool updated: True if object was updated else False
         :param dict json_data: the request params
-        :param str relationship_field: the model attribut used for relationship
+        :param str relationship_field: the model attribute used for relationship
         :param str related_id_field: the identifier field of the related model
         :param dict view_kwargs: kwargs from the resource view
         :return boolean: True if relationship have changed else False
         """
         pass
 
-    def before_delete_relationship(self, json_data, relationship_field, related_id_field, **view_kwargs):
+    def before_delete_relationship(self, json_data, relationship_field, related_id_field, view_kwargs):
         """Make work before to delete a relationship
 
         :param dict json_data: the request params
-        :param str relationship_field: the model attribut used for relationship
+        :param str relationship_field: the model attribute used for relationship
         :param str related_id_field: the identifier field of the related model
         :param dict view_kwargs: kwargs from the resource view
         """
         pass
 
-    def after_delete_relationship(self, obj, updated, json_data, relationship_field, related_id_field, **view_kwargs):
+    def after_delete_relationship(self, obj, updated, json_data, relationship_field, related_id_field, view_kwargs):
         """Make work after to delete a relationship
 
         :param obj: an object from data layer
         :param bool updated: True if object was updated else False
         :param dict json_data: the request params
-        :param str relationship_field: the model attribut used for relationship
+        :param str relationship_field: the model attribute used for relationship
         :param str related_id_field: the identifier field of the related model
         :param dict view_kwargs: kwargs from the resource view
         """

@@ -25,9 +25,9 @@ def compute_schema(schema_cls, default_kwargs, qs, include):
         for include_path in include:
             field = include_path.split('.')[0]
             if field not in schema_cls._declared_fields:
-                raise InvalidInclude("{} has no attribut {}".format(schema_cls.__name__, field))
+                raise InvalidInclude("{} has no attribute {}".format(schema_cls.__name__, field))
             elif not isinstance(schema_cls._declared_fields[field], Relationship):
-                raise InvalidInclude("{} is not a relationship attribut of {}".format(field, schema_cls.__name__))
+                raise InvalidInclude("{} is not a relationship attribute of {}".format(field, schema_cls.__name__))
             schema_kwargs['include_data'] += (field, )
 
     # make sure id field is in only parameter unless marshamllow will raise an Exception
@@ -42,7 +42,7 @@ def compute_schema(schema_cls, default_kwargs, qs, include):
         # check that sparse fieldsets exists in the schema
         for field in qs.fields[schema.opts.type_]:
             if field not in schema.declared_fields:
-                raise InvalidField("{} has no attribut {}".format(schema.__class__.__name__, field))
+                raise InvalidField("{} has no attribute {}".format(schema.__class__.__name__, field))
 
         tmp_only = set(schema.declared_fields.keys()) & set(qs.fields[schema.opts.type_])
         if schema.only:
@@ -75,9 +75,23 @@ def compute_schema(schema_cls, default_kwargs, qs, include):
     return schema
 
 
-def get_relationships(schema):
-    """Return relationship fields of a schema
+def get_model_field(schema, field):
+    """Get the model field of a schema field
 
     :param Schema schema: a marshmallow schema
+    :param str field: the name of the schema field
+    :return str: the name of the field in the model
     """
-    return [key for (key, value) in schema._declared_fields.items() if isinstance(value, Relationship)]
+    if schema._declared_fields[field].attribute is not None:
+        return schema._declared_fields[field].attribute
+    return field
+
+
+def get_relationships(schema):
+    """Return relationship mapping from schema to model
+
+    :param Schema schema: a marshmallow schema
+    :param list: list of dict with schema field and model field
+    """
+    return {get_model_field(schema, key): key for (key, value) in schema._declared_fields.items()
+            if isinstance(value, Relationship)}

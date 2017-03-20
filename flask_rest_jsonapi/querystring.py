@@ -3,6 +3,7 @@
 import json
 
 from flask_rest_jsonapi.exceptions import BadRequest, InvalidFilters, InvalidSort
+from flask_rest_jsonapi.schema import get_model_field, get_relationships
 
 
 class QueryStringManager(object):
@@ -148,9 +149,10 @@ class QueryStringManager(object):
             for sort_field in self.qs['sort'].split(','):
                 field = sort_field.replace('-', '')
                 if field not in self.schema._declared_fields:
-                    raise InvalidSort("{} has no attribut {}".format(self.schema.__name__, field))
-                if self.schema._declared_fields[field].attribute is not None:
-                    field = self.schema._declared_fields[field].attribute
+                    raise InvalidSort("{} has no attribute {}".format(self.schema.__name__, field))
+                if field in get_relationships(self.schema).values():
+                    raise InvalidSort("You can't sort on {} because it is a relationship field".format(field))
+                field = get_model_field(self.schema, field)
                 order = 'desc' if sort_field.startswith('-') else 'asc'
                 sorting_results.append({'field': field, 'order': order})
                 return sorting_results
