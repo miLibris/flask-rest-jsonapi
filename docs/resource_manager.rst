@@ -9,11 +9,9 @@ Resource manager is the link between your logical data abstraction, your data la
 
 Flask-REST-JSONAPI provides 3 kinds of resource manager with default methods implementation according to JSONAPI 1.0 specification:
 
-| * **ResourceList**: provides get and post methods to retrieve a collection of objects or create one.
-|
-| * **ResourceDetail**: provides get, patch and delete methods to retrieve details of an object, update an object and delete an object
-|
-| * **ResourceRelationship**: provides get, post, patch and delete methods to get relationships, create relationships, update relationships and delete relationships between objects.
+* **ResourceList**: provides get and post methods to retrieve a collection of objects or create one.
+* **ResourceDetail**: provides get, patch and delete methods to retrieve details of an object, update an object and delete an object
+* **ResourceRelationship**: provides get, post, patch and delete methods to get relationships, create relationships, update relationships and delete relationships between objects.
 
 You can rewrite each default methods implementation to make custom work. If you rewrite all default methods implementation of a resource manager or if you rewrite a method and disable access to others, you don't have to set any attribute of your resource manager.
 
