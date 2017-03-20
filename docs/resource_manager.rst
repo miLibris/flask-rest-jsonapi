@@ -7,7 +7,7 @@ Resource Manager
 
 Resource manager is the link between your logical data abstraction, your data layer and optionally other softwares. It is the place where logic management of your resource is located.
 
-Flask-REST-JSONAPI provides 3 kind of resource manager with default methods implementation according to JSONAPI 1.0 specification:
+Flask-REST-JSONAPI provides 3 kinds of resource manager with default methods implementation according to JSONAPI 1.0 specification:
 
 | * **ResourceList**: provides get and post methods to retrieve a collection of objects or create one.
 |
@@ -32,6 +32,7 @@ Example:
     from flask_rest_jsonapi import ResourceList
     from your_project.schemas import PersonSchema
     from your_project.models import Person
+    from your_project.extensions import db
 
     class PersonList(ResourceList):
         schema = PersonSchema
@@ -48,28 +49,28 @@ All resource mangers are inherited from flask.views.MethodView so you can provid
 
 You can plug additional decorators to each methods with this optional attributes:
 
-    :get_decorators: a list a decorators plugged to the get method of the resource manager
-    :post_decorators: a list a decorators plugged to the post method of the resource manager
-    :patch_decorators: a list a decorators plugged to the patch method of the resource manager
-    :delete_decorators: a list a decorators plugged to the delete method of the resource manager
+    :get_decorators: a list a decorators plugged to the get method
+    :post_decorators: a list a decorators plugged to the post method
+    :patch_decorators: a list a decorators plugged to the patch method
+    :delete_decorators: a list a decorators plugged to the delete method
 
 You can also provides default schema kwargs to each resource manager methods with this optional attributes:
 
-    :get_schema_kwargs: a dict of default schema instance kwargs in get method
-    :post_schema_kwargs: a dict of default schema instance kwargs in post method
-    :patch_schema_kwargs: a dict of default schema instance kwargs in patch method
-    :delete_schema_kwargs: a dict of default schema instance kwargs in delete method
+    :get_schema_kwargs: a dict of default schema kwargs in get method
+    :post_schema_kwargs: a dict of default schema kwargs in post method
+    :patch_schema_kwargs: a dict of default schema kwargs in patch method
+    :delete_schema_kwargs: a dict of default schema kwargs in delete method
 
 Each method of a resource manager got a pre and post process methods that take view args and kwargs as parameter for the pre process methods and the result of the method as parameter for the post process method. Thanks to this you can make custom work before and after the method process. Availables rewritable methods are:
 
-    :before_get(*args, **kwargs): pre process method of the get method
-    :after_get(result): post process method of the get method
-    :before_post(*args, **kwargs): pre process method of the post method
-    :after_post(result): post process method of the post method
-    :before_patch(*args, **kwargs): pre process method of the patch method
-    :after_patch(result): post process method of the patch method
-    :before_delete(*args, **kwargs): pre process method of the delete method
-    :after_delete(result): post process method of the delete method
+    :before_get: pre process method of the get method
+    :after_get: post process method of the get method
+    :before_post: pre process method of the post method
+    :after_post: post process method of the post method
+    :before_patch: pre process method of the patch method
+    :after_patch: post process method of the patch method
+    :before_delete: pre process method of the delete method
+    :after_delete: post process method of the delete method
 
 Example:
 
@@ -80,6 +81,7 @@ Example:
     from your_project.models import Person
     from your_project.security import login_required
     from your_project.decorators import dummy_decorator
+    from your_project.extensions import db
 
     class PersonList(ResourceDetail):
         schema = PersonSchema
@@ -88,9 +90,14 @@ Example:
         methods = ['GET', 'PATCH']
         decorators = (login_required, )
         get_decorators = [dummy_decorator]
+        get_schema_kwargs = {'only': ('name', )}
 
         def before_patch(*args, **kwargs):
-           """Make custom work here. View args and kwargs are provided as parameter 
+           """Make custom work here. View args and kwargs are provided as parameter
+           """
+
+        def after_patch(result):
+           """Make custom work here. Add something to the result of the view.
            """
 
 ResourceList
@@ -105,6 +112,9 @@ Example:
 .. code-block:: python
 
     from flask_rest_jsonapi import ResourceList
+    from your_project.schemas import PersonSchema
+    from your_project.models import Person
+    from your_project.extensions import db
 
     class PersonList(ResourceList):
         schema = PersonSchema
@@ -123,6 +133,9 @@ Example:
 .. code-block:: python
 
     from flask_rest_jsonapi import ResourceDetail
+    from your_project.schemas import PersonSchema
+    from your_project.models import Person
+    from your_project.extensions import db
 
     class PersonDetail(ResourceDetail):
         schema = PersonSchema
@@ -131,7 +144,7 @@ Example:
 
 This minimal ResourceDetail configuration provides GET, PATCH and DELETE interface to retrieve details of objects, update an objects and delete an object with all powerful features like sparse fieldsets and including related objects.
 
-If your schema has relationship(s) field(s) you can update an object and also link(s) to his related object(s) in the same time. If you want to see example go to  :ref:`quickstart`.
+If your schema has relationship(s) field(s) you can update an object and also update his link(s) to related object(s) in the same time. If you want to see example go to  :ref:`quickstart`.
 
 ResourceRelationship
 --------------------
@@ -141,6 +154,9 @@ Example:
 .. code-block:: python
 
     from flask_rest_jsonapi import ResourceRelationship
+    from your_project.schemas import PersonSchema
+    from your_project.models import Person
+    from your_project.extensions import db
 
     class PersonRelationship(ResourceRelationship):
         schema = PersonSchema

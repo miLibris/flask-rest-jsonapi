@@ -29,7 +29,9 @@ Example:
                       'model': Person}
 
 You can also plug additional methods to your data layer in the resource manager. There is 2 kind of additional methods:
+
 * query: the "query" additional method takes view_kwargs as parameter and return an alternative query to retrieve the collection of objects in the get method of the ResourceList manager.
+
 * pre / post process methods: all CRUD and relationship(s) operations have a pre / post process methods. Thanks to it you can make additional work before and after each operations of the data layer. Parameters of each pre / post process methods are available in the `flask_rest_jsonapi.data_layers.base.Base <https://github.com/miLibris/flask-rest-jsonapi/blob/master/flask_rest_jsonapi/data_layers/base.py>`_ base class.
 
 Example:
@@ -109,7 +111,7 @@ Usage example:
 
     from flask_rest_jsonapi import ResourceList
     from your_project.schemas import PersonSchema
-    from your_project_data_layers import MyCustomDataLayer
+    from your_project.data_layers import MyCustomDataLayer
 
     class PersonList(ResourceList):
         schema = PersonSchema
