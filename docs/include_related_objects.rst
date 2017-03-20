@@ -13,10 +13,14 @@ Example:
 
 Request:
 
+.. sourcecode:: http
+
     GET /persons/1?include=computers HTTP/1.1
     Accept: application/vnd.api+json
 
 Response:
+
+.. sourcecode:: http
 
     HTTP/1.1 200 OK
     Content-Type: application/vnd.api+json
@@ -81,10 +85,14 @@ Example:
 
 Request:
 
+.. sourcecode:: http
+
     GET /persons/1?include=computers.owner HTTP/1.1
     Accept: application/vnd.api+json
 
 Response:
+
+.. sourcecode:: http
 
     HTTP/1.1 200 OK
     Content-Type: application/vnd.api+json
