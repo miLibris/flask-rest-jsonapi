@@ -5,16 +5,16 @@ Pagination
 
 .. currentmodule:: flask_rest_jsonapi
 
-When you use the default implementation of get method on a ResourceList your results will be paginated by default. Default pagination size is 20 but you can manage it from querystring with the url parameter called page.
+When you use the default implementation of get method on a ResourceList your results will be paginated by default. Default pagination size is 20 but you can manage it from querystring parameter named "page".
 
 .. note::
 
-    Urls examples are not urlencoded for a better readability
+    Examples are not urlencoded for a better readability
 
 Size
 ----
 
-You can control the page size like that:
+You can control page size like that:
 
 .. sourcecode:: http
 
@@ -24,7 +24,17 @@ You can control the page size like that:
 Number
 ------
 
-You can control the page number like that:
+You can control page number like that:
+
+.. sourcecode:: http
+
+    GET /persons?page[number]=2 HTTP/1.1
+    Accept: application/vnd.api+json
+
+Size + Number
+-------------
+
+Of course, you can control both like that:
 
 .. sourcecode:: http
 

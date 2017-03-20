@@ -5,11 +5,11 @@ Sparse fieldsets
 
 .. currentmodule:: flask_rest_jsonapi
 
-You can restrict the fields returned by api with the querystring parameter called fields. It is very useful for performance purpose because fields not returned are not resolved by api. You can use "fields" parameter on any kind of url (classical CRUD url or relationships url) and any kind of http methods as long as method return data.
+You can restrict the fields returned by api with the querystring parameter called "fields". It is very useful for performance purpose because fields not returned are not resolved by api. You can use "fields" parameter on any kind of route (classical CRUD route or relationships route) and any kind of http methods as long as method return data.
 
 .. note::
 
-    Urls examples are not urlencoded for a better readability
+    Examples are not urlencoded for a better readability
 
 The syntax of a fields is like that ::
 
@@ -19,8 +19,10 @@ Example:
 
 .. sourcecode:: http
 
-    GET /persons?fields[person]=name HTTP/1.1
+    GET /persons?fields[person]=display_name HTTP/1.1
     Accept: application/vnd.api+json
+
+In this example person's display_name is the only field returned by the api. No relationships links are returned so the response is very fast because api doesn't have to compute relationships link and it is a very costly work.
 
 You can manage returned fields for the entire response even for included objects
 
@@ -33,7 +35,7 @@ If you don't want to compute relationships links for included computers of a per
     GET /persons/1?include=computers&fields[computer]=serial HTTP/1.1
     Accept: application/vnd.api+json
 
-And of course you can combine both
+And of course you can combine both like that:
 
 Example:
 
@@ -44,4 +46,4 @@ Example:
 
 .. warning::
 
-    If you want to use both fields and include for a resource_type don't forget to specify the name of the relation in fields; if you don't the include wont work.
+    If you want to use both "fields" and "include" don't forget to specify the name of the relation in fields; if you don't the include wont work.

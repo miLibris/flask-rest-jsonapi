@@ -32,10 +32,7 @@ def add_pagination_links(data, object_count, querystring, base_url):
         if last_page > 1:
             links['first'] = links['last'] = base_url
 
-            try:
-                del all_qs_args['page[number]']
-            except KeyError:
-                pass
+            all_qs_args.pop('page[number]', None)
 
             # compute first link
             if all_qs_args:

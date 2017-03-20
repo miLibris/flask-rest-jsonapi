@@ -15,7 +15,7 @@ from flask_rest_jsonapi.querystring import QueryStringManager as QSManager
 from flask_rest_jsonapi.pagination import add_pagination_links
 from flask_rest_jsonapi.exceptions import InvalidType, BadRequest, JsonApiException, RelationNotFound
 from flask_rest_jsonapi.decorators import check_headers, check_method_requirements
-from flask_rest_jsonapi.schema import compute_schema, get_relationships
+from flask_rest_jsonapi.schema import compute_schema, get_relationships, get_model_field
 from flask_rest_jsonapi.data_layers.base import BaseDataLayer
 from flask_rest_jsonapi.data_layers.alchemy import SqlalchemyDataLayer
 
@@ -32,7 +32,7 @@ class Resource(MethodView):
                                 .format(cls.__name__))
 
             data_layer_cls = cls.data_layer.get('class', SqlalchemyDataLayer)
-            cls._data_layer = data_layer_cls(**cls.data_layer)
+            cls._data_layer = data_layer_cls(cls.data_layer)
             cls._data_layer.resource = cls
 
         for method in getattr(cls, 'methods', ('GET', 'POST', 'PATCH', 'DELETE')):
@@ -100,10 +100,10 @@ class ResourceList(Resource):
     def get(self, *args, **kwargs):
         """Retrieve a collection of objects
         """
-        self.before_get(*args, **kwargs)
+        self.before_get(args, kwargs)
 
         qs = QSManager(request.args, self.schema)
-        object_count, objects = self._data_layer.get_collection(qs, **kwargs)
+        object_count, objects = self._data_layer.get_collection(qs, kwargs)
 
         schema_kwargs = getattr(self, 'get_schema_kwargs', dict())
         schema_kwargs.update({'many': True})
@@ -121,6 +121,8 @@ class ResourceList(Resource):
                              qs,
                              url_for(self.view, **view_kwargs))
 
+        result.update({'meta': {'count': object_count}})
+
         self.after_get(result)
         return result
 
@@ -128,7 +130,7 @@ class ResourceList(Resource):
     def post(self, *args, **kwargs):
         """Create an object
         """
-        self.before_post(*args, **kwargs)
+        self.before_post(args, kwargs)
 
         json_data = request.get_json()
 
@@ -160,19 +162,19 @@ class ResourceList(Resource):
                 error['title'] = "Validation error"
             return errors, 422
 
-        obj = self._data_layer.create_object(data, **kwargs)
+        obj = self._data_layer.create_object(data, kwargs)
 
         result = schema.dump(obj).data
         self.after_post(result)
         return result, 201, {'Location': result['data']['links']['self']}
 
-    def before_get(self, *args, **kwargs):
+    def before_get(self, args, kwargs):
         pass
 
     def after_get(self, result):
         pass
 
-    def before_post(self, *args, **kwargs):
+    def before_post(self, args, kwargs):
         pass
 
     def after_post(self, result):
@@ -185,9 +187,9 @@ class ResourceDetail(Resource):
     def get(self, *args, **kwargs):
         """Get object details
         """
-        self.before_get(*args, **kwargs)
+        self.before_get(args, kwargs)
 
-        obj = self._data_layer.get_object(**kwargs)
+        obj = self._data_layer.get_object(kwargs)
 
         qs = QSManager(request.args, self.schema)
 
@@ -205,7 +207,7 @@ class ResourceDetail(Resource):
     def patch(self, *args, **kwargs):
         """Update an object
         """
-        self.before_patch(*args, **kwargs)
+        self.before_patch(args, kwargs)
 
         json_data = request.get_json()
 
@@ -244,8 +246,8 @@ class ResourceDetail(Resource):
         if json_data['data']['id'] != str(kwargs[self.data_layer.get('url_field', 'id')]):
             raise BadRequest('/data/id', 'Value of id does not match the resource identifier in url')
 
-        obj = self._data_layer.get_object(**kwargs)
-        self._data_layer.update_object(obj, data, **kwargs)
+        obj = self._data_layer.get_object(kwargs)
+        self._data_layer.update_object(obj, data, kwargs)
 
         result = schema.dump(obj).data
 
@@ -256,28 +258,28 @@ class ResourceDetail(Resource):
     def delete(self, *args, **kwargs):
         """Delete an object
         """
-        self.before_delete(*args, **kwargs)
+        self.before_delete(args, kwargs)
 
-        obj = self._data_layer.get_object(**kwargs)
-        self._data_layer.delete_object(obj, **kwargs)
+        obj = self._data_layer.get_object(kwargs)
+        self._data_layer.delete_object(obj, kwargs)
 
         result = {'meta': 'Object successful deleted'}
         self.after_delete(result)
         return result
 
-    def before_get(self, *args, **kwargs):
+    def before_get(self, args, kwargs):
         pass
 
     def after_get(self, result):
         pass
 
-    def before_patch(self, *args, **kwargs):
+    def before_patch(self, args, kwargs):
         pass
 
     def after_patch(self, result):
         pass
 
-    def before_delete(self, *args, **kwargs):
+    def before_delete(self, args, kwargs):
         pass
 
     def after_delete(self, result):
@@ -290,7 +292,7 @@ class ResourceRelationship(Resource):
     def get(self, *args, **kwargs):
         """Get a relationship details
         """
-        self.before_get(*args, **kwargs)
+        self.before_get(args, kwargs)
 
         relationship_field, model_relationship_field, related_type_, related_id_field = self._get_relationship_data()
         related_view = self.schema._declared_fields[relationship_field].related_view
@@ -299,7 +301,7 @@ class ResourceRelationship(Resource):
         obj, data = self._data_layer.get_relationship(model_relationship_field,
                                                       related_type_,
                                                       related_id_field,
-                                                      **kwargs)
+                                                      kwargs)
 
         for key, value in copy(related_view_kwargs).items():
             if isinstance(value, str) and value.startswith('<') and value.endswith('>'):
@@ -308,7 +310,7 @@ class ResourceRelationship(Resource):
                     tmp_obj = getattr(tmp_obj, field)
                 related_view_kwargs[key] = tmp_obj
 
-        result = {'links': {'self': request.base_url,
+        result = {'links': {'self': request.path,
                             'related': url_for(related_view, **related_view_kwargs)},
                   'data': data}
 
@@ -326,7 +328,7 @@ class ResourceRelationship(Resource):
     def post(self, *args, **kwargs):
         """Add / create relationship(s)
         """
-        self.before_post(*args, **kwargs)
+        self.before_post(args, kwargs)
 
         json_data = request.get_json()
 
@@ -353,7 +355,7 @@ class ResourceRelationship(Resource):
         obj_, updated = self._data_layer.create_relationship(json_data,
                                                              model_relationship_field,
                                                              related_id_field,
-                                                             **kwargs)
+                                                             kwargs)
 
         qs = QSManager(request.args, self.schema)
         includes = qs.include
@@ -364,7 +366,7 @@ class ResourceRelationship(Resource):
         status_code = 200 if updated is True else 204
         result = schema.dump(obj_).data
         if result.get('links', {}).get('self') is not None:
-            result['links']['self'] = request.base_url
+            result['links']['self'] = request.path
         self.after_post(result)
         return result, status_code
 
@@ -372,7 +374,7 @@ class ResourceRelationship(Resource):
     def patch(self, *args, **kwargs):
         """Update a relationship
         """
-        self.before_patch(*args, **kwargs)
+        self.before_patch(args, kwargs)
 
         json_data = request.get_json()
 
@@ -399,7 +401,7 @@ class ResourceRelationship(Resource):
         obj_, updated = self._data_layer.update_relationship(json_data,
                                                              model_relationship_field,
                                                              related_id_field,
-                                                             **kwargs)
+                                                             kwargs)
 
         qs = QSManager(request.args, self.schema)
         includes = qs.include
@@ -410,7 +412,7 @@ class ResourceRelationship(Resource):
         status_code = 200 if updated is True else 204
         result = schema.dump(obj_).data
         if result.get('links', {}).get('self') is not None:
-            result['links']['self'] = request.base_url
+            result['links']['self'] = request.path
         self.after_patch(result)
         return result, status_code
 
@@ -418,7 +420,7 @@ class ResourceRelationship(Resource):
     def delete(self, *args, **kwargs):
         """Delete relationship(s)
         """
-        self.before_delete(*args, **kwargs)
+        self.before_delete(args, kwargs)
 
         json_data = request.get_json()
 
@@ -445,7 +447,7 @@ class ResourceRelationship(Resource):
         obj_, updated = self._data_layer.delete_relationship(json_data,
                                                              model_relationship_field,
                                                              related_id_field,
-                                                             **kwargs)
+                                                             kwargs)
 
         qs = QSManager(request.args, self.schema)
         includes = qs.include
@@ -456,47 +458,43 @@ class ResourceRelationship(Resource):
         status_code = 200 if updated is True else 204
         result = schema.dump(obj_).data
         if result.get('links', {}).get('self') is not None:
-            result['links']['self'] = request.base_url
+            result['links']['self'] = request.path
         self.after_delete(result)
         return result, status_code
 
     def _get_relationship_data(self):
         """Get useful data for relationship management
         """
-        relationship_field = request.base_url.split('/')[-1]
+        relationship_field = request.path.split('/')[-1]
 
-        if relationship_field not in get_relationships(self.schema):
-            raise RelationNotFound('', "{} has no attribut {}".format(self.schema.__name__, relationship_field))
+        if relationship_field not in get_relationships(self.schema).values():
+            raise RelationNotFound('', "{} has no attribute {}".format(self.schema.__name__, relationship_field))
 
         related_type_ = self.schema._declared_fields[relationship_field].type_
         related_id_field = self.schema._declared_fields[relationship_field].id_field
-
-        if hasattr(self, 'schema_to_model') and self.schema_to_model.get(relationship_field) is not None:
-            model_relationship_field = self.schema_to_model[relationship_field]
-        else:
-            model_relationship_field = relationship_field
+        model_relationship_field = get_model_field(self.schema, relationship_field)
 
         return relationship_field, model_relationship_field, related_type_, related_id_field
 
-    def before_get(self, *args, **kwargs):
+    def before_get(self, args, kwargs):
         pass
 
     def after_get(self, result):
         pass
 
-    def before_post(self, *args, **kwargs):
+    def before_post(self, args, kwargs):
         pass
 
     def after_post(self, result):
         pass
 
-    def before_patch(self, *args, **kwargs):
+    def before_patch(self, args, kwargs):
         pass
 
     def after_patch(self, result):
         pass
 
-    def before_delete(self, *args, **kwargs):
+    def before_delete(self, args, kwargs):
         pass
 
     def after_delete(self, result):

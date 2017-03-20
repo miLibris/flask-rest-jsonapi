@@ -130,8 +130,9 @@ def computer_schema():
             self_view_kwargs = {'id': '<id>'}
         id = fields.Str(dump_only=True)
         serial = fields.Str(required=True)
-        owner = Relationship(related_view='api.person_detail',
-                             related_view_kwargs={'person_id': '<owner.person_id>'},
+        owner = Relationship(attribute='person',
+                             related_view='api.person_detail',
+                             related_view_kwargs={'person_id': '<person.person_id>'},
                              schema='PersonSchema',
                              id_field='person_id',
                              type_='person')
@@ -140,21 +141,21 @@ def computer_schema():
 
 @pytest.fixture(scope="module")
 def before_create_object():
-    def before_create_object_(self, data, **view_kwargs):
+    def before_create_object_(self, data, view_kwargs):
         pass
     yield before_create_object_
 
 
 @pytest.fixture(scope="module")
 def before_update_object():
-    def before_update_object_(self, obj, data, **view_kwargs):
+    def before_update_object_(self, obj, data, view_kwargs):
         pass
     yield before_update_object_
 
 
 @pytest.fixture(scope="module")
 def before_delete_object():
-    def before_delete_object_(self, pbj, **view_kwargs):
+    def before_delete_object_(self, obj, view_kwargs):
         pass
     yield before_delete_object_
 
@@ -242,7 +243,7 @@ def person_list_without_schema(session, person_model):
 
 @pytest.fixture(scope="module")
 def query():
-    def query_(self, **view_kwargs):
+    def query_(self, view_kwargs):
         if view_kwargs.get('person_id') is not None:
             return self.session.query(computer_model).join(person_model).filter_by(person_id=view_kwargs['person_id'])
         return self.session.query(computer_model)
@@ -256,7 +257,6 @@ def computer_list(session, computer_model, computer_schema, query):
         data_layer = {'model': computer_model,
                       'session': session,
                       'methods': {'query': query}}
-        schema_to_model = {'owner': 'person'}
     yield ComputerList
 
 
@@ -276,7 +276,6 @@ def computer_owner(session, computer_model, dummy_decorator, computer_schema):
         schema = computer_schema
         data_layer = {'session': session,
                       'model': computer_model}
-        schema_to_model = {'owner': 'person'}
     yield ComputerOwnerRelationship
 
 
@@ -468,7 +467,7 @@ def test_get_relationship_empty(client, register_routes, person):
 
 def test_get_relationship_single(session, client, register_routes, computer, person):
     session_ = session
-    computer.owner = person
+    computer.person = person
     session_.commit()
 
     with client:
@@ -639,7 +638,7 @@ def test_get_list_exception(client, register_routes):
         assert response.status_code == 500
 
 
-def test_get_list_without_data_layer(client, register_routes):
+def test_get_list_without_schema(client, register_routes):
     with client:
         response = client.post('/persons_without_schema', content_type='application/vnd.api+json')
         assert response.status_code == 500
@@ -690,7 +689,7 @@ def test_get_list_invalid_sort(client, register_routes):
 def test_get_detail_object_not_found(client, register_routes):
     with client:
         response = client.get('/persons/3', content_type='application/vnd.api+json')
-        assert response.status_code == 404
+        assert response.status_code == 200
 
 
 def test_post_relationship_related_object_not_found(client, register_routes, person):
@@ -1259,25 +1258,25 @@ def test_delete_relationship_wrong_type(client, register_routes, computer, perso
 
 
 def test_base_data_layer():
-    base_dl = BaseDataLayer()
+    base_dl = BaseDataLayer(dict())
     with pytest.raises(NotImplementedError):
-        base_dl.create_object(None, **dict())
+        base_dl.create_object(None, dict())
     with pytest.raises(NotImplementedError):
-        base_dl.get_object(**dict())
+        base_dl.get_object(dict())
     with pytest.raises(NotImplementedError):
-        base_dl.get_collection(None, **dict())
+        base_dl.get_collection(None, dict())
     with pytest.raises(NotImplementedError):
-        base_dl.update_object(None, None, **dict())
+        base_dl.update_object(None, None, dict())
     with pytest.raises(NotImplementedError):
-        base_dl.delete_object(None, **dict())
+        base_dl.delete_object(None, dict())
     with pytest.raises(NotImplementedError):
-        base_dl.create_relationship(None, None, None, **dict())
+        base_dl.create_relationship(None, None, None, dict())
     with pytest.raises(NotImplementedError):
-        base_dl.get_relationship(None, None, None, **dict())
+        base_dl.get_relationship(None, None, None, dict())
     with pytest.raises(NotImplementedError):
-        base_dl.update_relationship(None, None, None, **dict())
+        base_dl.update_relationship(None, None, None, dict())
     with pytest.raises(NotImplementedError):
-        base_dl.delete_relationship(None, None, None, **dict())
+        base_dl.delete_relationship(None, None, None, dict())
 
 
 def test_qs_manager():

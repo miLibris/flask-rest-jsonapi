@@ -18,8 +18,8 @@ Install
 
     pip install Flask-REST-JSONAPI
 
-Quickstart
-==========
+A minimal api
+=============
 
 .. code-block:: python
 
@@ -37,16 +37,13 @@ Quickstart
     app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:////tmp/test.db'
     db = SQLAlchemy(app)
 
-
     # Create model
     class Person(db.Model):
         id = db.Column(db.Integer, primary_key=True)
-        name = db.Column(db.Unicode, unique=True)
-        birth_date = db.Column(db.Date)
+        name = db.Column(db.String)
 
     # Create the database.
     db.create_all()
-
 
     # Create schema
     class PersonSchema(Schema):
@@ -54,18 +51,16 @@ Quickstart
             type_ = 'person'
             self_view = 'person_detail'
             self_view_kwargs = {'id': '<id>'}
+            self_view_many = 'person_list'
 
         id = fields.Str(dump_only=True)
         name = fields.Str()
-        birth_date = fields.Date()
 
-
-    # Create resource
+    # Create resource managers
     class PersonList(ResourceList):
         schema = PersonSchema
         data_layer = {'session': db.session,
                       'model': Person}
-
 
     class PersonDetail(ResourceDetail):
         schema = PersonSchema
