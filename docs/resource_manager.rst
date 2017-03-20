@@ -52,7 +52,7 @@ You can plug additional decorators to each methods with this optional attributes
     :patch_decorators: a list a decorators plugged to the patch method
     :delete_decorators: a list a decorators plugged to the delete method
 
-You can also provides default schema kwargs to each resource manager methods with this optional attributes:
+You can also provide default schema kwargs to each resource manager methods with this optional attributes:
 
     :get_schema_kwargs: a dict of default schema kwargs in get method
     :post_schema_kwargs: a dict of default schema kwargs in post method
