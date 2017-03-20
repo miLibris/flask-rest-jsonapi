@@ -136,7 +136,7 @@ html_theme_options = {
     'show_related': True,
     'page_width': '1080px',
     'fixed_sidebar': True,
-    'code_font_size': '0.7em'
+    'code_font_size': '0.8em'
 }
 
 # Add any paths that contain custom themes here, relative to this directory.
