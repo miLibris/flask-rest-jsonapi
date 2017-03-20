@@ -48,6 +48,7 @@ All resource mangers are inherited from flask.views.MethodView so you can provid
 You can plug additional decorators to each methods with this optional attributes:
 
     :get_decorators: a list of decorators to plug to the get method
+    :post_decorators: a list of decorators to plug to the post method
 
 Each method of a resource manager got a pre and post process methods that take view args and kwargs as parameter for the pre process methods and the result of the method as parameter for the post process method. Thanks to this you can make custom work before and after the method process. Availables rewritable methods are:
 
