@@ -47,8 +47,17 @@ All resource mangers are inherited from flask.views.MethodView so you can provid
 
 You can plug additional decorators to each methods with this optional attributes:
 
-    :get_decorators: a list of decorators to plug to the get method
-    :pos_decorators: idem for the post method
+* **get_decorators**: a list of decorators to plug to the get method
+* **post_decorators**: a list a decorators plugged to the post method
+* **patch_decorators**: a list a decorators plugged to the patch method
+* **delete_decorators**: a list a decorators plugged to the delete method
+
+You can also provide default schema kwargs to each resource manager methods with this optional attributes:
+
+* **get_schema_kwargs**: a dict of default schema kwargs in get method
+* **post_schema_kwargs**: a dict of default schema kwargs in post method
+* **patch_schema_kwargs**: a dict of default schema kwargs in patch method
+* **delete_schema_kwargs**: a dict of default schema kwargs in delete method
 
 Each method of a resource manager got a pre and post process methods that take view args and kwargs as parameter for the pre process methods and the result of the method as parameter for the post process method. Thanks to this you can make custom work before and after the method process. Availables rewritable methods are:
 
