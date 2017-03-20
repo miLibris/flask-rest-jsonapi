@@ -5,11 +5,11 @@ Filtering
 
 .. currentmodule:: flask_rest_jsonapi
 
-Flask-REST-JSONAPI as a very flexible filtering system. The filtering system is completely related to the data layer used by the resource. I will explain the filtering interface for SQLAlchemy data layer but you can use the same interface to your filtering implementation of your custom data layer. The only requirement is that you have to use the filter querystring parameter to make filtering according to JSONAPI 1.0 specification.
+Flask-REST-JSONAPI as a very flexible filtering system. The filtering system is completely related to the data layer used by the ResourceList manager. I will explain the filtering interface for SQLAlchemy data layer but you can use the same interface to your filtering implementation of your custom data layer. The only requirement is that you have to use the "filter" querystring parameter to make filtering according to JSONAPI 1.0 specification.
 
 .. note::
 
-    Urls examples are not urlencoded for a better readability
+    Examples are not urlencoded for a better readability
 
 SQLAlchemy
 ----------
@@ -27,7 +27,7 @@ In this example we want to retrieve persons which name is John. So we can see th
 
     :name: the name of the field you want to filter on
     :op: the operation you want to use (all sqlalchemy operations are available)
-    :val: the value that you want to compare. You can replace this by field if you want to compare against the value of an other field
+    :val: the value that you want to compare. You can replace this by "field" if you want to compare against the value of an other field
 
 Example with field:
 
@@ -57,7 +57,7 @@ If you want to filter through relationships you can do that:
 
 .. note ::
 
-    When you filter on relationships use "any" operator for to many relationships and "has" operator for to one relationships.
+    When you filter on relationships use "any" operator for "to many" relationships and "has" operator for "to one" relationships.
 
 There is a shortcut to achieve the same filter:
 
@@ -106,6 +106,8 @@ You can also use boolean combinaison of operations:
     ] HTTP/1.1
     Accept: application/vnd.api+json
 
+Availables operators depend on field type
+
 Common available operators:
 
 * any: used to filter on to many relationships
@@ -128,3 +130,7 @@ Common available operators:
 * notin_: check if field is not in a list of values
 * notlike: check if field does not contains a string
 * startswith: check if field starts with a string
+
+.. note::
+
+    Availables operators depend on field type in your model

@@ -20,7 +20,9 @@ An example of Flask-REST-JSONAPI API looks like this:
 
     from flask import Flask
     from flask_rest_jsonapi import Api, ResourceDetail, ResourceList, ResourceRelationship
+    from flask_rest_jsonapi.exceptions import ObjectNotFound
     from flask_sqlalchemy import SQLAlchemy
+    from sqlalchemy.orm.exc import NoResultFound
     from marshmallow_jsonapi.flask import Schema, Relationship
     from marshmallow_jsonapi import fields
 
@@ -38,7 +40,9 @@ An example of Flask-REST-JSONAPI API looks like this:
     class Person(db.Model):
         id = db.Column(db.Integer, primary_key=True)
         name = db.Column(db.String)
+        email = db.Column(db.String)
         birth_date = db.Column(db.Date)
+        password = db.Column(db.String)
 
 
     class Computer(db.Model):
@@ -59,8 +63,10 @@ An example of Flask-REST-JSONAPI API looks like this:
             self_view_many = 'person_list'
 
         id = fields.Str(dump_only=True)
-        name = fields.Str()
+        name = fields.Str(requried=True, load_only=True)
+        email = fields.Email(load_only=True)
         birth_date = fields.Date()
+        display_name = fields.Function(lambda obj: "{} <{}>".format(obj.name.upper(), obj.email))
         computers = Relationship(self_view='person_computers',
                                  self_view_kwargs={'id': '<id>'},
                                  related_view='computer_list',
@@ -77,7 +83,14 @@ An example of Flask-REST-JSONAPI API looks like this:
             self_view_kwargs = {'id': '<id>'}
 
         id = fields.Str(dump_only=True)
-        serial = fields.Str()
+        serial = fields.Str(requried=True)
+        owner = Relationship(attribute='person',
+                             self_view='computer_person',
+                             self_view_kwargs={'id': '<id>'},
+                             related_view='person_detail',
+                             related_view_kwargs={'computer_id': '<id>'},
+                             schema='PersonSchema',
+                             type_='person')
 
 
     # Create resource managers
@@ -88,9 +101,23 @@ An example of Flask-REST-JSONAPI API looks like this:
 
 
     class PersonDetail(ResourceDetail):
+        def before_get_object(self, view_kwargs):
+            if view_kwargs.get('computer_id') is not None:
+                try:
+                    computer = self.session.query(Computer).filter_by(id=view_kwargs['computer_id']).one()
+                except NoResultFound:
+                    raise ObjectNotFound({'parameter': 'computer_id'},
+                                         "Computer: {} not found".format(view_kwargs['computer_id']))
+                else:
+                    if computer.person is not None:
+                        view_kwargs['id'] = computer.person.id
+                    else:
+                        view_kwargs['id'] = None
+
         schema = PersonSchema
         data_layer = {'session': db.session,
-                      'model': Person}
+                      'model': Person,
+                      'methods': {'before_get_object': before_get_object}}
 
 
     class PersonRelationship(ResourceRelationship):
@@ -100,23 +127,21 @@ An example of Flask-REST-JSONAPI API looks like this:
 
 
     class ComputerList(ResourceList):
-        def query(self, **view_kwargs):
+        def query(self, view_kwargs):
             query_ = self.session.query(Computer)
             if view_kwargs.get('id') is not None:
-                query_ = query_.join(Person).filter_by(id=view_kwargs['id'])
+                try:
+                    self.session.query(Person).filter_by(id=view_kwargs['id']).one()
+                except NoResultFound:
+                    raise ObjectNotFound({'parameter': 'id'}, "Person: {} not found".format(view_kwargs['id']))
+                else:
+                    query_ = query_.join(Person).filter(Person.id == view_kwargs['id'])
             return query_
 
-        def before_create_object(self, data, **view_kwargs):
+        def before_create_object(self, data, view_kwargs):
             if view_kwargs.get('id') is not None:
-                try:
-                    person = self.session.query(Person).filter_by(id=view_kwargs['id']).one()
-                except NoResultFound:
-                    raise JsonApiException({'parameter': 'id'},
-                                           'Person: {} not found'.format(view_kwargs['id']),
-                                           title='ObjectNotFound',
-                                           status='404')
-                else:
-                    data['person_id'] = person.id
+                person = self.session.query(Person).filter_by(id=view_kwargs['id']).one()
+                data['person_id'] = person.id
 
         schema = ComputerSchema
         data_layer = {'session': db.session,
@@ -131,13 +156,20 @@ An example of Flask-REST-JSONAPI API looks like this:
                       'model': Computer}
 
 
+    class ComputerRelationship(ResourceRelationship):
+        schema = ComputerSchema
+        data_layer = {'session': db.session,
+                      'model': Computer}
+
+
     # Create endpoints
     api = Api(app)
     api.route(PersonList, 'person_list', '/persons')
-    api.route(PersonDetail, 'person_detail', '/persons/<int:id>')
+    api.route(PersonDetail, 'person_detail', '/persons/<int:id>', '/computers/<int:computer_id>/owner')
     api.route(PersonRelationship, 'person_computers', '/persons/<int:id>/relationships/computers')
     api.route(ComputerList, 'computer_list', '/computers', '/persons/<int:id>/computers')
     api.route(ComputerDetail, 'computer_detail', '/computers/<int:id>')
+    api.route(ComputerRelationship, 'computer_person', '/computers/<int:id>/relationships/owner')
 
     if __name__ == '__main__':
         # Start application
@@ -158,6 +190,10 @@ This example provides this api:
 +------------------------------------------+--------+------------------+-------------------------------------------------------+
 | /persons/<int:id>                        | DELETE | person_detail    | Delete a person                                       |
 +------------------------------------------+--------+------------------+-------------------------------------------------------+
+| /persons/<int:id>/computers              | GET    | computer_list    | Retrieve a collection computers related to a person   |
++------------------------------------------+--------+------------------+-------------------------------------------------------+
+| /persons/<int:id>/computers              | POST   | computer_list    | Create a computer related to a person                 |
++------------------------------------------+--------+------------------+-------------------------------------------------------+
 | /persons/<int:id>/relationship/computers | GET    | person_computers | Retrieve relationships between a person and computers |
 +------------------------------------------+--------+------------------+-------------------------------------------------------+
 | /persons/<int:id>/relationship/computers | POST   | person_computers | Create relationships between a person and computers   |
@@ -170,15 +206,25 @@ This example provides this api:
 +------------------------------------------+--------+------------------+-------------------------------------------------------+
 | /computers                               | POST   | computer_list    | Create a computer                                     |
 +------------------------------------------+--------+------------------+-------------------------------------------------------+
-| /persons/<int:id>/computers              | GET    | computer_list    | Retrieve a collection computers related to a person   |
-+------------------------------------------+--------+------------------+-------------------------------------------------------+
-| /persons/<int:id>/computers              | POST   | computer_list    | Create a computer related to a person                 |
-+------------------------------------------+--------+------------------+-------------------------------------------------------+
 | /computers/<int:id>                      | GET    | computer_detail  | Retrieve details of a computer                        |
 +------------------------------------------+--------+------------------+-------------------------------------------------------+
 | /computers/<int:id>                      | PATCH  | computer_detail  | Update a computer                                     |
 +------------------------------------------+--------+------------------+-------------------------------------------------------+
 | /computers/<int:id>                      | DELETE | computer_detail  | Delete a computer                                     |
++------------------------------------------+--------+------------------+-------------------------------------------------------+
+| /computers/<int:id>/owner                | GET    | person_detail    | Retrieve details of the owner of a computer           |
++------------------------------------------+--------+------------------+-------------------------------------------------------+
+| /computers/<int:id>/owner                | PATCH  | person_detail    | Update the owner of a computer                        |
++------------------------------------------+--------+------------------+-------------------------------------------------------+
+| /computers/<int:id>/owner                | DELETE | person_detail    | Delete the owner of a computer                        |
++------------------------------------------+--------+------------------+-------------------------------------------------------+
+| /computers/<int:id>/relationship/owner   | GET    | person_computers | Retrieve relationships between a person and computers |
++------------------------------------------+--------+------------------+-------------------------------------------------------+
+| /computers/<int:id>/relationship/owner   | POST   | person_computers | Create relationships between a person and computers   |
++------------------------------------------+--------+------------------+-------------------------------------------------------+
+| /computers/<int:id>/relationship/owner   | PATCH  | person_computers | Update relationships between a person and computers   |
++------------------------------------------+--------+------------------+-------------------------------------------------------+
+| /computers/<int:id>/relationship/owner   | DELETE | person_computers | Delete relationships between a person and computers   |
 +------------------------------------------+--------+------------------+-------------------------------------------------------+
 
 .. warning::
@@ -202,8 +248,8 @@ messages. ::
 Classical CRUD operations
 -------------------------
 
-Create a computer
-~~~~~~~~~~~~~~~~~
+Create object
+~~~~~~~~~~~~~
 
 Request:
 
@@ -234,7 +280,15 @@ Response:
         "type": "computer",
         "id": "1",
         "attributes": {
-          "serial": "Amstrad",
+          "serial": "Amstrad"
+        },
+        "relationships": {
+          "owner": {
+            "links": {
+              "related": "/computers/1/owner",
+              "self": "/computers/1/relationships/owner"
+            }
+          }
         },
         "links": {
           "self": "/computers/1"
@@ -248,8 +302,8 @@ Response:
       }
     }
 
-List computers
-~~~~~~~~~~~~~~
+List objects
+~~~~~~~~~~~~
 
 Request:
 
@@ -271,23 +325,34 @@ Response:
           "type": "computer",
           "id": "1",
           "attributes": {
-            "serial": "Amstrad",
+            "serial": "Amstrad"
+          },
+          "relationships": {
+            "owner": {
+              "links": {
+                "related": "/computers/1/owner",
+                "self": "/computers/1/relationships/owner"
+              }
+            }
           },
           "links": {
             "self": "/computers/1"
           }
         }
       ],
+      "meta": {
+        "count": 1
+      },
       "links": {
         "self": "/computers"
       },
       "jsonapi": {
         "version": "1.0"
-      }
+      },
     }
 
-Update the computer
-~~~~~~~~~~~~~~~~~~~
+Update object
+~~~~~~~~~~~~~
 
 Request:
 
@@ -319,19 +384,30 @@ Response:
         "type": "computer",
         "id": "1",
         "attributes": {
-          "serial": "Amstrad 2",
+          "serial": "Amstrad 2"
+        },
+        "relationships": {
+          "owner": {
+            "links": {
+              "related": "/computers/1/owner",
+              "self": "/computers/1/relationships/owner"
+            }
+          }
         },
         "links": {
           "self": "/computers/1"
-        },
-        "jsonapi": {
-          "version": "1.0"
         }
+      },
+      "links": {
+        "self": "/computers/1"
+      },
+      "jsonapi": {
+        "version": "1.0"
       }
     }
 
-Delete the computer
-~~~~~~~~~~~~~~~~~~~
+Delete object
+~~~~~~~~~~~~~
 
 Request:
 
@@ -359,15 +435,15 @@ Response:
 Relationships
 -------------
 
-| Now let's use relationships tools. First, create 3 computers called Halo, Nestor and Comodor like in previous example.
+| Now let's use relationships tools. First, create 3 computers named Halo, Nestor and Comodor like in previous example.
 |
 | Done ?
 | Ok. So let's continue this tutorial.
 |
 | We assume that Halo has id: 2, Nestor id: 3 and Comodor has id: 4.
 
-Create a person with related computer
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Create object with related object(s)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Request:
 
@@ -382,6 +458,7 @@ Request:
         "type": "person",
         "attributes": {
           "name": "John",
+          "email": "john@gmail.com",
           "birth_date": "1990-12-18"
         },
         "relationships": {
@@ -389,7 +466,7 @@ Request:
             "data": [
               {
                 "type": "computer",
-                "id": "2"
+                "id": "1"
               }
             ]
           }
@@ -409,37 +486,45 @@ Response:
         "type": "person",
         "id": "1",
         "attributes": {
-          "birth_date": "1990-12-18",
-          "name": "John"
+          "display_name": "JOHN <john@gmail.com>",
+          "birth_date": "1990-12-18"
+        },
+        "links": {
+          "self": "/persons/1"
         },
         "relationships": {
           "computers": {
             "data": [
               {
-                "id": "2",
+                "id": "1",
                 "type": "computer"
               }
             ],
             "links": {
               "related": "/persons/1/computers",
-              "self": "/persons/1/relationship/computers"
+              "self": "/persons/1/relationships/computers"
             }
           }
-        },
-        "links": {
-          "self": "/persons/1"
         },
       },
       "included": [
         {
           "type": "computer",
-          "id": "2",
+          "id": "1",
           "attributes": {
             "serial": "Amstrad"
           },
           "links": {
-            "self": "/computers/2"
+            "self": "/computers/1"
           },
+          "relationships": {
+            "owner": {
+              "links": {
+                "related": "/computers/1/owner",
+                "self": "/computers/1/relationships/owner"
+              }
+            }
+          }
         }
       ],
       "jsonapi": {
@@ -458,10 +543,10 @@ You can see that I have added the querystring parameter "include" to the url
 
 Thanks to this parameter, related computers details are included to the result. If you want to learn more: :ref:`include_related_objects`
 
-Update relationships between a person and computers
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Update object and his relationships
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Now John sell his Amstrad and buy a new computer called Nestor (id: 3). So we want to link this new computer to John. John have also made a mistake in his birth_date so let's update this 2 things in the same time.
+Now John sell his Amstrad and buy a new computer named Nestor (id: 3). So we want to link this new computer to John. John have also made a mistake in his birth_date so let's update this 2 things in the same time.
 
 Request:
 
@@ -503,8 +588,8 @@ Response:
         "type": "person",
         "id": "1",
         "attributes": {
+          "display_name": "JOHN <john@gmail.com>",
           "birth_date": "1990-10-18",
-          "name": "John"
         },
         "links": {
           "self": "/persons/1"
@@ -531,9 +616,17 @@ Response:
           "attributes": {
             "serial": "Nestor"
           },
+          "relationships": {
+            "owner": {
+              "links": {
+                "related": "/computers/3/owner",
+                "self": "/computers/3/relationships/owner"
+              }
+            }
+          },
           "links": {
             "self": "/computers/3"
-          },
+          }
         }
       ],
       "links": {
@@ -544,10 +637,10 @@ Response:
       }
     }
 
-Add computer to a person
-~~~~~~~~~~~~~~~~~~~~~~~~
+Create relationship
+~~~~~~~~~~~~~~~~~~~
 
-Now John buy a new computer called Comodor so let's link it to John.
+Now John buy a new computer named Comodor so let's link it to John.
 
 Request:
 
@@ -578,11 +671,8 @@ Response:
         "type": "person",
         "id": "1",
         "attributes": {
-          "name": "John",
+          "display_name": "JOHN <john@gmail.com>",
           "birth_date": "1990-10-18"
-        },
-        "links": {
-          "self": "/persons/1"
         },
         "relationships": {
           "computers": {
@@ -601,6 +691,9 @@ Response:
               "self": "/persons/1/relationships/computers"
             }
           }
+        },
+        "links": {
+          "self": "/persons/1"
         }
       },
       "included": [
@@ -609,6 +702,14 @@ Response:
           "id": "3",
           "attributes": {
             "serial": "Nestor"
+          },
+          "relationships": {
+            "owner": {
+              "links": {
+                "related": "/computers/3/owner",
+                "self": "/computers/3/relationships/owner"
+              }
+            }
           },
           "links": {
             "self": "/computers/3"
@@ -620,22 +721,30 @@ Response:
           "attributes": {
             "serial": "Comodor"
           },
+          "relationships": {
+            "owner": {
+              "links": {
+                "related": "/computers/4/owner",
+                "self": "/computers/4/relationships/owner"
+              }
+            }
+          },
           "links": {
             "self": "/computers/4"
           }
         }
       ],
-      "jsonapi": {
-        "version": "1.0"
-      },
       "links": {
         "self": "/persons/1/relationships/computers"
+      },
+      "jsonapi": {
+        "version": "1.0"
       }
     }
 
 
-Remove relationship between a computer and a person
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Delete relationship
+~~~~~~~~~~~~~~~~~~~
 
 Now John sell his old Nestor computer so let's unlink it from John.
 
@@ -665,46 +774,56 @@ Response:
 
     {
       "data": {
-          "type": "person",
-          "id": "1",
-          "attributes": {
-              "name": "John",
-              "birth_date": "1990-10-18"
-          },
-          "links": {
-              "self": "/persons/1"
-          },
-          "relationships": {
-              "computers": {
-                  "data": [
-                      {
-                          "id": "4",
-                          "type": "computer"
-                      }
-                  ],
-                  "links": {
-                      "related": "/persons/1/computers",
-                      "self": "/persons/1/relationships/computers"
-                  }
+        "type": "person",
+        "id": "1",
+        "attributes": {
+          "display_name": "JOHN <john@gmail.com>",
+          "birth_date": "1990-10-18"
+        },
+        "relationships": {
+          "computers": {
+            "data": [
+              {
+                "id": "4",
+                "type": "computer"
               }
+            ],
+            "links": {
+              "related": "/persons/1/computers",
+              "self": "/persons/1/relationships/computers"
+            }
           }
+        },
+        "links": {
+          "self": "/persons/1"
+        }
       },
       "included": [
-          {
-              "type": "computer",
-              "id": "4",
-              "attributes": {
-                  "serial": "Comodor"
-              },
+        {
+          "type": "computer",
+          "id": "4",
+          "attributes": {
+            "serial": "Comodor"
+          },
+          "relationships": {
+            "owner": {
               "links": {
-                  "self": "/computers/4"
+                "related": "/computers/4/owner",
+                "self": "/computers/4/relationships/owner"
               }
+            }
+          },
+          "links": {
+            "self": "/computers/4"
           }
+        }
       ],
-      "jsonapi": {
-          "version": "1.0"
-      },
       "links": {
           "self": "/persons/1/relationships/computers"
+      },
+      "jsonapi": {
+          "version": "1.0"
       }
     }
+
+If you want to see more examples to go `JSON API 1.0 specification <http://jsonapi.org/>`_

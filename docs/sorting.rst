@@ -5,11 +5,11 @@ Sorting
 
 .. currentmodule:: flask_rest_jsonapi
 
-You can sort result with querystring parameter called sort
+You can sort results with querystring parameter named "sort"
 
 .. note::
 
-    Urls examples are not urlencoded for a better readability
+    Examples are not urlencoded for a better readability
 
 Example:
 
@@ -32,6 +32,16 @@ Descendant sort
 ---------------
 
 You can make desc sort with the character "-" like that:
+
+.. sourcecode:: http
+
+    GET /persons?sort=-name HTTP/1.1
+    Accept: application/vnd.api+json
+
+Muliple sort + Descendant sort
+------------------------------
+
+Of course, you can combine both like that:
 
 .. sourcecode:: http
 
