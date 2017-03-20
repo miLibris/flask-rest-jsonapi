@@ -129,11 +129,11 @@ html_theme = 'alabaster'
 # documentation.
 #
 html_theme_options = {
-    'github_user': 'akira-dev'
-#    'github_repo': 'flask-rest-jsonapi',
-#    'github_banner': true,
-#    'travis_button': true,
-#    'show_related': true,
+    'github_user': 'akira-dev',
+    'github_repo': 'flask-rest-jsonapi',
+    'github_banner': true,
+    'travis_button': true,
+    'show_related': true
 #    'page_width': '1080px',
 #    'fixed_sidebar': true,
 #    'code_font_size': '0.6em'
