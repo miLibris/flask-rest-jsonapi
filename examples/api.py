@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
 
 from flask import Flask
-from flask_rest_jsonapi import Api, ResourceDetail, ResourceList, ResourceRelationship, JsonApiException
+from flask_rest_jsonapi import Api, ResourceDetail, ResourceList, ResourceRelationship
+from flask_rest_jsonapi.exceptions import ObjectNotFound
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.orm.exc import NoResultFound
 from marshmallow_jsonapi.flask import Schema, Relationship
@@ -21,7 +22,9 @@ db = SQLAlchemy(app)
 class Person(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String)
+    email = db.Column(db.String)
     birth_date = db.Column(db.Date)
+    password = db.Column(db.String)
 
 
 class Computer(db.Model):
@@ -42,8 +45,10 @@ class PersonSchema(Schema):
         self_view_many = 'person_list'
 
     id = fields.Str(dump_only=True)
-    name = fields.Str()
+    name = fields.Str(requried=True, load_only=True)
+    email = fields.Email(load_only=True)
     birth_date = fields.Date()
+    display_name = fields.Function(lambda obj: "{} <{}>".format(obj.name.upper(), obj.email))
     computers = Relationship(self_view='person_computers',
                              self_view_kwargs={'id': '<id>'},
                              related_view='computer_list',
@@ -60,7 +65,14 @@ class ComputerSchema(Schema):
         self_view_kwargs = {'id': '<id>'}
 
     id = fields.Str(dump_only=True)
-    serial = fields.Str()
+    serial = fields.Str(requried=True)
+    owner = Relationship(attribute='person',
+                         self_view='computer_person',
+                         self_view_kwargs={'id': '<id>'},
+                         related_view='person_detail',
+                         related_view_kwargs={'computer_id': '<id>'},
+                         schema='PersonSchema',
+                         type_='person')
 
 
 # Create resource managers
@@ -71,9 +83,23 @@ class PersonList(ResourceList):
 
 
 class PersonDetail(ResourceDetail):
+    def before_get_object(self, view_kwargs):
+        if view_kwargs.get('computer_id') is not None:
+            try:
+                computer = self.session.query(Computer).filter_by(id=view_kwargs['computer_id']).one()
+            except NoResultFound:
+                raise ObjectNotFound({'parameter': 'computer_id'},
+                                     "Computer: {} not found".format(view_kwargs['computer_id']))
+            else:
+                if computer.person is not None:
+                    view_kwargs['id'] = computer.person.id
+                else:
+                    view_kwargs['id'] = None
+
     schema = PersonSchema
     data_layer = {'session': db.session,
-                  'model': Person}
+                  'model': Person,
+                  'methods': {'before_get_object': before_get_object}}
 
 
 class PersonRelationship(ResourceRelationship):
@@ -83,23 +109,21 @@ class PersonRelationship(ResourceRelationship):
 
 
 class ComputerList(ResourceList):
-    def query(self, **view_kwargs):
+    def query(self, view_kwargs):
         query_ = self.session.query(Computer)
         if view_kwargs.get('id') is not None:
-            query_ = query_.join(Person).filter(Person.id == view_kwargs['id'])
+            try:
+                self.session.query(Person).filter_by(id=view_kwargs['id']).one()
+            except NoResultFound:
+                raise ObjectNotFound({'parameter': 'id'}, "Person: {} not found".format(view_kwargs['id']))
+            else:
+                query_ = query_.join(Person).filter(Person.id == view_kwargs['id'])
         return query_
 
-    def before_create_object(self, data, **view_kwargs):
+    def before_create_object(self, data, view_kwargs):
         if view_kwargs.get('id') is not None:
-            try:
-                person = self.session.query(Person).filter_by(id=view_kwargs['id']).one()
-            except NoResultFound:
-                raise JsonApiException({'parameter': 'id'},
-                                       'Person: {} not found'.format(view_kwargs['id']),
-                                       title='ObjectNotFound',
-                                       status='404')
-            else:
-                data['person_id'] = person.id
+            person = self.session.query(Person).filter_by(id=view_kwargs['id']).one()
+            data['person_id'] = person.id
 
     schema = ComputerSchema
     data_layer = {'session': db.session,
@@ -114,13 +138,20 @@ class ComputerDetail(ResourceDetail):
                   'model': Computer}
 
 
+class ComputerRelationship(ResourceRelationship):
+    schema = ComputerSchema
+    data_layer = {'session': db.session,
+                  'model': Computer}
+
+
 # Create endpoints
 api = Api(app)
 api.route(PersonList, 'person_list', '/persons')
-api.route(PersonDetail, 'person_detail', '/persons/<int:id>')
+api.route(PersonDetail, 'person_detail', '/persons/<int:id>', '/computers/<int:computer_id>/owner')
 api.route(PersonRelationship, 'person_computers', '/persons/<int:id>/relationships/computers')
 api.route(ComputerList, 'computer_list', '/computers', '/persons/<int:id>/computers')
 api.route(ComputerDetail, 'computer_detail', '/computers/<int:id>')
+api.route(ComputerRelationship, 'computer_person', '/computers/<int:id>/relationships/owner')
 
 if __name__ == '__main__':
     # Start application
