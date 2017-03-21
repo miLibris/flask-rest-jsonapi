@@ -61,7 +61,7 @@ class SqlalchemyDataLayer(BaseDataLayer):
         try:
             filter_field = getattr(self.model, id_field)
         except Exception:
-            raise Exception("{} has no attribute {}".format(self.model.__name__), id_field)
+            raise Exception("{} has no attribute {}".format(self.model.__name__, id_field))
 
         url_field = getattr(self, 'url_field', 'id')
         filter_value = view_kwargs[url_field]

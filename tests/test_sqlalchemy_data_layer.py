@@ -12,6 +12,7 @@ from marshmallow_jsonapi.flask import Schema, Relationship
 from marshmallow_jsonapi import fields
 
 from flask_rest_jsonapi import Api, ResourceList, ResourceDetail, ResourceRelationship, JsonApiException
+from flask_rest_jsonapi.exceptions import RelationNotFound, InvalidSort
 from flask_rest_jsonapi.querystring import QueryStringManager as QSManager
 from flask_rest_jsonapi.data_layers.alchemy import SqlalchemyDataLayer
 from flask_rest_jsonapi.data_layers.base import BaseDataLayer
@@ -302,6 +303,21 @@ def register_routes(client, app, api_blueprint, person_list, person_detail, pers
     api.route(computer_list, 'computer_detail', '/computers/<int:id>')
     api.route(computer_owner, 'computer_owner', '/computers/<int:id>/relationships/owner')
     api.init_app(app)
+
+
+@pytest.fixture(scope="module")
+def get_object_mock():
+    class get_object(object):
+        foo = type('foo', (object,), {
+            'property': type('prop', (object,), {
+                'mapper': type('map', (object,), {
+                    'class_': 'test'
+                })()
+            })()
+        })()
+        def __init__(self, kwargs):
+            pass
+    return get_object
 
 
 # test good cases
@@ -777,7 +793,7 @@ def test_sqlalchemy_data_layer_create_object_error(session, person_model, person
 def test_sqlalchemy_data_layer_get_object_error(session, person_model):
     with pytest.raises(Exception):
         dl = SqlalchemyDataLayer(dict(session=session, model=person_model, id_field='error'))
-        dl.get_object(**dict())
+        dl.get_object(dict())
 
 
 def test_sqlalchemy_data_layer_update_object_error(session, person_model, person_list, monkeypatch):
@@ -804,25 +820,61 @@ def test_sqlalchemy_data_layer_delete_object_error(session, person_model, person
 def test_sqlalchemy_data_layer_create_relationship_field_not_found(session, person_model):
     with pytest.raises(Exception):
         dl = SqlalchemyDataLayer(dict(session=session, model=person_model))
-        dl.create_relationship(dict(), 'error', '', **{'id': 1})
+        dl.create_relationship(dict(), 'error', '', dict(id=1))
+
+
+def test_sqlalchemy_data_layer_create_relationship_error(session, person_model, get_object_mock, monkeypatch):
+    def commit_mock():
+        raise JsonApiException()
+    with pytest.raises(JsonApiException):
+        dl = SqlalchemyDataLayer(dict(session=session, model=person_model))
+        monkeypatch.setattr(dl.session, 'commit', commit_mock)
+        monkeypatch.setattr(dl, 'get_object', get_object_mock)
+        dl.create_relationship(dict(data=None), 'foo', '', dict(id=1))
 
 
 def test_sqlalchemy_data_layer_get_relationship_field_not_found(session, person_model):
-    with pytest.raises(Exception):
+    with pytest.raises(RelationNotFound):
         dl = SqlalchemyDataLayer(dict(session=session, model=person_model))
-        dl.get_relationship('error', '', '', **{'id': 1})
+        dl.get_relationship('error', '', '', dict(id=1))
 
 
 def test_sqlalchemy_data_layer_update_relationship_field_not_found(session, person_model):
     with pytest.raises(Exception):
         dl = SqlalchemyDataLayer(dict(session=session, model=person_model))
-        dl.update_relationship(dict(), 'error', '', **{'id': 1})
+        dl.update_relationship(dict(), 'error', '', dict(id=1))
+
+
+def test_sqlalchemy_data_layer_update_relationship_error(session, person_model, get_object_mock, monkeypatch):
+    def commit_mock():
+        raise JsonApiException()
+    with pytest.raises(JsonApiException):
+        dl = SqlalchemyDataLayer(dict(session=session, model=person_model))
+        monkeypatch.setattr(dl.session, 'commit', commit_mock)
+        monkeypatch.setattr(dl, 'get_object', get_object_mock)
+        dl.update_relationship(dict(data=None), 'foo', '', dict(id=1))
 
 
 def test_sqlalchemy_data_layer_delete_relationship_field_not_found(session, person_model):
     with pytest.raises(Exception):
         dl = SqlalchemyDataLayer(dict(session=session, model=person_model))
-        dl.delete_relationship(dict(), 'error', '', **{'id': 1})
+        dl.delete_relationship(dict(), 'error', '', dict(id=1))
+
+
+def test_sqlalchemy_data_layer_delete_relationship_error(session, person_model, get_object_mock, monkeypatch):
+    def commit_mock():
+        raise JsonApiException()
+    with pytest.raises(JsonApiException):
+        dl = SqlalchemyDataLayer(dict(session=session, model=person_model))
+        monkeypatch.setattr(dl.session, 'commit', commit_mock)
+        monkeypatch.setattr(dl, 'get_object', get_object_mock)
+        dl.delete_relationship(dict(data=None), 'foo', '', dict(id=1))
+
+
+def test_sqlalchemy_data_layer_sort_query_error(session, person_model, monkeypatch):
+    with pytest.raises(InvalidSort):
+        dl = SqlalchemyDataLayer(dict(session=session, model=person_model))
+        dl.sort_query(None, [dict(field='test')])
 
 
 def test_post_list_incorrect_type(client, register_routes, computer):
@@ -1304,6 +1356,44 @@ def test_base_data_layer():
         base_dl.update_relationship(None, None, None, dict())
     with pytest.raises(NotImplementedError):
         base_dl.delete_relationship(None, None, None, dict())
+    with pytest.raises(NotImplementedError):
+        base_dl.query(dict())
+    with pytest.raises(NotImplementedError):
+        base_dl.before_create_object(None, dict())
+    with pytest.raises(NotImplementedError):
+        base_dl.after_create_object(None, None, dict())
+    with pytest.raises(NotImplementedError):
+        base_dl.before_get_object(dict())
+    with pytest.raises(NotImplementedError):
+        base_dl.after_get_object(None, dict())
+    with pytest.raises(NotImplementedError):
+        base_dl.before_get_collection(None, dict())
+    with pytest.raises(NotImplementedError):
+        base_dl.after_get_collection(None, None, dict())
+    with pytest.raises(NotImplementedError):
+        base_dl.before_update_object(None, None, dict())
+    with pytest.raises(NotImplementedError):
+        base_dl.after_update_object(None, None, dict())
+    with pytest.raises(NotImplementedError):
+        base_dl.before_delete_object(None, dict())
+    with pytest.raises(NotImplementedError):
+        base_dl.after_delete_object(None, dict())
+    with pytest.raises(NotImplementedError):
+        base_dl.before_create_relationship(None, None, None, dict())
+    with pytest.raises(NotImplementedError):
+        base_dl.after_create_relationship(None, None, None, None, None, dict())
+    with pytest.raises(NotImplementedError):
+        base_dl.before_get_relationship(None, None, None, dict())
+    with pytest.raises(NotImplementedError):
+        base_dl.after_get_relationship(None, None, None, None, None, dict())
+    with pytest.raises(NotImplementedError):
+        base_dl.before_update_relationship(None, None, None, dict())
+    with pytest.raises(NotImplementedError):
+        base_dl.after_update_relationship(None, None, None, None, None, dict())
+    with pytest.raises(NotImplementedError):
+        base_dl.before_delete_relationship(None, None, None, dict())
+    with pytest.raises(NotImplementedError):
+        base_dl.after_delete_relationship(None, None, None, None, None, dict())
 
 
 def test_qs_manager():
