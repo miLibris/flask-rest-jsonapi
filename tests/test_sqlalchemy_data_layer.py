@@ -760,41 +760,68 @@ def test_get_list_field_error(client, register_routes):
 
 def test_sqlalchemy_data_layer_without_session(person_model, person_list):
     with pytest.raises(Exception):
-        SqlalchemyDataLayer(model=person_model, resource=person_list)
+        SqlalchemyDataLayer(dict(model=person_model, resource=person_list))
 
 
 def test_sqlalchemy_data_layer_without_model(session, person_list):
     with pytest.raises(Exception):
-        SqlalchemyDataLayer(session=session, resource=person_list)
+        SqlalchemyDataLayer(dict(session=session, resource=person_list))
+
+
+def test_sqlalchemy_data_layer_create_object_error(session, person_model, person_list):
+    with pytest.raises(JsonApiException):
+        dl = SqlalchemyDataLayer(dict(session=session, model=person_model, resource=person_list))
+        dl.create_object(dict(), dict())
 
 
 def test_sqlalchemy_data_layer_get_object_error(session, person_model):
     with pytest.raises(Exception):
-        dl = SqlalchemyDataLayer(session=session, model=person_model, id_field='error')
+        dl = SqlalchemyDataLayer(dict(session=session, model=person_model, id_field='error'))
         dl.get_object(**dict())
+
+
+def test_sqlalchemy_data_layer_update_object_error(session, person_model, person_list, monkeypatch):
+    def commit_mock():
+        raise JsonApiException()
+    with pytest.raises(JsonApiException):
+        dl = SqlalchemyDataLayer(dict(session=session, model=person_model, resource=person_list))
+        monkeypatch.setattr(dl.session, 'commit', commit_mock)
+        dl.update_object(dict(), dict(), dict())
+
+
+def test_sqlalchemy_data_layer_delete_object_error(session, person_model, person_list, monkeypatch):
+    def commit_mock():
+        raise JsonApiException()
+    def delete_mock(obj):
+        pass
+    with pytest.raises(JsonApiException):
+        dl = SqlalchemyDataLayer(dict(session=session, model=person_model, resource=person_list))
+        monkeypatch.setattr(dl.session, 'commit', commit_mock)
+        monkeypatch.setattr(dl.session, 'delete', delete_mock)
+        dl.delete_object(dict(), dict())
 
 
 def test_sqlalchemy_data_layer_create_relationship_field_not_found(session, person_model):
     with pytest.raises(Exception):
-        dl = SqlalchemyDataLayer(session=session, model=person_model)
+        dl = SqlalchemyDataLayer(dict(session=session, model=person_model))
         dl.create_relationship(dict(), 'error', '', **{'id': 1})
 
 
 def test_sqlalchemy_data_layer_get_relationship_field_not_found(session, person_model):
     with pytest.raises(Exception):
-        dl = SqlalchemyDataLayer(session=session, model=person_model)
+        dl = SqlalchemyDataLayer(dict(session=session, model=person_model))
         dl.get_relationship('error', '', '', **{'id': 1})
 
 
 def test_sqlalchemy_data_layer_update_relationship_field_not_found(session, person_model):
     with pytest.raises(Exception):
-        dl = SqlalchemyDataLayer(session=session, model=person_model)
+        dl = SqlalchemyDataLayer(dict(session=session, model=person_model))
         dl.update_relationship(dict(), 'error', '', **{'id': 1})
 
 
 def test_sqlalchemy_data_layer_delete_relationship_field_not_found(session, person_model):
     with pytest.raises(Exception):
-        dl = SqlalchemyDataLayer(session=session, model=person_model)
+        dl = SqlalchemyDataLayer(dict(session=session, model=person_model))
         dl.delete_relationship(dict(), 'error', '', **{'id': 1})
 
 
