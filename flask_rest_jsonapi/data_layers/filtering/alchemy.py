@@ -29,7 +29,7 @@ class Node(object):
         self.schema = schema
 
     def resolve(self):
-        if 'or' not in self.filter_ and 'and' not in self.filter_:
+        if 'or' not in self.filter_ and 'and' not in self.filter_ and 'not' not in self.filter_:
             if self.val is None and self.field is None:
                 raise InvalidFilters("Can't find value or field in a filter")
 
