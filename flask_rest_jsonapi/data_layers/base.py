@@ -30,13 +30,14 @@ class BaseDataLayer(object):
 
         :param dict kwargs: information about data layer instance
         """
+        if kwargs.get('methods') is not None:
+            self.bound_additional_methods(kwargs['methods'])
+            kwargs.pop('methods')
+
         kwargs.pop('class', None)
 
         for key, value in kwargs.items():
             setattr(self, key, value)
-
-        if kwargs.get('methods') is not None:
-            self.bound_additional_methods()
 
     def create_object(self, data, view_kwargs):
         """Create an object
@@ -310,10 +311,11 @@ class BaseDataLayer(object):
         """
         raise NotImplementedError
 
-    def bound_additional_methods(self):
+    def bound_additional_methods(self, methods):
         """Bound additional methods to current instance
 
         :param class meta: information from Meta class used to configure the data layer instance
         """
-        for key, value in self.methods.items():
-            setattr(self, key, types.MethodType(value, self))
+        for key, value in methods.items():
+            if key in self.ADDITIONAL_METHODS:
+                setattr(self, key, types.MethodType(value, self))
