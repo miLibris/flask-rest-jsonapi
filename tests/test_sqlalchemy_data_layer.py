@@ -12,10 +12,13 @@ from marshmallow_jsonapi.flask import Schema, Relationship
 from marshmallow_jsonapi import fields
 
 from flask_rest_jsonapi import Api, ResourceList, ResourceDetail, ResourceRelationship, JsonApiException
-from flask_rest_jsonapi.exceptions import RelationNotFound, InvalidSort
+from flask_rest_jsonapi.pagination import add_pagination_links
+from flask_rest_jsonapi.exceptions import RelationNotFound, InvalidSort, InvalidFilters
 from flask_rest_jsonapi.querystring import QueryStringManager as QSManager
 from flask_rest_jsonapi.data_layers.alchemy import SqlalchemyDataLayer
 from flask_rest_jsonapi.data_layers.base import BaseDataLayer
+from flask_rest_jsonapi.data_layers.filtering.alchemy import Node
+import flask_rest_jsonapi.decorators
 
 
 @pytest.fixture(scope="module")
@@ -315,9 +318,59 @@ def get_object_mock():
                 })()
             })()
         })()
+
         def __init__(self, kwargs):
             pass
     return get_object
+
+
+def test_add_pagination_links():
+    qs = {'page[number]': '15', 'page[size]': '10'}
+    qsm = QSManager(qs, None)
+    add_pagination_links(dict(), 1000, qsm, str())
+
+
+def test_Node(person_model, person_schema, monkeypatch):
+    from copy import deepcopy
+    filt = {
+        'val': '0000',
+        'field': True,
+        'not': dict(),
+        'name': 'name',
+        'op': 'eq',
+        'strip': lambda: 's'
+    }
+    filt['not'] = deepcopy(filt)
+    del filt['not']['not']
+    n = Node(person_model,
+             filt,
+             None,
+             person_schema)
+    with pytest.raises(TypeError):
+        # print(n.val is None and n.field is None)
+        # # n.column
+        n.resolve()
+    with pytest.raises(AttributeError):
+        n.model = None
+        n.column
+    with pytest.raises(InvalidFilters):
+        n.model = person_model
+        n.filter_['op'] = ''
+        n.operator
+    with pytest.raises(InvalidFilters):
+        n.related_model
+    with pytest.raises(InvalidFilters):
+        n.related_schema
+
+
+def test_check_method_requirements(monkeypatch):
+    class Self(object):
+        def __init__(self):
+            pass
+    request = type('request', (object,), dict(method=None))
+    monkeypatch.setattr(flask_rest_jsonapi.decorators, 'request', request)
+    with pytest.raises(Exception):
+        flask_rest_jsonapi.decorators.check_method_requirements(lambda: 1)(Self())
 
 
 # test good cases
