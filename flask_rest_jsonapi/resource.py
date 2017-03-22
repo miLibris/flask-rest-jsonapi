@@ -32,7 +32,8 @@ class Resource(MethodView):
                                 .format(cls.__name__))
 
             data_layer_cls = cls.data_layer.get('class', SqlalchemyDataLayer)
-            cls._data_layer = data_layer_cls(cls.data_layer)
+            data_layer_kwargs = copy(cls.data_layer)
+            cls._data_layer = data_layer_cls(data_layer_kwargs)
             cls._data_layer.resource = cls
 
         for method in getattr(cls, 'methods', ('GET', 'POST', 'PATCH', 'DELETE')):
