@@ -364,9 +364,7 @@ def test_Node(person_model, person_schema, monkeypatch):
 
 
 def test_check_method_requirements(monkeypatch):
-    class Self(object):
-        def __init__(self):
-            pass
+    self = type('self', (object,), dict())
     request = type('request', (object,), dict(method=None))
     monkeypatch.setattr(flask_rest_jsonapi.decorators, 'request', request)
     with pytest.raises(Exception):
