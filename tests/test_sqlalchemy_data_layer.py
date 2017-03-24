@@ -422,14 +422,10 @@ def test_resource(person_model, person_schema, session, monkeypatch):
 def test_compute_schema(person_schema):
     query_string = {'page[number]': '3', 'fields[person]': list()}
     qsm = QSManager(query_string, person_schema)
-    # print(person_schema._declared_fields)
     with pytest.raises(InvalidInclude):
         flask_rest_jsonapi.schema.compute_schema(
             person_schema, dict(), qsm, ['id']
         )
-    # print(person_schema.opts.type_)
-    print(person_schema.opts.type_)
-    print(qsm.fields)
     s = flask_rest_jsonapi.schema.compute_schema(
         person_schema, dict(only=list()), qsm, list()
     )
