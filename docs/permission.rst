@@ -43,7 +43,7 @@ The permission manager must be a function that looks like this:
 
 If permission is denied I recommand to raise exception like that:
 
-    .. code-block:: python
+.. code-block:: python
 
     raise JsonApiException(<error_source>,
                            <error_details>,
@@ -52,7 +52,7 @@ If permission is denied I recommand to raise exception like that:
 
 You can disable the permission system or make custom permission checking management of a resource like that:
 
-    .. code-block:: python
+.. code-block:: python
 
     from flask_rest_jsonapi import ResourceList
     from your_project.extensions import api
