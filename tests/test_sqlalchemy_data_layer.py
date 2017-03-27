@@ -10,12 +10,19 @@ from sqlalchemy.ext.declarative import declarative_base
 from flask import Blueprint, make_response
 from marshmallow_jsonapi.flask import Schema, Relationship
 from marshmallow_jsonapi import fields
+from marshmallow import ValidationError
 
 from flask_rest_jsonapi import Api, ResourceList, ResourceDetail, ResourceRelationship, JsonApiException
-from flask_rest_jsonapi.exceptions import RelationNotFound, InvalidSort
+from flask_rest_jsonapi.pagination import add_pagination_links
+from flask_rest_jsonapi.exceptions import RelationNotFound, InvalidSort, InvalidFilters, InvalidInclude, BadRequest
 from flask_rest_jsonapi.querystring import QueryStringManager as QSManager
 from flask_rest_jsonapi.data_layers.alchemy import SqlalchemyDataLayer
 from flask_rest_jsonapi.data_layers.base import BaseDataLayer
+from flask_rest_jsonapi.data_layers.filtering.alchemy import Node
+from flask_rest_jsonapi.schema import get_relationships
+import flask_rest_jsonapi.decorators
+import flask_rest_jsonapi.resource
+import flask_rest_jsonapi.schema
 
 
 @pytest.fixture(scope="module")
@@ -315,9 +322,113 @@ def get_object_mock():
                 })()
             })()
         })()
+
         def __init__(self, kwargs):
             pass
     return get_object
+
+
+def test_add_pagination_links():
+    qs = {'page[number]': '15', 'page[size]': '10'}
+    qsm = QSManager(qs, None)
+    add_pagination_links(dict(), 1000, qsm, str())
+
+
+def test_Node(person_model, person_schema, monkeypatch):
+    from copy import deepcopy
+    filt = {
+        'val': '0000',
+        'field': True,
+        'not': dict(),
+        'name': 'name',
+        'op': 'eq',
+        'strip': lambda: 's'
+    }
+    filt['not'] = deepcopy(filt)
+    del filt['not']['not']
+    n = Node(person_model,
+             filt,
+             None,
+             person_schema)
+    with pytest.raises(TypeError):
+        # print(n.val is None and n.field is None)
+        # # n.column
+        n.resolve()
+    with pytest.raises(AttributeError):
+        n.model = None
+        n.column
+    with pytest.raises(InvalidFilters):
+        n.model = person_model
+        n.filter_['op'] = ''
+        n.operator
+    with pytest.raises(InvalidFilters):
+        n.related_model
+    with pytest.raises(InvalidFilters):
+        n.related_schema
+
+
+def test_check_method_requirements(monkeypatch):
+    self = type('self', (object,), dict())
+    request = type('request', (object,), dict(method='GET'))
+    monkeypatch.setattr(flask_rest_jsonapi.decorators, 'request', request)
+    with pytest.raises(Exception):
+        flask_rest_jsonapi.\
+            decorators.check_method_requirements(lambda: 1)(self())
+
+
+def test_json_api_exception():
+    JsonApiException(None, None, title='test', status='test')
+
+
+def test_query_string_manager(person_schema):
+    query_string = {'page[slumber]': '3'}
+    qsm = QSManager(query_string, person_schema)
+    with pytest.raises(BadRequest):
+        qsm.pagination
+    qsm.qs['sort'] = 'computers'
+    with pytest.raises(InvalidSort):
+        qsm.sorting
+
+
+def test_resource(person_model, person_schema, session, monkeypatch):
+    def schema_load_mock(*args):
+        raise ValidationError(dict(errors=[dict(status=None, title=None)]))
+    query_string = {'page[slumber]': '3'}
+    app = type('app', (object,), dict(config=dict(DEBUG=True)))
+    headers = {'Content-Type': 'application/vnd.api+json'}
+    request = type('request', (object,), dict(method='POST',
+                                              headers=headers,
+                                              get_json=dict,
+                                              args=query_string))
+    dl = SqlalchemyDataLayer(dict(session=session, model=person_model))
+    rl = ResourceList()
+    rd = ResourceDetail()
+    rl._data_layer = dl
+    rl.schema = person_schema
+    rd._data_layer = dl
+    rd.schema = person_schema
+    monkeypatch.setattr(flask_rest_jsonapi.resource, 'request', request)
+    monkeypatch.setattr(flask_rest_jsonapi.resource, 'current_app', app)
+    monkeypatch.setattr(flask_rest_jsonapi.decorators, 'request', request)
+    monkeypatch.setattr(rl.schema, 'load', schema_load_mock)
+    r = super(flask_rest_jsonapi.resource.Resource, ResourceList)\
+        .__new__(ResourceList)
+    with pytest.raises(Exception):
+        r.dispatch_request()
+    rl.post()
+    rd.patch()
+
+
+def test_compute_schema(person_schema):
+    query_string = {'page[number]': '3', 'fields[person]': list()}
+    qsm = QSManager(query_string, person_schema)
+    with pytest.raises(InvalidInclude):
+        flask_rest_jsonapi.schema.compute_schema(
+            person_schema, dict(), qsm, ['id']
+        )
+    s = flask_rest_jsonapi.schema.compute_schema(
+        person_schema, dict(only=list()), qsm, list()
+    )
 
 
 # test good cases
