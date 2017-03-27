@@ -1,19 +1,21 @@
 # -*- coding: utf-8 -*-
 
 import json
+from functools import wraps
 
 from flask import request, make_response
 
 from flask_rest_jsonapi.errors import jsonapi_errors
 
 
-def check_headers(f):
+def check_headers(func):
     """Check headers according to jsonapi reference
 
-    :param callable f: the function to decorate
+    :param callable func: the function to decorate
     :return callable: the wrapped function
     """
-    def wrapped_f(*args, **kwargs):
+    @wraps(func)
+    def wrapped(*args, **kwargs):
         if request.method in ('POST', 'PATCH'):
             if request.headers['Content-Type'] != 'application/vnd.api+json':
                 error = json.dumps(jsonapi_errors([{'source': '',
@@ -27,30 +29,29 @@ def check_headers(f):
                                                 'title': 'InvalidRequestHeader',
                                                 'status': 406}]))
             return make_response(error, 406, {'Content-Type': 'application/vnd.api+json'})
-        return f(*args, **kwargs)
-    return wrapped_f
+        return func(*args, **kwargs)
+    return wrapped
 
 
-def check_method_requirements(f):
+def check_method_requirements(func):
     """Check methods requirements
 
-    :param callable f: the function to decorate
+    :param callable func: the function to decorate
     :return callable: the wrapped function
     """
-    def wrapped_f(self, *args, **kwargs):
-        cls = type(self)
+    @wraps(func)
+    def wrapped(*args, **kwargs):
         error_message = "You must provide {error_field} in {cls} to get access to the default {method} method"
-        error_data = {'cls': cls.__name__, 'method': request.method}
+        error_data = {'cls': args[0].__class__.__name__, 'method': request.method.lower()}
 
-        if not hasattr(self, '_data_layer'):
+        if not hasattr(args[0], '_data_layer'):
             error_data.update({'error_field': 'a data layer class'})
             raise Exception(error_message.format(**error_data))
 
         if request.method != 'DELETE':
-            if not hasattr(self, 'schema'):
+            if not hasattr(args[0], 'schema'):
                 error_data.update({'error_field': 'a schema class'})
                 raise Exception(error_message.format(**error_data))
 
-        return f(self, *args, **kwargs)
-
-    return wrapped_f
+        return func(*args, **kwargs)
+    return wrapped
