@@ -19,7 +19,6 @@ from flask_rest_jsonapi.querystring import QueryStringManager as QSManager
 from flask_rest_jsonapi.data_layers.alchemy import SqlalchemyDataLayer
 from flask_rest_jsonapi.data_layers.base import BaseDataLayer
 from flask_rest_jsonapi.data_layers.filtering.alchemy import Node
-from flask_rest_jsonapi.schema import get_relationships
 import flask_rest_jsonapi.decorators
 import flask_rest_jsonapi.resource
 import flask_rest_jsonapi.schema
@@ -297,7 +296,7 @@ def api_blueprint(client):
 def register_routes(client, app, api_blueprint, person_list, person_detail, person_computers,
                     person_list_raise_jsonapiexception, person_list_raise_exception, person_list_response,
                     person_list_without_schema, computer_list, computer_detail, computer_owner):
-    api = Api(api_blueprint)
+    api = Api(blueprint=api_blueprint)
     api.route(person_list, 'person_list', '/persons')
     api.route(person_detail, 'person_detail', '/persons/<int:person_id>')
     api.route(person_computers, 'person_computers', '/persons/<int:person_id>/relationships/computers')
@@ -423,12 +422,8 @@ def test_compute_schema(person_schema):
     query_string = {'page[number]': '3', 'fields[person]': list()}
     qsm = QSManager(query_string, person_schema)
     with pytest.raises(InvalidInclude):
-        flask_rest_jsonapi.schema.compute_schema(
-            person_schema, dict(), qsm, ['id']
-        )
-    s = flask_rest_jsonapi.schema.compute_schema(
-        person_schema, dict(only=list()), qsm, list()
-    )
+        flask_rest_jsonapi.schema.compute_schema(person_schema, dict(), qsm, ['id'])
+    flask_rest_jsonapi.schema.compute_schema(person_schema, dict(only=list()), qsm, list())
 
 
 # test good cases
@@ -919,6 +914,7 @@ def test_sqlalchemy_data_layer_update_object_error(session, person_model, person
 def test_sqlalchemy_data_layer_delete_object_error(session, person_model, person_list, monkeypatch):
     def commit_mock():
         raise JsonApiException()
+
     def delete_mock(obj):
         pass
     with pytest.raises(JsonApiException):
@@ -1520,5 +1516,5 @@ def test_api(app, person_list):
 
 def test_api_resources(app, person_list):
     api = Api()
-    api.route(person_list, 'person_list', '/persons', '/person_list')
+    api.route(person_list, 'person_list2', '/persons', '/person_list')
     api.init_app(app)
