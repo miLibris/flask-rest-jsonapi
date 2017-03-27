@@ -29,6 +29,8 @@ Flask-REST-JSONAPI has lot of features:
 * Sparse fieldsets
 * Pagination
 * Sorting
+* OAuth
+* Permission management
 
 
 User's Guide
@@ -52,6 +54,8 @@ Flask-REST-JSONAPI with Flask.
    pagination
    sorting
    errors
+   permission
+   oauth
 
 API Reference
 -------------
