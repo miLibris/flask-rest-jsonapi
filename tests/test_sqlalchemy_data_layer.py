@@ -19,6 +19,7 @@ from flask_rest_jsonapi.querystring import QueryStringManager as QSManager
 from flask_rest_jsonapi.data_layers.alchemy import SqlalchemyDataLayer
 from flask_rest_jsonapi.data_layers.base import BaseDataLayer
 from flask_rest_jsonapi.data_layers.filtering.alchemy import Node
+from flask_rest_jsonapi.api import Api
 import flask_rest_jsonapi.decorators
 import flask_rest_jsonapi.resource
 import flask_rest_jsonapi.schema
@@ -373,6 +374,55 @@ def test_check_method_requirements(monkeypatch):
     with pytest.raises(Exception):
         flask_rest_jsonapi.\
             decorators.check_method_requirements(lambda: 1)(self())
+
+
+def test_api_init_app(app, api_blueprint, person_list, monkeypatch):
+    import flask_rest_jsonapi.api
+    api = Api(app)
+    api.route(person_list, 'person_list_2', '/persons', '/person_list')
+    api.init_app(blueprint=api_blueprint)
+
+
+def test_api_oauth_manager(app, person_list):
+    api = Api(app)
+    api.route(person_list, 'person_list_3', '/persons', '/person_list')
+    with pytest.raises(AttributeError):
+        api.oauth_manager(None)
+
+
+def test_api_scope(app, person_list):
+    api = Api(app)
+    api.route(person_list, 'person_list_4', '/persons', '/person_list')
+    api.scope_setter(lambda: 'test')
+    Api.get_scope(person_list, 'POST')
+
+
+def test_api_has_permission(app, person_list, person_model, session, monkeypatch):
+    import flask_rest_jsonapi.api
+    request = type('request', (object,), dict(method='GET'))
+    monkeypatch.setattr(flask_rest_jsonapi.decorators, 'request', request)
+    dl = SqlalchemyDataLayer(dict(session=session, model=person_model))
+    person_list._data_layer = dl
+    api = Api(app)
+    api.route(person_list, 'person_list_5', '/persons', '/person_list')
+    monkeypatch.setattr(flask_rest_jsonapi.api.Api,
+                        'check_permissions',
+                        lambda *args, **kwargs: (args, kwargs))
+    monkeypatch.setattr(person_list, 'get', lambda: 'test')
+    api.has_permission()(getattr(person_list, 'get'))()
+
+
+def test_api_permission(app, person_list, monkeypatch):
+    import flask_rest_jsonapi.api
+    api = Api(app)
+    api.route(person_list, 'person_list_6', '/persons', '/person_list')
+    perms = type('pm', (object,), dict(disable_permission=False))
+    monkeypatch.setattr(flask_rest_jsonapi.api.Api,
+                        'has_permission',
+                        lambda self: lambda x: x)
+    api.permission_manager(perms)
+    with pytest.raises(NotImplementedError):
+        Api.check_permissions(*([None] * 3))
 
 
 def test_json_api_exception():
