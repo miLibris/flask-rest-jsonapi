@@ -3,7 +3,7 @@
 
 class JsonApiException(Exception):
 
-    title = 'Unknow error'
+    title = 'Unknown error'
     status = 500
 
     def __init__(self, source, detail, title=None, status=None):
