@@ -29,8 +29,8 @@ Flask-REST-JSONAPI has lot of features:
 * Sparse fieldsets
 * Pagination
 * Sorting
-* OAuth
 * Permission management
+* OAuth support
 
 
 User's Guide

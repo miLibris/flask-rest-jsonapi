@@ -45,7 +45,7 @@ Example ::
 
 If you want to customize the scope you can provide a function that computes your custom scope. The function have to looks like that:
 
-    .. code-block:: python
+.. code-block:: python
 
     def get_scope(resource, method):
             """Compute the name of the scope for oauth
@@ -80,7 +80,7 @@ If you want to disable OAuth or make custom methods protection for a resource yo
 
 Example:
 
-    .. code-block:: python
+.. code-block:: python
 
     from flask_rest_jsonapi import ResourceList
     from your_project.extensions import oauth2
