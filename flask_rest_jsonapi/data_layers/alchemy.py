@@ -8,7 +8,7 @@ from sqlalchemy.inspection import inspect
 from flask_rest_jsonapi.constants import DEFAULT_PAGE_SIZE
 from flask_rest_jsonapi.data_layers.base import BaseDataLayer
 from flask_rest_jsonapi.exceptions import RelationNotFound, RelatedObjectNotFound, JsonApiException,\
-    InvalidSort
+    InvalidSort, ObjectNotFound
 from flask_rest_jsonapi.data_layers.filtering.alchemy import create_filters
 from flask_rest_jsonapi.schema import get_relationships
 
@@ -110,6 +110,12 @@ class SqlalchemyDataLayer(BaseDataLayer):
         :param dict view_kwargs: kwargs from the resource view
         :return boolean: True if object have changed else False
         """
+        if obj is None:
+            url_field = getattr(self, 'url_field', 'id')
+            filter_value = view_kwargs[url_field]
+            raise ObjectNotFound({'parameter': url_field},
+                                 '{}: {} not found'.format(self.model.__class__.__name__, filter_value))
+
         self.before_update_object(obj, data, view_kwargs)
 
         relationship_fields = get_relationships(self.resource.schema)
@@ -133,6 +139,12 @@ class SqlalchemyDataLayer(BaseDataLayer):
         :param DeclarativeMeta item: an item from sqlalchemy
         :param dict view_kwargs: kwargs from the resource view
         """
+        if obj is None:
+            url_field = getattr(self, 'url_field', 'id')
+            filter_value = view_kwargs[url_field]
+            raise ObjectNotFound({'parameter': url_field},
+                                 '{}: {} not found'.format(self.model.__class__.__name__, filter_value))
+
         self.before_delete_object(obj, view_kwargs)
 
         self.session.delete(obj)
@@ -156,6 +168,12 @@ class SqlalchemyDataLayer(BaseDataLayer):
         self.before_create_relationship(json_data, relationship_field, related_id_field, view_kwargs)
 
         obj = self.get_object(view_kwargs)
+
+        if obj is None:
+            url_field = getattr(self, 'url_field', 'id')
+            filter_value = view_kwargs[url_field]
+            raise ObjectNotFound({'parameter': url_field},
+                                 '{}: {} not found'.format(self.model.__class__.__name__, filter_value))
 
         if not hasattr(obj, relationship_field):
             raise RelationNotFound('', "{} has no attribute {}".format(obj.__class__.__name__, relationship_field))
@@ -207,6 +225,12 @@ class SqlalchemyDataLayer(BaseDataLayer):
 
         obj = self.get_object(view_kwargs)
 
+        if obj is None:
+            url_field = getattr(self, 'url_field', 'id')
+            filter_value = view_kwargs[url_field]
+            raise ObjectNotFound({'parameter': url_field},
+                                 '{}: {} not found'.format(self.model.__class__.__name__, filter_value))
+
         if not hasattr(obj, relationship_field):
             raise RelationNotFound('', "{} has no attribute {}".format(obj.__class__.__name__, relationship_field))
 
@@ -236,6 +260,12 @@ class SqlalchemyDataLayer(BaseDataLayer):
         self.before_update_relationship(json_data, relationship_field, related_id_field, view_kwargs)
 
         obj = self.get_object(view_kwargs)
+
+        if obj is None:
+            url_field = getattr(self, 'url_field', 'id')
+            filter_value = view_kwargs[url_field]
+            raise ObjectNotFound({'parameter': url_field},
+                                 '{}: {} not found'.format(self.model.__class__.__name__, filter_value))
 
         if not hasattr(obj, relationship_field):
             raise RelationNotFound('', "{} has no attribute {}".format(obj.__class__.__name__, relationship_field))
@@ -289,6 +319,12 @@ class SqlalchemyDataLayer(BaseDataLayer):
         self.before_delete_relationship(json_data, relationship_field, related_id_field, view_kwargs)
 
         obj = self.get_object(view_kwargs)
+
+        if obj is None:
+            url_field = getattr(self, 'url_field', 'id')
+            filter_value = view_kwargs[url_field]
+            raise ObjectNotFound({'parameter': url_field},
+                                 '{}: {} not found'.format(self.model.__class__.__name__, filter_value))
 
         if not hasattr(obj, relationship_field):
             raise RelationNotFound('', "{} has no attribute {}".format(obj.__class__.__name__, relationship_field))
