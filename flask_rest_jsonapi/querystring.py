@@ -155,7 +155,7 @@ class QueryStringManager(object):
                 field = get_model_field(self.schema, field)
                 order = 'desc' if sort_field.startswith('-') else 'asc'
                 sorting_results.append({'field': field, 'order': order})
-                return sorting_results
+            return sorting_results
 
         return []
 

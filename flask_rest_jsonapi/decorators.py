@@ -17,7 +17,7 @@ def check_headers(func):
     @wraps(func)
     def wrapped(*args, **kwargs):
         if request.method in ('POST', 'PATCH'):
-            if request.headers['Content-Type'] != 'application/vnd.api+json':
+            if 'Content-Type' not in request.headers or request.headers['Content-Type'] != 'application/vnd.api+json':
                 error = json.dumps(jsonapi_errors([{'source': '',
                                                     'detail': "Content-Type header must be application/vnd.api+json",
                                                     'title': 'InvalidRequestHeader',
