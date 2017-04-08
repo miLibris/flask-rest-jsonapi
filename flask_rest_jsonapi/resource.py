@@ -22,6 +22,8 @@ from flask_rest_jsonapi.data_layers.alchemy import SqlalchemyDataLayer
 
 class Resource(MethodView):
 
+    decorators = (check_headers,)
+
     def __new__(cls):
         if hasattr(cls, 'data_layer'):
             if not isinstance(cls.data_layer, dict):
@@ -35,10 +37,6 @@ class Resource(MethodView):
             data_layer_kwargs = copy(cls.data_layer)
             cls._data_layer = data_layer_cls(data_layer_kwargs)
             cls._data_layer.resource = cls
-
-        for method in getattr(cls, 'methods', ('GET', 'POST', 'PATCH', 'DELETE')):
-            if hasattr(cls, method.lower()):
-                setattr(cls, method.lower(), check_headers(getattr(cls, method.lower())))
 
         for method in ('get', 'post', 'patch', 'delete'):
             if hasattr(cls, '{}_decorators'.format(method)) and hasattr(cls, method):
