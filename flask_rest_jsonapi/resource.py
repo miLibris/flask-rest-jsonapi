@@ -3,10 +3,11 @@
 import inspect
 import json
 from copy import copy
+from six import with_metaclass
 
 from werkzeug.wrappers import Response
 from flask import request, url_for, make_response, current_app
-from flask.views import MethodView
+from flask.views import MethodView, MethodViewType
 from marshmallow_jsonapi.exceptions import IncorrectTypeError
 from marshmallow import ValidationError
 
@@ -20,30 +21,35 @@ from flask_rest_jsonapi.data_layers.base import BaseDataLayer
 from flask_rest_jsonapi.data_layers.alchemy import SqlalchemyDataLayer
 
 
-class Resource(MethodView):
+class ResourceMeta(MethodViewType):
 
-    def __new__(cls):
-        if hasattr(cls, 'data_layer'):
-            if not isinstance(cls.data_layer, dict):
+    def __new__(cls, name, bases, d):
+        rv = super(ResourceMeta, cls).__new__(cls, name, bases, d)
+        if 'data_layer' in d:
+            if not isinstance(d['data_layer'], dict):
                 raise Exception("You must provide a data layer information as dict in {}".format(cls.__name__))
 
-            if cls.data_layer.get('class') is not None and BaseDataLayer not in inspect.getmro(cls.data_layer['class']):
+            if d['data_layer'].get('class') is not None\
+                    and BaseDataLayer not in inspect.getmro(d['data_layer']['class']):
                 raise Exception("You must provide a data layer class inherited from BaseDataLayer in {}"
                                 .format(cls.__name__))
 
-            data_layer_cls = cls.data_layer.get('class', SqlalchemyDataLayer)
-            data_layer_kwargs = copy(cls.data_layer)
-            cls._data_layer = data_layer_cls(data_layer_kwargs)
+            data_layer_cls = d['data_layer'].get('class', SqlalchemyDataLayer)
+            data_layer_kwargs = d['data_layer']
+            rv._data_layer = data_layer_cls(data_layer_kwargs)
+
+        rv.decorators = (check_headers,)
+        if 'decorators' in d:
+            rv.decorators += d['decorators']
+
+        return rv
+
+
+class Resource(MethodView):
+
+    def __new__(cls):
+        if hasattr(cls, '_data_layer'):
             cls._data_layer.resource = cls
-
-        for method in getattr(cls, 'methods', ('GET', 'POST', 'PATCH', 'DELETE')):
-            if hasattr(cls, method.lower()):
-                setattr(cls, method.lower(), check_headers(getattr(cls, method.lower())))
-
-        for method in ('get', 'post', 'patch', 'delete'):
-            if hasattr(cls, '{}_decorators'.format(method)) and hasattr(cls, method):
-                for decorator in getattr(cls, '{}_decorators'.format(method)):
-                    setattr(cls, method, decorator(getattr(cls, method)))
 
         return super(Resource, cls).__new__(cls)
 
@@ -95,7 +101,7 @@ class Resource(MethodView):
         return make_response(json.dumps(data), status_code, headers)
 
 
-class ResourceList(Resource):
+class ResourceList(with_metaclass(ResourceMeta, Resource)):
 
     @check_method_requirements
     def get(self, *args, **kwargs):
@@ -182,7 +188,7 @@ class ResourceList(Resource):
         pass
 
 
-class ResourceDetail(Resource):
+class ResourceDetail(with_metaclass(ResourceMeta, Resource)):
 
     @check_method_requirements
     def get(self, *args, **kwargs):
@@ -287,7 +293,7 @@ class ResourceDetail(Resource):
         pass
 
 
-class ResourceRelationship(Resource):
+class ResourceRelationship(with_metaclass(ResourceMeta, Resource)):
 
     @check_method_requirements
     def get(self, *args, **kwargs):
