@@ -8,11 +8,12 @@ from flask_rest_jsonapi.resource import ResourceList
 
 class Api(object):
 
-    def __init__(self, app=None, blueprint=None):
+    def __init__(self, app=None, blueprint=None, decorators=None):
         self.app = app
         self.blueprint = blueprint
         self.resources = []
         self.resource_registry = []
+        self.decorators = decorators or tuple()
 
     def init_app(self, app=None, blueprint=None):
         """Update flask application with our api
@@ -45,6 +46,12 @@ class Api(object):
         resource.view = view
         view_func = resource.as_view(view)
         url_rule_options = kwargs.get('url_rule_options') or dict()
+
+        for decorator in self.decorators:
+            if hasattr(resource, 'decorators'):
+                resource.decorators += self.decorators
+            else:
+                resource.decorators = self.decorators
 
         if self.blueprint is not None:
             resource.view = '.'.join([self.blueprint.name, resource.view])
