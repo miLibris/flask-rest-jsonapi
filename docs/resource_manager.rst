@@ -45,14 +45,7 @@ All resource mangers are inherited from flask.views.MethodView so you can provid
     :methods: a list of methods this resource manager can handle. If you don't specify any method, all methods are handled.
     :decorators: a tuple of decorators plugged to all methods that the resource manager can handle
 
-You can plug additional decorators to each methods with this optional attributes:
-
-* **get_decorators**: a list of decorators to plug to the get method
-* **post_decorators**: a list a decorators plugged to the post method
-* **patch_decorators**: a list a decorators plugged to the patch method
-* **delete_decorators**: a list a decorators plugged to the delete method
-
-You can also provide default schema kwargs to each resource manager methods with this optional attributes:
+You can provide default schema kwargs for each resource manager methods with this optional attributes:
 
 * **get_schema_kwargs**: a dict of default schema kwargs in get method
 * **post_schema_kwargs**: a dict of default schema kwargs in post method
@@ -78,7 +71,6 @@ Example:
     from your_project.schemas import PersonSchema
     from your_project.models import Person
     from your_project.security import login_required
-    from your_project.decorators import dummy_decorator
     from your_project.extensions import db
 
     class PersonList(ResourceDetail):
@@ -87,7 +79,6 @@ Example:
                       'model': Person}
         methods = ['GET', 'PATCH']
         decorators = (login_required, )
-        get_decorators = [dummy_decorator]
         get_schema_kwargs = {'only': ('name', )}
 
         def before_patch(*args, **kwargs):

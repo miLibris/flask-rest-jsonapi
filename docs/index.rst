@@ -54,6 +54,7 @@ Flask-REST-JSONAPI with Flask.
    pagination
    sorting
    errors
+   api
    permission
    oauth
 
