@@ -15,7 +15,7 @@ def check_headers(func):
     :return callable: the wrapped function
     """
     @wraps(func)
-    def wrapped(*args, **kwargs):
+    def wrapper(*args, **kwargs):
         if request.method in ('POST', 'PATCH'):
             if 'Content-Type' not in request.headers or request.headers['Content-Type'] != 'application/vnd.api+json':
                 error = json.dumps(jsonapi_errors([{'source': '',
@@ -30,7 +30,7 @@ def check_headers(func):
                                                 'status': 406}]))
             return make_response(error, 406, {'Content-Type': 'application/vnd.api+json'})
         return func(*args, **kwargs)
-    return wrapped
+    return wrapper
 
 
 def check_method_requirements(func):
@@ -40,7 +40,7 @@ def check_method_requirements(func):
     :return callable: the wrapped function
     """
     @wraps(func)
-    def wrapped(*args, **kwargs):
+    def wrapper(*args, **kwargs):
         error_message = "You must provide {error_field} in {cls} to get access to the default {method} method"
         error_data = {'cls': args[0].__class__.__name__, 'method': request.method.lower()}
 
@@ -54,4 +54,4 @@ def check_method_requirements(func):
                 raise Exception(error_message.format(**error_data))
 
         return func(*args, **kwargs)
-    return wrapped
+    return wrapper
