@@ -125,10 +125,14 @@ class Api(object):
         """Decorator used to check permissions before to call resource manager method
         """
         def wrapper(view):
+            if getattr(view, '_has_permissions_decorator', False) is True:
+                return view
+
             @wraps(view)
             def decorated(*view_args, **view_kwargs):
                 self.check_permissions(view, view_args, view_kwargs, *args, **kwargs)
                 return view(*view_args, **view_kwargs)
+            decorated._has_permissions_decorator = True
             return decorated
         return wrapper
 
