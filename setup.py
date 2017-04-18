@@ -27,7 +27,7 @@ setup(
     zip_safe=False,
     platforms='any',
     install_requires=['six',
-                      'Flask',
+                      'Flask>=0.11',
                       'marshmallow==2.13.1',
                       'marshmallow_jsonapi',
                       'sqlalchemy'],
