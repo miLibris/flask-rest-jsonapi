@@ -270,7 +270,7 @@ class ResourceDetail(with_metaclass(ResourceMeta, Resource)):
         obj = self._data_layer.get_object(kwargs)
         self._data_layer.delete_object(obj, kwargs)
 
-        result = {'meta': 'Object successful deleted'}
+        result = {'meta': {'message': 'Object successfully deleted'}}
         self.after_delete(result)
         return result
 
