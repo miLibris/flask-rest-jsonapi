@@ -368,9 +368,9 @@ class SqlalchemyDataLayer(BaseDataLayer):
                                          .filter(getattr(related_model, related_id_field) == obj['id'])\
                                          .one()
         except NoResultFound:
-            raise RelatedObjectNotFound('', "Could not find {}.{}={} object".format(related_model.__name__,
-                                                                                    related_id_field,
-                                                                                    obj['id']))
+            raise RelatedObjectNotFound('', "{}.{}: {} not found".format(related_model.__name__,
+                                                                         related_id_field,
+                                                                         obj['id']))
 
         return related_object
 
