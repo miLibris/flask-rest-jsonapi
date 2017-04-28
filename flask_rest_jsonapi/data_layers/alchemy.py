@@ -114,7 +114,7 @@ class SqlalchemyDataLayer(BaseDataLayer):
             url_field = getattr(self, 'url_field', 'id')
             filter_value = view_kwargs[url_field]
             raise ObjectNotFound({'parameter': url_field},
-                                 '{}: {} not found'.format(self.model.__class__.__name__, filter_value))
+                                 '{}: {} not found'.format(self.model.__name__, filter_value))
 
         self.before_update_object(obj, data, view_kwargs)
 
@@ -143,7 +143,7 @@ class SqlalchemyDataLayer(BaseDataLayer):
             url_field = getattr(self, 'url_field', 'id')
             filter_value = view_kwargs[url_field]
             raise ObjectNotFound({'parameter': url_field},
-                                 '{}: {} not found'.format(self.model.__class__.__name__, filter_value))
+                                 '{}: {} not found'.format(self.model.__name__, filter_value))
 
         self.before_delete_object(obj, view_kwargs)
 
@@ -173,7 +173,7 @@ class SqlalchemyDataLayer(BaseDataLayer):
             url_field = getattr(self, 'url_field', 'id')
             filter_value = view_kwargs[url_field]
             raise ObjectNotFound({'parameter': url_field},
-                                 '{}: {} not found'.format(self.model.__class__.__name__, filter_value))
+                                 '{}: {} not found'.format(self.model.__name__, filter_value))
 
         if not hasattr(obj, relationship_field):
             raise RelationNotFound('', "{} has no attribute {}".format(obj.__class__.__name__, relationship_field))
@@ -229,7 +229,7 @@ class SqlalchemyDataLayer(BaseDataLayer):
             url_field = getattr(self, 'url_field', 'id')
             filter_value = view_kwargs[url_field]
             raise ObjectNotFound({'parameter': url_field},
-                                 '{}: {} not found'.format(self.model.__class__.__name__, filter_value))
+                                 '{}: {} not found'.format(self.model.__name__, filter_value))
 
         if not hasattr(obj, relationship_field):
             raise RelationNotFound('', "{} has no attribute {}".format(obj.__class__.__name__, relationship_field))
@@ -265,7 +265,7 @@ class SqlalchemyDataLayer(BaseDataLayer):
             url_field = getattr(self, 'url_field', 'id')
             filter_value = view_kwargs[url_field]
             raise ObjectNotFound({'parameter': url_field},
-                                 '{}: {} not found'.format(self.model.__class__.__name__, filter_value))
+                                 '{}: {} not found'.format(self.model.__name__, filter_value))
 
         if not hasattr(obj, relationship_field):
             raise RelationNotFound('', "{} has no attribute {}".format(obj.__class__.__name__, relationship_field))
@@ -324,7 +324,7 @@ class SqlalchemyDataLayer(BaseDataLayer):
             url_field = getattr(self, 'url_field', 'id')
             filter_value = view_kwargs[url_field]
             raise ObjectNotFound({'parameter': url_field},
-                                 '{}: {} not found'.format(self.model.__class__.__name__, filter_value))
+                                 '{}: {} not found'.format(self.model.__name__, filter_value))
 
         if not hasattr(obj, relationship_field):
             raise RelationNotFound('', "{} has no attribute {}".format(obj.__class__.__name__, relationship_field))
