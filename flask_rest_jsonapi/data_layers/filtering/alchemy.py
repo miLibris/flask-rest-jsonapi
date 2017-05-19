@@ -119,7 +119,7 @@ class Node(object):
         """
         if self.filter_.get('field') is not None:
             try:
-                return getattr(self.model, self.field)
+                return getattr(self.model, self.filter_['field'])
             except AttributeError:
                 raise InvalidFilters("{} has no attribute {}".format(self.model.__name__, self.field))
         else:
