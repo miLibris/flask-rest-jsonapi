@@ -119,9 +119,11 @@ class Node(object):
         """
         if self.filter_.get('field') is not None:
             try:
-                return getattr(self.model, self.filter_['field'])
+                result = getattr(self.model, self.filter_['field'])
             except AttributeError:
-                raise InvalidFilters("{} has no attribute {}".format(self.model.__name__, self.field))
+                raise InvalidFilters("{} has no attribute {}".format(self.model.__name__, self.filter_['field']))
+            else:
+                return result
         else:
             if 'val' not in self.filter_:
                 raise InvalidFilters("Can't find value or field in a filter")
