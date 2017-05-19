@@ -30,13 +30,10 @@ class Node(object):
 
     def resolve(self):
         if 'or' not in self.filter_ and 'and' not in self.filter_ and 'not' not in self.filter_:
-            if self.val is None and self.field is None:
-                raise InvalidFilters("Can't find value or field in a filter")
-
             value = self.value
 
-            if isinstance(self.val, dict):
-                value = Node(self.related_model, self.val, self.resource, self.related_schema).resolve()
+            if isinstance(value, dict):
+                value = Node(self.related_model, value, self.resource, self.related_schema).resolve()
 
             if '__' in self.filter_.get('name', ''):
                 value = {self.filter_['name'].split('__')[1]: value}
@@ -84,22 +81,6 @@ class Node(object):
             raise InvalidFilters("Can't find op of a filter")
 
     @property
-    def val(self):
-        """Return the val of the node
-
-        :return: the value to filter with
-        """
-        return self.filter_.get('val')
-
-    @property
-    def field(self):
-        """Return the field of the node
-
-        :return: the field to pick up value from to filter with
-        """
-        return self.filter_.get('field')
-
-    @property
     def column(self):
         """Get the column object
 
@@ -114,7 +95,7 @@ class Node(object):
         try:
             return getattr(self.model, model_field)
         except AttributeError:
-            raise InvalidFilters("{} has no attribute {} in a filter".format(self.model.__name__, model_field))
+            raise InvalidFilters("{} has no attribute {}".format(self.model.__name__, model_field))
 
     @property
     def operator(self):
@@ -128,7 +109,7 @@ class Node(object):
             if hasattr(self.column, op):
                 return op
 
-        raise InvalidFilters("{} has no operator {} in a filter".format(self.column.key, self.op))
+        raise InvalidFilters("{} has no operator {}".format(self.column.key, self.op))
 
     @property
     def value(self):
@@ -136,13 +117,18 @@ class Node(object):
 
         :return: the value to filter on
         """
-        if self.field is not None:
+        if self.filter_.get('field') is not None:
             try:
-                return getattr(self.model, self.field)
+                result = getattr(self.model, self.filter_['field'])
             except AttributeError:
-                raise InvalidFilters("{} has no attribute {} in a filter".format(self.model.__name__, self.field))
+                raise InvalidFilters("{} has no attribute {}".format(self.model.__name__, self.filter_['field']))
+            else:
+                return result
+        else:
+            if 'val' not in self.filter_:
+                raise InvalidFilters("Can't find value or field in a filter")
 
-        return self.val
+            return self.filter_['val']
 
     @property
     def related_model(self):
