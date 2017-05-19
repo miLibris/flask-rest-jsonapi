@@ -370,12 +370,14 @@ class ResourceRelationship(with_metaclass(ResourceMeta, Resource)):
             includes.append(relationship_field)
         schema = compute_schema(self.schema, dict(), qs, includes)
 
-        status_code = 200 if updated is True else 204
+        if updated is False:
+            return '', 204
+
         result = schema.dump(obj_).data
         if result.get('links', {}).get('self') is not None:
             result['links']['self'] = request.path
         self.after_post(result)
-        return result, status_code
+        return result, 200
 
     @check_method_requirements
     def patch(self, *args, **kwargs):
@@ -416,12 +418,14 @@ class ResourceRelationship(with_metaclass(ResourceMeta, Resource)):
             includes.append(relationship_field)
         schema = compute_schema(self.schema, dict(), qs, includes)
 
-        status_code = 200 if updated is True else 204
+        if updated is False:
+            return '', 204
+
         result = schema.dump(obj_).data
         if result.get('links', {}).get('self') is not None:
             result['links']['self'] = request.path
         self.after_patch(result)
-        return result, status_code
+        return result, 200
 
     @check_method_requirements
     def delete(self, *args, **kwargs):
