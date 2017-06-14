@@ -714,17 +714,28 @@ def test_get_list_response(client, register_routes):
         assert response.status_code == 200
 
 
-# test errors
-def test_wrong_content_type(client, register_routes):
+# test various Accept headers
+def test_single_accept_header(client, register_routes):
     with client:
-        response = client.post('/persons')
-        assert response.status_code == 415
+        response = client.get('/persons', content_type='application/vnd.api+json', headers={'Accept': 'application/vnd.api+json'})
+        assert response.status_code == 200
 
+def test_multiple_accept_header(client, register_routes):
+    with client:
+        response = client.get('/persons', content_type='application/vnd.api+json', headers={'Accept': '*/*, application/vnd.api+json'})
+        assert response.status_code == 200
 
 def test_wrong_accept_header(client, register_routes):
     with client:
         response = client.get('/persons', content_type='application/vnd.api+json', headers={'Accept': 'error'})
         assert response.status_code == 406
+
+        
+# test Content-Type error
+def test_wrong_content_type(client, register_routes):
+    with client:
+        response = client.post('/persons')
+        assert response.status_code == 415
 
 
 @pytest.fixture(scope="module")
