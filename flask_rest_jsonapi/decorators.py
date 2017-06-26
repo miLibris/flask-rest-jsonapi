@@ -23,7 +23,7 @@ def check_headers(func):
                                                     'title': 'InvalidRequestHeader',
                                                     'status': 415}]))
                 return make_response(error, 415, {'Content-Type': 'application/vnd.api+json'})
-        if request.headers.get('Accept') and request.headers['Accept'] != 'application/vnd.api+json':
+        if request.headers.get('Accept') and not 'application/vnd.api+json' in request.accept_mimetypes:
             error = json.dumps(jsonapi_errors([{'source': '',
                                                 'detail': "Accept header must be application/vnd.api+json",
                                                 'title': 'InvalidRequestHeader',
