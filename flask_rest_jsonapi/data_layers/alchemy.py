@@ -2,7 +2,6 @@
 
 from sqlalchemy.orm.exc import NoResultFound
 from sqlalchemy.orm.collections import InstrumentedList
-from sqlalchemy.sql.expression import desc, asc, text
 from sqlalchemy.inspection import inspect
 
 from flask_rest_jsonapi.constants import DEFAULT_PAGE_SIZE
@@ -425,15 +424,12 @@ class SqlalchemyDataLayer(BaseDataLayer):
         :param list sort_info: sort information
         :return Query: the sorted query
         """
-        expressions = {'asc': asc, 'desc': desc}
-        order_objects = []
         for sort_opt in sort_info:
-            if not hasattr(self.model, sort_opt['field']):
-                raise InvalidSort("{} has no attribute {}".format(self.model.__name__, sort_opt['field']))
-            field = text(sort_opt['field'])
-            order = expressions[sort_opt['order']]
-            order_objects.append(order(field))
-        return query.order_by(*order_objects)
+            field = sort_opt['field']
+            if not hasattr(self.model, field):
+                raise InvalidSort("{} has no attribute {}".format(self.model.__name__, field))
+            query = query.order_by(getattr(getattr(self.model, field), sort_opt['order'])())
+        return query
 
     def paginate_query(self, query, paginate_info):
         """Paginate query according to jsonapi 1.0
