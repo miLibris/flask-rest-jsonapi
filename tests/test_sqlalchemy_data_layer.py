@@ -138,6 +138,8 @@ def computer_schema():
         id = fields.Str(dump_only=True)
         serial = fields.Str(required=True)
         owner = Relationship(attribute='person',
+                             default=None,
+                             missing=None,
                              related_view='api.person_detail',
                              related_view_kwargs={'person_id': '<person.person_id>'},
                              schema='PersonSchema',
@@ -691,7 +693,7 @@ def test_delete_relationship(session, client, register_routes, computer, person)
 
 def test_delete_relationship_single(session, client, register_routes, computer, person):
     session_ = session
-    computer.owner = person
+    computer.person = person
     session_.commit()
 
     payload = {
