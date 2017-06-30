@@ -604,6 +604,8 @@ def test_get_relationship_single_empty(session, client, register_routes, compute
     with client:
         response = client.get('/computers/' + str(computer.id) + '/relationships/owner',
                               content_type='application/vnd.api+json')
+        response_json = json.loads(response.get_data())
+        assert None is response_json['data']
         assert response.status_code == 200
 
 
