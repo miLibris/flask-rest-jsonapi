@@ -2,12 +2,11 @@
 
 from six.moves.urllib.parse import urlencode
 import pytest
-import json
 
 from sqlalchemy import create_engine, Column, Integer, DateTime, String, ForeignKey
 from sqlalchemy.orm import sessionmaker, relationship
 from sqlalchemy.ext.declarative import declarative_base
-from flask import Blueprint, make_response
+from flask import Blueprint, make_response, json
 from marshmallow_jsonapi.flask import Schema, Relationship
 from marshmallow_jsonapi import fields
 from marshmallow import ValidationError
