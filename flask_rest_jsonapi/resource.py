@@ -248,7 +248,7 @@ class ResourceDetail(with_metaclass(ResourceMeta, Resource)):
 
         if 'id' not in json_data['data']:
             raise BadRequest('/data/id', 'Missing id in "data" node')
-        if json_data['data']['id'] != str(kwargs[self.data_layer.get('url_field', 'id')]):
+        if str(json_data['data']['id']) != str(kwargs[self.data_layer.get('url_field', 'id')]):
             raise BadRequest('/data/id', 'Value of id does not match the resource identifier in url')
 
         self.before_patch(args, kwargs, data=data)
