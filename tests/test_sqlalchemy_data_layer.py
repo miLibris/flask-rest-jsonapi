@@ -730,7 +730,7 @@ def test_wrong_accept_header(client, register_routes):
         response = client.get('/persons', content_type='application/vnd.api+json', headers={'Accept': 'error'})
         assert response.status_code == 406
 
-        
+
 # test Content-Type error
 def test_wrong_content_type(client, register_routes):
     with client:

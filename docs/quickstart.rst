@@ -258,7 +258,7 @@ Request:
     POST /computers HTTP/1.1
     Content-Type: application/vnd.api+json
     Accept: application/vnd.api+json
- 
+
     {
       "data": {
         "type": "computer",
@@ -452,7 +452,7 @@ Request:
     POST /persons?include=computers HTTP/1.1
     Content-Type: application/vnd.api+json
     Accept: application/vnd.api+json
- 
+
     {
       "data": {
         "type": "person",
@@ -555,7 +555,7 @@ Request:
     PATCH /persons/1?include=computers HTTP/1.1
     Content-Type: application/vnd.api+json
     Accept: application/vnd.api+json
- 
+
     {
       "data": {
         "type": "person",
@@ -649,7 +649,7 @@ Request:
     POST /persons/1/relationships/computers HTTP/1.1
     Content-Type: application/vnd.api+json
     Accept: application/vnd.api+json
- 
+
     {
       "data": [
         {
@@ -755,7 +755,7 @@ Request:
     DELETE /persons/1/relationships/computers HTTP/1.1
     Content-Type: application/vnd.api+json
     Accept: application/vnd.api+json
- 
+
     {
       "data": [
         {
