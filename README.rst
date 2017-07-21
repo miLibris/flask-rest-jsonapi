@@ -53,7 +53,7 @@ A minimal API
             self_view_kwargs = {'id': '<id>'}
             self_view_many = 'person_list'
 
-        id = fields.Str(dump_only=True)
+        id = fields.Integer(as_string=True, dump_only=True)
         name = fields.Str()
 
     # Create resource managers
