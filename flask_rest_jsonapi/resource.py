@@ -134,6 +134,8 @@ class ResourceList(with_metaclass(ResourceMeta, Resource)):
         schema_kwargs = getattr(self, 'get_schema_kwargs', dict())
         schema_kwargs.update({'many': True})
 
+        self.before_marshmallow(args, kwargs)
+
         schema = compute_schema(self.schema,
                                 schema_kwargs,
                                 qs,
@@ -217,6 +219,9 @@ class ResourceList(with_metaclass(ResourceMeta, Resource)):
         """Hook to make custom work after post method"""
         pass
 
+    def before_marshmallow(self, args, kwargs):
+        pass
+
     def get_collection(self, qs, kwargs):
         return self._data_layer.get_collection(qs, kwargs)
 
@@ -235,6 +240,8 @@ class ResourceDetail(with_metaclass(ResourceMeta, Resource)):
         qs = QSManager(request.args, self.schema)
 
         obj = self.get_object(kwargs, qs)
+
+        self.before_marshmallow(args, kwargs)
 
         schema = compute_schema(self.schema,
                                 getattr(self, 'get_schema_kwargs', dict()),
@@ -255,6 +262,8 @@ class ResourceDetail(with_metaclass(ResourceMeta, Resource)):
         qs = QSManager(request.args, self.schema)
         schema_kwargs = getattr(self, 'patch_schema_kwargs', dict())
         schema_kwargs.update({'partial': True})
+
+        self.before_marshmallow(args, kwargs)
 
         schema = compute_schema(self.schema,
                                 schema_kwargs,
@@ -334,6 +343,9 @@ class ResourceDetail(with_metaclass(ResourceMeta, Resource)):
 
     def after_delete(self, result):
         """Hook to make custom work after delete method"""
+        pass
+
+    def before_marshmallow(self, args, kwargs):
         pass
 
     def get_object(self, kwargs, qs):
