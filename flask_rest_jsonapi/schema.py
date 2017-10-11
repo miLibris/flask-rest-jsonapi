@@ -21,6 +21,9 @@ def compute_schema(schema_cls, default_kwargs, qs, include):
     schema_kwargs = default_kwargs
     schema_kwargs['include_data'] = tuple()
 
+    # collect sub-related_includes
+    related_includes = {}
+
     if include:
         for include_path in include:
             field = include_path.split('.')[0]
@@ -29,6 +32,10 @@ def compute_schema(schema_cls, default_kwargs, qs, include):
             elif not isinstance(schema_cls._declared_fields[field], Relationship):
                 raise InvalidInclude("{} is not a relationship attribute of {}".format(field, schema_cls.__name__))
             schema_kwargs['include_data'] += (field, )
+            if field not in related_includes:
+                related_includes[field] = []
+            if '.' in include_path:
+                related_includes[field] += ['.'.join(include_path.split('.')[1:])]
 
     # make sure id field is in only parameter unless marshamllow will raise an Exception
     if schema_kwargs.get('only') is not None and 'id' not in schema_kwargs['only']:
@@ -65,11 +72,7 @@ def compute_schema(schema_cls, default_kwargs, qs, include):
                 related_schema_cls = related_schema_cls.__class__
             if isinstance(related_schema_cls, str):
                 related_schema_cls = class_registry.get_class(related_schema_cls)
-            if '.' in include_path:
-                related_include = ['.'.join(include_path.split('.')[1:])]
-            else:
-                related_include = None
-            related_schema = compute_schema(related_schema_cls, related_schema_kwargs, qs, related_include)
+            related_schema = compute_schema(related_schema_cls, related_schema_kwargs, qs, related_includes[field] or None)
             relation_field.__dict__['_Relationship__schema'] = related_schema
 
     return schema
