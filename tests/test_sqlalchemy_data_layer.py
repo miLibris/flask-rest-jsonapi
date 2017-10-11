@@ -2,12 +2,11 @@
 
 from six.moves.urllib.parse import urlencode
 import pytest
-import json
 
 from sqlalchemy import create_engine, Column, Integer, DateTime, String, ForeignKey
 from sqlalchemy.orm import sessionmaker, relationship
 from sqlalchemy.ext.declarative import declarative_base
-from flask import Blueprint, make_response
+from flask import Blueprint, make_response, json
 from marshmallow_jsonapi.flask import Schema, Relationship
 from marshmallow_jsonapi import fields
 from marshmallow import ValidationError
@@ -138,6 +137,8 @@ def computer_schema():
         id = fields.Integer(as_string=True, dump_only=True)
         serial = fields.Str(required=True)
         owner = Relationship(attribute='person',
+                             default=None,
+                             missing=None,
                              related_view='api.person_detail',
                              related_view_kwargs={'person_id': '<person.person_id>'},
                              schema='PersonSchema',
@@ -602,6 +603,8 @@ def test_get_relationship_single_empty(session, client, register_routes, compute
     with client:
         response = client.get('/computers/' + str(computer.id) + '/relationships/owner',
                               content_type='application/vnd.api+json')
+        response_json = json.loads(response.get_data())
+        assert None is response_json['data']
         assert response.status_code == 200
 
 
@@ -691,7 +694,7 @@ def test_delete_relationship(session, client, register_routes, computer, person)
 
 def test_delete_relationship_single(session, client, register_routes, computer, person):
     session_ = session
-    computer.owner = person
+    computer.person = person
     session_.commit()
 
     payload = {
