@@ -56,7 +56,7 @@ class SqlalchemyDataLayer(BaseDataLayer):
         """
         self.before_get_object(view_kwargs)
 
-        id_field = getattr(self, 'id_field', inspect(self.model).primary_key[0].name)
+        id_field = getattr(self, 'id_field', inspect(self.model).primary_key[0].key)
         try:
             filter_field = getattr(self.model, id_field)
         except Exception:
