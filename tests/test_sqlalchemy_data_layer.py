@@ -117,7 +117,7 @@ def person_schema():
             type_ = 'person'
             self_view = 'api.person_detail'
             self_view_kwargs = {'person_id': '<id>'}
-        id = fields.Str(dump_only=True, attribute='person_id')
+        id = fields.Integer(as_string=True, dump_only=True, attribute='person_id')
         name = fields.Str(required=True)
         birth_date = fields.DateTime()
         computers = Relationship(related_view='api.computer_list',
@@ -135,7 +135,7 @@ def computer_schema():
             type_ = 'computer'
             self_view = 'api.computer_detail'
             self_view_kwargs = {'id': '<id>'}
-        id = fields.Str(dump_only=True)
+        id = fields.Integer(as_string=True, dump_only=True)
         serial = fields.Str(required=True)
         owner = Relationship(attribute='person',
                              related_view='api.person_detail',
@@ -730,7 +730,7 @@ def test_wrong_accept_header(client, register_routes):
         response = client.get('/persons', content_type='application/vnd.api+json', headers={'Accept': 'error'})
         assert response.status_code == 406
 
-        
+
 # test Content-Type error
 def test_wrong_content_type(client, register_routes):
     with client:

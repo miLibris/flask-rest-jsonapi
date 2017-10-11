@@ -45,7 +45,7 @@ Now let's create the logical abstraction to illustrate this concept.
             self_view_kwargs = {'id': '<id>'}
             self_view_many = 'person_list'
 
-        id = fields.Str(dump_only=True)
+        id = fields.Integer(as_string=True, dump_only=True)
         name = fields.Str(required=True, load_only=True)
         email = fields.Email(load_only=True)
         birth_date = fields.Date()
@@ -65,7 +65,7 @@ Now let's create the logical abstraction to illustrate this concept.
             self_view = 'computer_detail'
             self_view_kwargs = {'id': '<id>'}
 
-        id = fields.Str(dump_only=True, attribute='computer_id')
+        id = fields.Str(as_string=True, dump_only=True, attribute='computer_id')
         serial = fields.Str(required=True)
         owner = Relationship(attribute='person',
                              self_view='computer_person',

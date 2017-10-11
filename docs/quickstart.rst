@@ -62,7 +62,7 @@ An example of Flask-REST-JSONAPI API looks like this:
             self_view_kwargs = {'id': '<id>'}
             self_view_many = 'person_list'
 
-        id = fields.Str(dump_only=True)
+        id = fields.Integer(as_string=True, dump_only=True)
         name = fields.Str(requried=True, load_only=True)
         email = fields.Email(load_only=True)
         birth_date = fields.Date()
@@ -82,7 +82,7 @@ An example of Flask-REST-JSONAPI API looks like this:
             self_view = 'computer_detail'
             self_view_kwargs = {'id': '<id>'}
 
-        id = fields.Str(dump_only=True)
+        id = fields.Integer(as_string=True, dump_only=True)
         serial = fields.Str(requried=True)
         owner = Relationship(attribute='person',
                              self_view='computer_person',
@@ -258,7 +258,7 @@ Request:
     POST /computers HTTP/1.1
     Content-Type: application/vnd.api+json
     Accept: application/vnd.api+json
- 
+
     {
       "data": {
         "type": "computer",
@@ -452,7 +452,7 @@ Request:
     POST /persons?include=computers HTTP/1.1
     Content-Type: application/vnd.api+json
     Accept: application/vnd.api+json
- 
+
     {
       "data": {
         "type": "person",
@@ -555,7 +555,7 @@ Request:
     PATCH /persons/1?include=computers HTTP/1.1
     Content-Type: application/vnd.api+json
     Accept: application/vnd.api+json
- 
+
     {
       "data": {
         "type": "person",
@@ -649,7 +649,7 @@ Request:
     POST /persons/1/relationships/computers HTTP/1.1
     Content-Type: application/vnd.api+json
     Accept: application/vnd.api+json
- 
+
     {
       "data": [
         {
@@ -755,7 +755,7 @@ Request:
     DELETE /persons/1/relationships/computers HTTP/1.1
     Content-Type: application/vnd.api+json
     Accept: application/vnd.api+json
- 
+
     {
       "data": [
         {
