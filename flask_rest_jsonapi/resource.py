@@ -302,23 +302,14 @@ class ResourceRelationship(with_metaclass(ResourceMeta, Resource)):
         self.before_get(args, kwargs)
 
         relationship_field, model_relationship_field, related_type_, related_id_field = self._get_relationship_data()
-        related_view = self.schema._declared_fields[relationship_field].related_view
-        related_view_kwargs = self.schema._declared_fields[relationship_field].related_view_kwargs
 
         obj, data = self._data_layer.get_relationship(model_relationship_field,
                                                       related_type_,
                                                       related_id_field,
                                                       kwargs)
 
-        for key, value in copy(related_view_kwargs).items():
-            if isinstance(value, str) and value.startswith('<') and value.endswith('>'):
-                tmp_obj = obj
-                for field in value[1:-1].split('.'):
-                    tmp_obj = getattr(tmp_obj, field)
-                related_view_kwargs[key] = tmp_obj
-
         result = {'links': {'self': request.path,
-                            'related': url_for(related_view, **related_view_kwargs)},
+                            'related': self.schema._declared_fields[relationship_field].get_related_url(obj)},
                   'data': data}
 
         qs = QSManager(request.args, self.schema)

@@ -608,6 +608,15 @@ def test_get_relationship_single_empty(session, client, register_routes, compute
         assert response.status_code == 200
 
 
+def test_issue_49(session, client, register_routes, person, person_2):
+    with client:
+        for p in [person, person_2]:
+            response = client.get('/persons/' + str(p.person_id) + '/relationships/computers?include=computers',
+                                  content_type='application/vnd.api+json')
+            assert response.status_code == 200
+            assert (json.loads(response.get_data()))['links']['related'] == '/persons/' + str(p.person_id) + '/computers'
+
+
 def test_post_relationship(client, register_routes, computer, person):
     payload = {
         'data': [
