@@ -57,6 +57,7 @@ Flask-REST-JSONAPI with Flask.
    api
    permission
    oauth
+   configuration
 
 API Reference
 -------------

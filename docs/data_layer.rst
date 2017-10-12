@@ -100,6 +100,8 @@ Optional parameters:
     :id_field: the field used as identifier field instead of the primary key of the model
     :url_field: the name of the parameter in the route to get value to filter with. Instead "id" is used.
 
+By default SQLAlchemy eagerload related data specified in include querystring parameter. If you want to disable this feature you must add eagerload_includes: False to data layer parameters.
+
 Custom data layer
 -----------------
 

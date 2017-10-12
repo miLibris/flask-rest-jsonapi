@@ -826,4 +826,4 @@ Response:
       }
     }
 
-If you want to see more examples to go `JSON API 1.0 specification <http://jsonapi.org/>`_
+If you want to see more examples go to `JSON API 1.0 specification <http://jsonapi.org/>`_
