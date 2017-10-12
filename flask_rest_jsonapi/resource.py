@@ -1,8 +1,9 @@
 # -*- coding: utf-8 -*-
 
+"""This module contains the logic of resource management"""
+
 import inspect
 import json
-from copy import copy
 from six import with_metaclass
 
 from werkzeug.wrappers import Response
@@ -22,8 +23,10 @@ from flask_rest_jsonapi.data_layers.alchemy import SqlalchemyDataLayer
 
 
 class ResourceMeta(MethodViewType):
+    """Meta class to initilize the data layer and decorators of a resource"""
 
     def __new__(cls, name, bases, d):
+        """Constructor of a resource class"""
         rv = super(ResourceMeta, cls).__new__(cls, name, bases, d)
         if 'data_layer' in d:
             if not isinstance(d['data_layer'], dict):
@@ -46,14 +49,17 @@ class ResourceMeta(MethodViewType):
 
 
 class Resource(MethodView):
+    """Base resource class"""
 
     def __new__(cls):
+        """Constructor of a resource instance"""
         if hasattr(cls, '_data_layer'):
             cls._data_layer.resource = cls
 
         return super(Resource, cls).__new__(cls)
 
     def dispatch_request(self, *args, **kwargs):
+        """Logic of how to handle a request"""
         method = getattr(self, request.method.lower(), None)
         if method is None and request.method == 'HEAD':
             method = getattr(self, 'get', None)
@@ -102,11 +108,11 @@ class Resource(MethodView):
 
 
 class ResourceList(with_metaclass(ResourceMeta, Resource)):
+    """Base class of a resource list manager"""
 
     @check_method_requirements
     def get(self, *args, **kwargs):
-        """Retrieve a collection of objects
-        """
+        """Retrieve a collection of objects"""
         self.before_get(args, kwargs)
 
         qs = QSManager(request.args, self.schema)
@@ -131,12 +137,12 @@ class ResourceList(with_metaclass(ResourceMeta, Resource)):
         result.update({'meta': {'count': objects_count}})
 
         self.after_get(result)
+
         return result
 
     @check_method_requirements
     def post(self, *args, **kwargs):
-        """Create an object
-        """
+        """Create an object"""
         json_data = request.get_json()
 
         qs = QSManager(request.args, self.schema)
@@ -172,28 +178,34 @@ class ResourceList(with_metaclass(ResourceMeta, Resource)):
         obj = self._data_layer.create_object(data, kwargs)
 
         result = schema.dump(obj).data
+
         self.after_post(result)
+
         return result, 201, {'Location': result['data']['links']['self']}
 
     def before_get(self, args, kwargs):
+        """Hook to make custom work before get method"""
         pass
 
     def after_get(self, result):
+        """Hook to make custom work after get method"""
         pass
 
     def before_post(self, args, kwargs, data=None):
+        """Hook to make custom work before post method"""
         pass
 
     def after_post(self, result):
+        """Hook to make custom work after post method"""
         pass
 
 
 class ResourceDetail(with_metaclass(ResourceMeta, Resource)):
+    """Base class of a resource detail manager"""
 
     @check_method_requirements
     def get(self, *args, **kwargs):
-        """Get object details
-        """
+        """Get object details"""
         self.before_get(args, kwargs)
 
         obj = self._data_layer.get_object(kwargs)
@@ -208,12 +220,12 @@ class ResourceDetail(with_metaclass(ResourceMeta, Resource)):
         result = schema.dump(obj).data
 
         self.after_get(result)
+
         return result
 
     @check_method_requirements
     def patch(self, *args, **kwargs):
-        """Update an object
-        """
+        """Update an object"""
         json_data = request.get_json()
 
         qs = QSManager(request.args, self.schema)
@@ -259,46 +271,54 @@ class ResourceDetail(with_metaclass(ResourceMeta, Resource)):
         result = schema.dump(obj).data
 
         self.after_patch(result)
+
         return result
 
     @check_method_requirements
     def delete(self, *args, **kwargs):
-        """Delete an object
-        """
+        """Delete an object"""
         self.before_delete(args, kwargs)
 
         obj = self._data_layer.get_object(kwargs)
         self._data_layer.delete_object(obj, kwargs)
 
         result = {'meta': {'message': 'Object successfully deleted'}}
+
         self.after_delete(result)
+
         return result
 
     def before_get(self, args, kwargs):
+        """Hook to make custom work before get method"""
         pass
 
     def after_get(self, result):
+        """Hook to make custom work after get method"""
         pass
 
     def before_patch(self, args, kwargs, data=None):
+        """Hook to make custom work before patch method"""
         pass
 
     def after_patch(self, result):
+        """Hook to make custom work after patch method"""
         pass
 
     def before_delete(self, args, kwargs):
+        """Hook to make custom work before delete method"""
         pass
 
     def after_delete(self, result):
+        """Hook to make custom work after delete method"""
         pass
 
 
 class ResourceRelationship(with_metaclass(ResourceMeta, Resource)):
+    """Base class of a resource relationship manager"""
 
     @check_method_requirements
     def get(self, *args, **kwargs):
-        """Get a relationship details
-        """
+        """Get a relationship details"""
         self.before_get(args, kwargs)
 
         relationship_field, model_relationship_field, related_type_, related_id_field = self._get_relationship_data()
@@ -320,12 +340,12 @@ class ResourceRelationship(with_metaclass(ResourceMeta, Resource)):
             result['included'] = serialized_obj.data.get('included', dict())
 
         self.after_get(result)
+
         return result
 
     @check_method_requirements
     def post(self, *args, **kwargs):
-        """Add / create relationship(s)
-        """
+        """Add / create relationship(s)"""
         json_data = request.get_json()
 
         relationship_field, model_relationship_field, related_type_, related_id_field = self._get_relationship_data()
@@ -367,13 +387,14 @@ class ResourceRelationship(with_metaclass(ResourceMeta, Resource)):
         result = schema.dump(obj_).data
         if result.get('links', {}).get('self') is not None:
             result['links']['self'] = request.path
+
         self.after_post(result)
+
         return result, 200
 
     @check_method_requirements
     def patch(self, *args, **kwargs):
-        """Update a relationship
-        """
+        """Update a relationship"""
         json_data = request.get_json()
 
         relationship_field, model_relationship_field, related_type_, related_id_field = self._get_relationship_data()
@@ -415,13 +436,14 @@ class ResourceRelationship(with_metaclass(ResourceMeta, Resource)):
         result = schema.dump(obj_).data
         if result.get('links', {}).get('self') is not None:
             result['links']['self'] = request.path
+
         self.after_patch(result)
+
         return result, 200
 
     @check_method_requirements
     def delete(self, *args, **kwargs):
-        """Delete relationship(s)
-        """
+        """Delete relationship(s)"""
         json_data = request.get_json()
 
         relationship_field, model_relationship_field, related_type_, related_id_field = self._get_relationship_data()
@@ -461,15 +483,16 @@ class ResourceRelationship(with_metaclass(ResourceMeta, Resource)):
         result = schema.dump(obj_).data
         if result.get('links', {}).get('self') is not None:
             result['links']['self'] = request.path
+
         self.after_delete(result)
+
         return result, status_code
 
     def _get_relationship_data(self):
-        """Get useful data for relationship management
-        """
+        """Get useful data for relationship management"""
         relationship_field = request.path.split('/')[-1]
 
-        if relationship_field not in get_relationships(self.schema).values():
+        if relationship_field not in get_relationships(self.schema):
             raise RelationNotFound('', "{} has no attribute {}".format(self.schema.__name__, relationship_field))
 
         related_type_ = self.schema._declared_fields[relationship_field].type_
@@ -479,25 +502,33 @@ class ResourceRelationship(with_metaclass(ResourceMeta, Resource)):
         return relationship_field, model_relationship_field, related_type_, related_id_field
 
     def before_get(self, args, kwargs):
+        """Hook to make custom work before get method"""
         pass
 
     def after_get(self, result):
+        """Hook to make custom work after get method"""
         pass
 
     def before_post(self, args, kwargs, json_data=None):
+        """Hook to make custom work before post method"""
         pass
 
     def after_post(self, result):
+        """Hook to make custom work after post method"""
         pass
 
     def before_patch(self, args, kwargs, json_data=None):
+        """Hook to make custom work before patch method"""
         pass
 
     def after_patch(self, result):
+        """Hook to make custom work after patch method"""
         pass
 
     def before_delete(self, args, kwargs, json_data=None):
+        """Hook to make custom work before delete method"""
         pass
 
     def after_delete(self, result):
+        """Hook to make custom work after delete method"""
         pass

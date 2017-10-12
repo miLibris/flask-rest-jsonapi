@@ -1,14 +1,17 @@
 # -*- coding: utf-8 -*-
 
+"""Helper to deal with querystring parameters according to jsonapi specification"""
+
 import json
 
-from flask_rest_jsonapi.exceptions import BadRequest, InvalidFilters, InvalidSort
-from flask_rest_jsonapi.schema import get_model_field, get_relationships
+from flask import current_app
+
+from flask_rest_jsonapi.exceptions import BadRequest, InvalidFilters, InvalidSort, InvalidField, InvalidInclude
+from flask_rest_jsonapi.schema import get_model_field, get_relationships, get_schema_from_type
 
 
 class QueryStringManager(object):
-    """Querystring parser according to jsonapi reference
-    """
+    """Querystring parser according to jsonapi reference"""
 
     MANAGED_KEYS = (
         'filter',
@@ -24,7 +27,7 @@ class QueryStringManager(object):
         :param dict querystring: query string dict from request.args
         """
         if not isinstance(querystring, dict):
-            raise ValueError('QueryStringManager require a dict-like object query_string parameter')
+            raise ValueError('QueryStringManager require a dict-like object querystring parameter')
 
         self.qs = querystring
         self.schema = schema
@@ -108,6 +111,11 @@ class QueryStringManager(object):
             except ValueError:
                 raise BadRequest({'parameter': 'page[{}]'.format(key)}, "Parse error")
 
+        if current_app.config.get('MAX_PAGE_SIZE') is not None and 'size' in result:
+            if int(result['size']) > current_app.config['MAX_PAGE_SIZE']:
+                raise BadRequest({'parameter': 'page[size]'},
+                                 "Maximum page size is {}".format(current_app.config['MAX_PAGE_SIZE']))
+
         return result
 
     @property
@@ -127,6 +135,12 @@ class QueryStringManager(object):
         for key, value in result.items():
             if not isinstance(value, list):
                 result[key] = [value]
+
+        for key, value in result.items():
+            schema = get_schema_from_type(key)
+            for obj in value:
+                if obj not in schema._declared_fields:
+                    raise InvalidField("{} has no attribute {}".format(schema.__name__, obj))
 
         return result
 
@@ -150,7 +164,7 @@ class QueryStringManager(object):
                 field = sort_field.replace('-', '')
                 if field not in self.schema._declared_fields:
                     raise InvalidSort("{} has no attribute {}".format(self.schema.__name__, field))
-                if field in get_relationships(self.schema).values():
+                if field in get_relationships(self.schema):
                     raise InvalidSort("You can't sort on {} because it is a relationship field".format(field))
                 field = get_model_field(self.schema, field)
                 order = 'desc' if sort_field.startswith('-') else 'asc'
@@ -166,4 +180,11 @@ class QueryStringManager(object):
         :return list: a list of include information
         """
         include_param = self.qs.get('include')
+
+        if current_app.config.get('MAX_INCLUDE_DEPTH') is not None:
+            for include_path in include_param:
+                if len(include_path.split('.')) > current_app.config['MAX_INCLUDE_DEPTH']:
+                    raise InvalidInclude("You can't use include through more than {} relationships"
+                                         .format(current_app.config['MAX_INCLUDE_DEPTH']))
+
         return include_param.split(',') if include_param else []

@@ -1,10 +1,12 @@
 # -*- coding: utf-8 -*-
 
+"""Helper to create pagination links according to jsonapi specification"""
+
 from six.moves.urllib.parse import urlencode
 from math import ceil
 from copy import copy
 
-from flask_rest_jsonapi.constants import DEFAULT_PAGE_SIZE
+from flask import current_app
 
 
 def add_pagination_links(data, object_count, querystring, base_url):
@@ -26,7 +28,7 @@ def add_pagination_links(data, object_count, querystring, base_url):
 
     if querystring.pagination.get('size') != '0' and object_count > 1:
         # compute last link
-        page_size = int(querystring.pagination.get('size', 0)) or DEFAULT_PAGE_SIZE
+        page_size = int(querystring.pagination.get('size', 0)) or current_app.config['PAGE_SIZE']
         last_page = int(ceil(object_count / page_size))
 
         if last_page > 1:

@@ -1,20 +1,30 @@
 # -*- coding: utf-8 -*-
 
+"""This module is a CRUD interface between resource managers and the sqlalchemy ORM"""
+
 from sqlalchemy.orm.exc import NoResultFound
 from sqlalchemy.orm.collections import InstrumentedList
 from sqlalchemy.inspection import inspect
+from sqlalchemy.orm import joinedload
+from marshmallow import class_registry
+from marshmallow.base import SchemaABC
 
-from flask_rest_jsonapi.constants import DEFAULT_PAGE_SIZE
+from flask import current_app
 from flask_rest_jsonapi.data_layers.base import BaseDataLayer
 from flask_rest_jsonapi.exceptions import RelationNotFound, RelatedObjectNotFound, JsonApiException,\
     InvalidSort, ObjectNotFound
 from flask_rest_jsonapi.data_layers.filtering.alchemy import create_filters
-from flask_rest_jsonapi.schema import get_relationships
+from flask_rest_jsonapi.schema import get_model_field, get_related_schema, get_relationships
 
 
 class SqlalchemyDataLayer(BaseDataLayer):
+    """Sqlalchemy data layer"""
 
     def __init__(self, kwargs):
+        """Initialize an instance of SqlalchemyDataLayer
+
+        :param dict kwargs: initialization parameters of an SqlalchemyDataLayer instance
+        """
         super(SqlalchemyDataLayer, self).__init__(kwargs)
 
         if not hasattr(self, 'session'):
@@ -34,7 +44,8 @@ class SqlalchemyDataLayer(BaseDataLayer):
         self.before_create_object(data, view_kwargs)
 
         relationship_fields = get_relationships(self.resource.schema)
-        obj = self.model(**{key: value for (key, value) in data.items() if key not in relationship_fields})
+        obj = self.model(**{get_model_field(self.resource.schema, key): value
+                            for (key, value) in data.items() if key not in relationship_fields})
         self.apply_relationships(data, obj)
 
         self.session.add(obj)
@@ -93,11 +104,14 @@ class SqlalchemyDataLayer(BaseDataLayer):
 
         object_count = query.count()
 
+        if getattr(self, 'eagerload_includes', True):
+            query = self.eagerload_includes(query, qs)
+
         query = self.paginate_query(query, qs.pagination)
 
         collection = query.all()
 
-        self.after_get_collection(collection, qs, view_kwargs)
+        collection = self.after_get_collection(collection, qs, view_kwargs)
 
         return object_count, collection
 
@@ -119,8 +133,8 @@ class SqlalchemyDataLayer(BaseDataLayer):
 
         relationship_fields = get_relationships(self.resource.schema)
         for key, value in data.items():
-            if hasattr(obj, key) and key not in relationship_fields:
-                setattr(obj, key, value)
+            if hasattr(obj, get_model_field(self.resource.schema, key)) and key not in relationship_fields:
+                setattr(obj, get_model_field(self.resource.schema, key), value)
 
         self.apply_relationships(data, obj)
 
@@ -380,11 +394,13 @@ class SqlalchemyDataLayer(BaseDataLayer):
         :param DeclarativeMeta obj: the sqlalchemy object to plug relationships to
         :return boolean: True if relationship have changed else False
         """
+        relationships_to_apply = []
         relationship_fields = get_relationships(self.resource.schema)
         for key, value in data.items():
             if key in relationship_fields:
-                related_model = getattr(obj.__class__, key).property.mapper.class_
-                related_id_field = self.resource.schema._declared_fields[relationship_fields[key]].id_field
+                related_model = getattr(obj.__class__,
+                                        get_model_field(self.resource.schema, key)).property.mapper.class_
+                related_id_field = self.resource.schema._declared_fields[key].id_field
 
                 if isinstance(value, list):
                     related_objects = []
@@ -393,14 +409,17 @@ class SqlalchemyDataLayer(BaseDataLayer):
                         related_object = self.get_related_object(related_model, related_id_field, {'id': identifier})
                         related_objects.append(related_object)
 
-                    setattr(obj, key, related_objects)
+                    relationships_to_apply.append({'field': key, 'value': related_objects})
                 else:
                     related_object = None
 
                     if value is not None:
                         related_object = self.get_related_object(related_model, related_id_field, {'id': value})
 
-                    setattr(obj, key, related_object)
+                    relationships_to_apply.append({'field': key, 'value': related_object})
+
+        for relationship in relationships_to_apply:
+            setattr(obj, get_model_field(self.resource.schema, relationship['field']), relationship['value'])
 
     def filter_query(self, query, filter_info, model):
         """Filter query according to jsonapi 1.0
@@ -441,10 +460,46 @@ class SqlalchemyDataLayer(BaseDataLayer):
         if int(paginate_info.get('size', 1)) == 0:
             return query
 
-        page_size = int(paginate_info.get('size', 0)) or DEFAULT_PAGE_SIZE
+        page_size = int(paginate_info.get('size', 0)) or current_app.config['PAGE_SIZE']
         query = query.limit(page_size)
         if paginate_info.get('number'):
             query = query.offset((int(paginate_info['number']) - 1) * page_size)
+
+        return query
+
+    def eagerload_includes(self, query, qs):
+        """Use eagerload feature of sqlalchemy to optimize data retrieval for include querystring parameter
+
+        :param Query query: sqlalchemy queryset
+        :param QueryStringManager qs: a querystring manager to retrieve information from url
+        :return Query: the query with includes eagerloaded
+        """
+        for include in qs.include:
+            joinload_object = None
+
+            if '.' in include:
+                current_schema = self.resource.schema
+                for obj in include.split('.'):
+                    field = get_model_field(current_schema, obj)
+
+                    if joinload_object is None:
+                        joinload_object = joinedload(field, innerjoin=True)
+                    else:
+                        joinload_object = joinload_object.joinedload(field, innerjoin=True)
+
+                    related_schema_cls = get_related_schema(current_schema, obj)
+
+                    if isinstance(related_schema_cls, SchemaABC):
+                        related_schema_cls = related_schema_cls.__class__
+                    else:
+                        related_schema_cls = class_registry.get_class(related_schema_cls)
+
+                    current_schema = related_schema_cls
+            else:
+                field = get_model_field(self.resource.schema, include)
+                joinload_object = joinedload(field, innerjoin=True)
+
+            query = query.options(joinload_object)
 
         return query
 
@@ -502,7 +557,7 @@ class SqlalchemyDataLayer(BaseDataLayer):
         :param QueryStringManager qs: a querystring manager to retrieve information from url
         :param dict view_kwargs: kwargs from the resource view
         """
-        pass
+        return collection
 
     def before_update_object(self, obj, data, view_kwargs):
         """Make checks or provide additional data before update object

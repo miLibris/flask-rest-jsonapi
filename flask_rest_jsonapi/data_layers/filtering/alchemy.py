@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 
+"""Helper to create sqlalchemy filters according to filter querystring parameter"""
+
 from sqlalchemy import and_, or_, not_
 
 from flask_rest_jsonapi.exceptions import InvalidFilters
@@ -21,14 +23,23 @@ def create_filters(model, filter_info, resource):
 
 
 class Node(object):
+    """Helper to recursively create filters with sqlalchemy according to filter querystring parameter"""
 
     def __init__(self, model, filter_, resource, schema):
+        """Initialize an instance of a filter node
+
+        :param Model model: an sqlalchemy model
+        :param dict filter_: filters information of the current node and deeper nodes
+        :param Resource resource: the base resource to apply filters on
+        :param Schema schema: the serializer of the resource
+        """
         self.model = model
         self.filter_ = filter_
         self.resource = resource
         self.schema = schema
 
     def resolve(self):
+        """Create filter for a particular node of the filter tree"""
         if 'or' not in self.filter_ and 'and' not in self.filter_ and 'not' not in self.filter_:
             value = self.value
 
@@ -138,12 +149,10 @@ class Node(object):
         """
         relationship_field = self.name
 
-        if relationship_field not in get_relationships(self.schema).values():
+        if relationship_field not in get_relationships(self.schema):
             raise InvalidFilters("{} has no relationship attribute {}".format(self.schema.__name__, relationship_field))
 
-        relationship_model_field = get_model_field(self.schema, relationship_field)
-
-        return getattr(self.model, relationship_model_field).property.mapper.class_
+        return getattr(self.model, get_model_field(self.schema, relationship_field)).property.mapper.class_
 
     @property
     def related_schema(self):
@@ -153,7 +162,7 @@ class Node(object):
         """
         relationship_field = self.name
 
-        if relationship_field not in get_relationships(self.schema).values():
+        if relationship_field not in get_relationships(self.schema):
             raise InvalidFilters("{} has no relationship attribute {}".format(self.schema.__name__, relationship_field))
 
         return self.schema._declared_fields[relationship_field].schema.__class__

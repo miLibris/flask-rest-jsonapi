@@ -1,5 +1,9 @@
 # -*- coding: utf-8 -*-
 
+"""This module contains the main class of the Api to initialize the Api, plug default decorators for each resources
+methods, speficy which blueprint to use, define the Api routes and plug additional oauth manager and permission manager
+"""
+
 import inspect
 from functools import wraps
 
@@ -7,8 +11,15 @@ from flask_rest_jsonapi.resource import ResourceList
 
 
 class Api(object):
+    """The main class of the Api"""
 
     def __init__(self, app=None, blueprint=None, decorators=None):
+        """Initialize an instance of the Api
+
+        :param app: the flask application
+        :param blueprint: a flask blueprint
+        :param tuple decorators: a tuple of decorators plugged to each resource methods
+        """
         self.app = app
         self.blueprint = blueprint
         self.resources = []
@@ -34,6 +45,8 @@ class Api(object):
 
         if self.blueprint is not None:
             self.app.register_blueprint(self.blueprint)
+
+        self.app.config.setdefault('PAGE_SIZE', 30)
 
     def route(self, resource, view, *urls, **kwargs):
         """Create an api view.
@@ -122,8 +135,7 @@ class Api(object):
                             self.has_permission()(getattr(resource, method.lower())))
 
     def has_permission(self, *args, **kwargs):
-        """Decorator used to check permissions before to call resource manager method
-        """
+        """Decorator used to check permissions before to call resource manager method"""
         def wrapper(view):
             if getattr(view, '_has_permissions_decorator', False) is True:
                 return view

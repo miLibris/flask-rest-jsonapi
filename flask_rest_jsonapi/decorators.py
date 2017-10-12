@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 
+"""Decorators to check headers and method requirements for each Api calls"""
+
 import json
 from functools import wraps
 
@@ -23,7 +25,7 @@ def check_headers(func):
                                                     'title': 'InvalidRequestHeader',
                                                     'status': 415}]))
                 return make_response(error, 415, {'Content-Type': 'application/vnd.api+json'})
-        if request.headers.get('Accept') and not 'application/vnd.api+json' in request.accept_mimetypes:
+        if request.headers.get('Accept') and 'application/vnd.api+json' not in request.accept_mimetypes:
             error = json.dumps(jsonapi_errors([{'source': '',
                                                 'detail': "Accept header must be application/vnd.api+json",
                                                 'title': 'InvalidRequestHeader',

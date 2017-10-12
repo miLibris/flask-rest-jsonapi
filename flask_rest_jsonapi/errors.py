@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 
+"""Helper to  format Api errors according to jsonapi specification"""
+
 
 def jsonapi_errors(jsonapi_errors):
     """Construct api error according to jsonapi 1.0

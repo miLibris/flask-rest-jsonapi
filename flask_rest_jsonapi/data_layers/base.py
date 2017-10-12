@@ -1,9 +1,12 @@
 # -*- coding: utf-8 -*-
 
+"""The base class of a data layer. If you want to create your own data layer you must inherite from this base class"""
+
 import types
 
 
 class BaseDataLayer(object):
+    """Base class of a data layer"""
 
     ADDITIONAL_METHODS = ('query',
                           'before_create_object',

@@ -1,10 +1,12 @@
 # -*- coding: utf-8 -*-
 
+"""Helpers to deal with marshmallow schemas"""
+
 from marshmallow import class_registry
 from marshmallow.base import SchemaABC
 from marshmallow_jsonapi.fields import Relationship
 
-from flask_rest_jsonapi.exceptions import InvalidField, InvalidInclude
+from flask_rest_jsonapi.exceptions import InvalidInclude
 
 
 def compute_schema(schema_cls, default_kwargs, qs, include):
@@ -27,10 +29,12 @@ def compute_schema(schema_cls, default_kwargs, qs, include):
     if include:
         for include_path in include:
             field = include_path.split('.')[0]
+
             if field not in schema_cls._declared_fields:
                 raise InvalidInclude("{} has no attribute {}".format(schema_cls.__name__, field))
             elif not isinstance(schema_cls._declared_fields[field], Relationship):
                 raise InvalidInclude("{} is not a relationship attribute of {}".format(field, schema_cls.__name__))
+
             schema_kwargs['include_data'] += (field, )
             if field not in related_includes:
                 related_includes[field] = []
@@ -46,11 +50,6 @@ def compute_schema(schema_cls, default_kwargs, qs, include):
 
     # manage sparse fieldsets
     if schema.opts.type_ in qs.fields:
-        # check that sparse fieldsets exists in the schema
-        for field in qs.fields[schema.opts.type_]:
-            if field not in schema.declared_fields:
-                raise InvalidField("{} has no attribute {}".format(schema.__class__.__name__, field))
-
         tmp_only = set(schema.declared_fields.keys()) & set(qs.fields[schema.opts.type_])
         if schema.only:
             tmp_only &= set(schema.only)
@@ -72,7 +71,10 @@ def compute_schema(schema_cls, default_kwargs, qs, include):
                 related_schema_cls = related_schema_cls.__class__
             if isinstance(related_schema_cls, str):
                 related_schema_cls = class_registry.get_class(related_schema_cls)
-            related_schema = compute_schema(related_schema_cls, related_schema_kwargs, qs, related_includes[field] or None)
+            related_schema = compute_schema(related_schema_cls,
+                                            related_schema_kwargs,
+                                            qs,
+                                            related_includes[field] or None)
             relation_field.__dict__['_Relationship__schema'] = related_schema
 
     return schema
@@ -85,16 +87,44 @@ def get_model_field(schema, field):
     :param str field: the name of the schema field
     :return str: the name of the field in the model
     """
+    if schema._declared_fields.get(field) is None:
+        raise Exception("{} has no attribute {}".format(schema.__name__, field))
+
     if schema._declared_fields[field].attribute is not None:
         return schema._declared_fields[field].attribute
     return field
 
 
 def get_relationships(schema):
-    """Return relationship mapping from schema to model
+    """Return relationship fields of a schema
 
     :param Schema schema: a marshmallow schema
-    :param list: list of dict with schema field and model field
+    :param list: list of relationship fields of a schema
     """
-    return {get_model_field(schema, key): key for (key, value) in schema._declared_fields.items()
-            if isinstance(value, Relationship)}
+    return [key for (key, value) in schema._declared_fields.items() if isinstance(value, Relationship)]
+
+
+def get_related_schema(schema, field):
+    """Retrieve the related schema of a relationship field
+
+    :param Schema schema: the schema to retrieve le relationship field from
+    :param field: the relationship field
+    :return Schema: the related schema
+    """
+    return schema._declared_fields[field].__dict__['_Relationship__schema']
+
+
+def get_schema_from_type(resource_type):
+    """Retrieve a schema from the registry by his type
+
+    :param str type_: the type of the resource
+    :return Schema: the schema class
+    """
+    for cls_name, cls in class_registry._registry.items():
+        try:
+            if cls[0].opts.type_ == resource_type:
+                return cls[0]
+        except Exception:
+            pass
+
+    raise Exception("Couldn't find schema for type: {}".format(resource_type))
