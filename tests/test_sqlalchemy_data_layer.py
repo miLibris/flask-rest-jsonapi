@@ -328,10 +328,11 @@ def get_object_mock():
     return get_object
 
 
-def test_add_pagination_links():
-    qs = {'page[number]': '15', 'page[size]': '10'}
-    qsm = QSManager(qs, None)
-    add_pagination_links(dict(), 1000, qsm, str())
+def test_add_pagination_links(app):
+    with app.app_context():
+        qs = {'page[number]': '15', 'page[size]': '10'}
+        qsm = QSManager(qs, None)
+        add_pagination_links(dict(), 1000, qsm, str())
 
 
 def test_Node(person_model, person_schema, monkeypatch):
@@ -390,33 +391,35 @@ def test_query_string_manager(person_schema):
         qsm.sorting
 
 
-def test_resource(person_model, person_schema, session, monkeypatch):
+def test_resource(app, person_model, person_schema, session, monkeypatch):
     def schema_load_mock(*args):
         raise ValidationError(dict(errors=[dict(status=None, title=None)]))
-    query_string = {'page[slumber]': '3'}
-    app = type('app', (object,), dict(config=dict(DEBUG=True)))
-    headers = {'Content-Type': 'application/vnd.api+json'}
-    request = type('request', (object,), dict(method='POST',
-                                              headers=headers,
-                                              get_json=dict,
-                                              args=query_string))
-    dl = SqlalchemyDataLayer(dict(session=session, model=person_model))
-    rl = ResourceList()
-    rd = ResourceDetail()
-    rl._data_layer = dl
-    rl.schema = person_schema
-    rd._data_layer = dl
-    rd.schema = person_schema
-    monkeypatch.setattr(flask_rest_jsonapi.resource, 'request', request)
-    monkeypatch.setattr(flask_rest_jsonapi.resource, 'current_app', app)
-    monkeypatch.setattr(flask_rest_jsonapi.decorators, 'request', request)
-    monkeypatch.setattr(rl.schema, 'load', schema_load_mock)
-    r = super(flask_rest_jsonapi.resource.Resource, ResourceList)\
-        .__new__(ResourceList)
-    with pytest.raises(Exception):
-        r.dispatch_request()
-    rl.post()
-    rd.patch()
+
+    with app.app_context():
+        query_string = {'page[slumber]': '3'}
+        app = type('app', (object,), dict(config=dict(DEBUG=True)))
+        headers = {'Content-Type': 'application/vnd.api+json'}
+        request = type('request', (object,), dict(method='POST',
+                                                  headers=headers,
+                                                  get_json=dict,
+                                                  args=query_string))
+        dl = SqlalchemyDataLayer(dict(session=session, model=person_model))
+        rl = ResourceList()
+        rd = ResourceDetail()
+        rl._data_layer = dl
+        rl.schema = person_schema
+        rd._data_layer = dl
+        rd.schema = person_schema
+        monkeypatch.setattr(flask_rest_jsonapi.resource, 'request', request)
+        monkeypatch.setattr(flask_rest_jsonapi.resource, 'current_app', app)
+        monkeypatch.setattr(flask_rest_jsonapi.decorators, 'request', request)
+        monkeypatch.setattr(rl.schema, 'load', schema_load_mock)
+        r = super(flask_rest_jsonapi.resource.Resource, ResourceList)\
+            .__new__(ResourceList)
+        with pytest.raises(Exception):
+            r.dispatch_request()
+        rl.post()
+        rd.patch()
 
 
 def test_compute_schema(person_schema):

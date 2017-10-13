@@ -12,9 +12,9 @@ from marshmallow.base import SchemaABC
 from flask import current_app
 from flask_rest_jsonapi.data_layers.base import BaseDataLayer
 from flask_rest_jsonapi.exceptions import RelationNotFound, RelatedObjectNotFound, JsonApiException,\
-    InvalidSort, ObjectNotFound
+    InvalidSort, ObjectNotFound, InvalidInclude
 from flask_rest_jsonapi.data_layers.filtering.alchemy import create_filters
-from flask_rest_jsonapi.schema import get_model_field, get_related_schema, get_relationships
+from flask_rest_jsonapi.schema import get_model_field, get_related_schema, get_relationships, get_schema_field
 
 
 class SqlalchemyDataLayer(BaseDataLayer):
@@ -43,8 +43,8 @@ class SqlalchemyDataLayer(BaseDataLayer):
         """
         self.before_create_object(data, view_kwargs)
 
-        relationship_fields = get_relationships(self.resource.schema)
-        obj = self.model(**{get_model_field(self.resource.schema, key): value
+        relationship_fields = get_relationships(self.resource.schema, model_field=True)
+        obj = self.model(**{key: value
                             for (key, value) in data.items() if key not in relationship_fields})
         self.apply_relationships(data, obj)
 
@@ -131,10 +131,10 @@ class SqlalchemyDataLayer(BaseDataLayer):
 
         self.before_update_object(obj, data, view_kwargs)
 
-        relationship_fields = get_relationships(self.resource.schema)
+        relationship_fields = get_relationships(self.resource.schema, model_field=True)
         for key, value in data.items():
-            if hasattr(obj, get_model_field(self.resource.schema, key)) and key not in relationship_fields:
-                setattr(obj, get_model_field(self.resource.schema, key), value)
+            if hasattr(obj, key) and key not in relationship_fields:
+                setattr(obj, key, value)
 
         self.apply_relationships(data, obj)
 
@@ -395,12 +395,12 @@ class SqlalchemyDataLayer(BaseDataLayer):
         :return boolean: True if relationship have changed else False
         """
         relationships_to_apply = []
-        relationship_fields = get_relationships(self.resource.schema)
+        relationship_fields = get_relationships(self.resource.schema, model_field=True)
         for key, value in data.items():
             if key in relationship_fields:
-                related_model = getattr(obj.__class__,
-                                        get_model_field(self.resource.schema, key)).property.mapper.class_
-                related_id_field = self.resource.schema._declared_fields[key].id_field
+                related_model = getattr(obj.__class__, key).property.mapper.class_
+                schema_field = get_schema_field(self.resource.schema, key)
+                related_id_field = self.resource.schema._declared_fields[schema_field].id_field
 
                 if isinstance(value, list):
                     related_objects = []
@@ -419,7 +419,7 @@ class SqlalchemyDataLayer(BaseDataLayer):
                     relationships_to_apply.append({'field': key, 'value': related_object})
 
         for relationship in relationships_to_apply:
-            setattr(obj, get_model_field(self.resource.schema, relationship['field']), relationship['value'])
+            setattr(obj, relationship['field'], relationship['value'])
 
     def filter_query(self, query, filter_info, model):
         """Filter query according to jsonapi 1.0
@@ -480,7 +480,10 @@ class SqlalchemyDataLayer(BaseDataLayer):
             if '.' in include:
                 current_schema = self.resource.schema
                 for obj in include.split('.'):
-                    field = get_model_field(current_schema, obj)
+                    try:
+                        field = get_model_field(current_schema, obj)
+                    except Exception as e:
+                        raise InvalidInclude(str(e))
 
                     if joinload_object is None:
                         joinload_object = joinedload(field, innerjoin=True)
@@ -496,7 +499,11 @@ class SqlalchemyDataLayer(BaseDataLayer):
 
                     current_schema = related_schema_cls
             else:
-                field = get_model_field(self.resource.schema, include)
+                try:
+                    field = get_model_field(self.resource.schema, include)
+                except Exception as e:
+                    raise InvalidInclude(str(e))
+
                 joinload_object = joinedload(field, innerjoin=True)
 
             query = query.options(joinload_object)

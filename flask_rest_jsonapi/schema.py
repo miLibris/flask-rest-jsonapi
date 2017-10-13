@@ -95,13 +95,18 @@ def get_model_field(schema, field):
     return field
 
 
-def get_relationships(schema):
+def get_relationships(schema, model_field=False):
     """Return relationship fields of a schema
 
     :param Schema schema: a marshmallow schema
     :param list: list of relationship fields of a schema
     """
-    return [key for (key, value) in schema._declared_fields.items() if isinstance(value, Relationship)]
+    relationships = [key for (key, value) in schema._declared_fields.items() if isinstance(value, Relationship)]
+
+    if model_field is True:
+        relationships = [get_model_field(schema, key) for key in relationships]
+
+    return relationships
 
 
 def get_related_schema(schema, field):
@@ -128,3 +133,18 @@ def get_schema_from_type(resource_type):
             pass
 
     raise Exception("Couldn't find schema for type: {}".format(resource_type))
+
+
+def get_schema_field(schema, field):
+    """Get the schema field of a model field
+
+    :param Schema schema: a marshmallow schema
+    :param str field: the name of the model field
+    :return str: the name of the field in the schema
+    """
+    schema_fields_to_model = {key: get_model_field(schema, key) for (key, value) in schema._declared_fields.items()}
+    for key, value in schema_fields_to_model.items():
+        if value == field:
+            return key
+
+    raise Exception("Couldn't find schema field from {}".format(field))
