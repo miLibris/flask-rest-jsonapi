@@ -179,7 +179,7 @@ class QueryStringManager(object):
 
         :return list: a list of include information
         """
-        include_param = self.qs.get('include')
+        include_param = self.qs.get('include', [])
 
         if current_app.config.get('MAX_INCLUDE_DEPTH') is not None:
             for include_path in include_param:
