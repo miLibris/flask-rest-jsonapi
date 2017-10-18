@@ -3,11 +3,10 @@
 """This module contains the logic of resource management"""
 
 import inspect
-import json
 from six import with_metaclass
 
 from werkzeug.wrappers import Response
-from flask import request, url_for, make_response, current_app
+from flask import request, url_for, make_response, current_app, jsonify
 from flask.views import MethodView, MethodViewType
 from marshmallow_jsonapi.exceptions import IncorrectTypeError
 from marshmallow import ValidationError
@@ -70,14 +69,14 @@ class Resource(MethodView):
         try:
             response = method(*args, **kwargs)
         except JsonApiException as e:
-            return make_response(json.dumps(jsonapi_errors([e.to_dict()])),
+            return make_response(jsonify(jsonapi_errors([e.to_dict()])),
                                  e.status,
                                  headers)
         except Exception as e:
             if current_app.config['DEBUG'] is True:
                 raise e
             exc = JsonApiException('', str(e))
-            return make_response(json.dumps(jsonapi_errors([exc.to_dict()])),
+            return make_response(jsonify(jsonapi_errors([exc.to_dict()])),
                                  exc.status,
                                  headers)
 
@@ -88,7 +87,7 @@ class Resource(MethodView):
         if not isinstance(response, tuple):
             if isinstance(response, dict):
                 response.update({'jsonapi': {'version': '1.0'}})
-            return make_response(json.dumps(response), 200, headers)
+            return make_response(jsonify(response), 200, headers)
 
         try:
             data, status_code, headers = response
@@ -104,7 +103,7 @@ class Resource(MethodView):
         if isinstance(data, dict):
             data.update({'jsonapi': {'version': '1.0'}})
 
-        return make_response(json.dumps(data), status_code, headers)
+        return make_response(jsonify(data), status_code, headers)
 
 
 class ResourceList(with_metaclass(ResourceMeta, Resource)):
