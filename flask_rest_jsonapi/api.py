@@ -26,6 +26,9 @@ class Api(object):
         self.resource_registry = []
         self.decorators = decorators or tuple()
 
+        self.app.config.setdefault('PAGE_SIZE', 30)
+
+
     def init_app(self, app=None, blueprint=None):
         """Update flask application with our api
 
