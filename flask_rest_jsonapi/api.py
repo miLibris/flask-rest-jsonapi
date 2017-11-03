@@ -7,6 +7,7 @@ methods, speficy which blueprint to use, define the Api routes and plug addition
 import inspect
 from functools import wraps
 
+from flask import Flask
 from flask_rest_jsonapi.resource import ResourceList
 
 
@@ -20,6 +21,10 @@ class Api(object):
         :param blueprint: a flask blueprint
         :param tuple decorators: a tuple of decorators plugged to each resource methods
         """
+
+        if app is None:
+            app = Flask(__name__)
+
         self.app = app
         self.blueprint = blueprint
         self.resources = []
