@@ -4,7 +4,7 @@
 
 from marshmallow import class_registry
 from marshmallow.base import SchemaABC
-from marshmallow_jsonapi.fields import Relationship
+from marshmallow_jsonapi.fields import Relationship, List, Nested
 
 from flask_rest_jsonapi.exceptions import InvalidInclude
 
@@ -94,6 +94,24 @@ def get_model_field(schema, field):
         return schema._declared_fields[field].attribute
     return field
 
+def get_nested_fields(schema, model_field=False):
+    """Return nested fields of a schema to support a join
+
+    :param Schema schema: a marshmallow schema
+    :param boolean model_field: whether to extract the model field for the nested fields
+    :return list: list of nested fields of the schema
+    """
+
+    nested_fields = []
+    for (key, value) in schema._declared_fields.items():
+        if isinstance(value, List):
+            if isinstance(value.container, Nested):
+                nested_fields.append(key)
+
+    if model_field is True:
+        nested_fields = [get_model_field(schema, key) for key in nested_fields]
+
+    return nested_fields
 
 def get_relationships(schema, model_field=False):
     """Return relationship fields of a schema

@@ -8,6 +8,7 @@ from sqlalchemy.orm import sessionmaker, relationship
 from sqlalchemy.ext.declarative import declarative_base
 from flask import Blueprint, make_response, json
 from marshmallow_jsonapi.flask import Schema, Relationship
+from marshmallow import Schema as MarshmallowSchema
 from marshmallow_jsonapi import fields
 from marshmallow import ValidationError
 
@@ -27,6 +28,16 @@ import flask_rest_jsonapi.schema
 def base():
     yield declarative_base()
 
+@pytest.fixture(scope="module")
+def person_tag_model(base):
+    class Person_Tag(base):
+
+        __tablename__ = 'person_tag'
+
+        id = Column(Integer, ForeignKey('person.person_id'), primary_key=True, index=True)
+        key = Column(String, primary_key=True)
+        value = Column(String, primary_key=True)
+    yield Person_Tag
 
 @pytest.fixture(scope="module")
 def person_model(base):
@@ -38,6 +49,8 @@ def person_model(base):
         name = Column(String, nullable=False)
         birth_date = Column(DateTime)
         computers = relationship("Computer", backref="person")
+        tags = relationship("Person_Tag", cascade="save-update, merge, delete, delete-orphan")
+
     yield Person
 
 
@@ -54,8 +67,9 @@ def computer_model(base):
 
 
 @pytest.fixture(scope="module")
-def engine(person_model, computer_model):
+def engine(person_tag_model, person_model, computer_model):
     engine = create_engine("sqlite:///:memory:")
+    person_tag_model.metadata.create_all(engine)
     person_model.metadata.create_all(engine)
     computer_model.metadata.create_all(engine)
     return engine
@@ -108,9 +122,19 @@ def dummy_decorator():
         return wrapper_f
     yield deco
 
+@pytest.fixture(scope="module")
+def person_tag_schema():
+    class PersonTagSchema(MarshmallowSchema):
+        class Meta:
+            type_ = 'person_tag'
+
+        id = fields.Str(dump_only=True, load_only=True)
+        key = fields.Str()
+        value = fields.Str()
+    yield PersonTagSchema
 
 @pytest.fixture(scope="module")
-def person_schema():
+def person_schema(person_tag_schema):
     class PersonSchema(Schema):
         class Meta:
             type_ = 'person'
@@ -124,6 +148,8 @@ def person_schema():
                                  schema='ComputerSchema',
                                  type_='computer',
                                  many=True)
+        tags = fields.List(fields.Nested(person_tag_schema))
+
     yield PersonSchema
 
 
@@ -510,6 +536,36 @@ def test_post_list(client, register_routes, computer):
         assert response.status_code == 201
 
 
+def test_post_list_nested(client, register_routes, computer):
+    payload = {
+        'data': {
+            'type': 'person',
+            'attributes': {
+                'name': 'test',
+                'tags': [
+                    {'key': 'k1', 'value': 'v1'},
+                    {'key': 'k2', 'value': 'v2'}
+                ]
+            },
+            'relationships': {
+                'computers': {
+                    'data': [
+                        {
+                            'type': 'computer',
+                            'id': str(computer.id)
+                        }
+                    ]
+                }
+            }
+        }
+    }
+
+    with client:
+        response = client.post('/persons', data=json.dumps(payload), content_type='application/vnd.api+json')
+        assert response.status_code == 201
+        assert json.loads(response.get_data())['data']['attributes']['tags'][0]['key'] == 'k1'
+
+
 def test_post_list_single(client, register_routes, person):
     payload = {
         'data': {
@@ -538,7 +594,6 @@ def test_get_detail(client, register_routes, person):
         response = client.get('/persons/' + str(person.person_id), content_type='application/vnd.api+json')
         assert response.status_code == 200
 
-
 def test_patch_detail(client, register_routes, computer, person):
     payload = {
         'data': {
@@ -565,6 +620,38 @@ def test_patch_detail(client, register_routes, computer, person):
                                 data=json.dumps(payload),
                                 content_type='application/vnd.api+json')
         assert response.status_code == 200
+
+
+def test_patch_detail_nested(client, register_routes, computer, person):
+    payload = {
+        'data': {
+            'id': str(person.person_id),
+            'type': 'person',
+            'attributes': {
+                'name': 'test2',
+                'tags': [
+                    {'key': 'new_key', 'value': 'new_value' }
+                ]
+            },
+            'relationships': {
+                'computers': {
+                    'data': [
+                        {
+                            'type': 'computer',
+                            'id': str(computer.id)
+                        }
+                    ]
+                }
+            }
+        }
+    }
+
+    with client:
+        response = client.patch('/persons/' + str(person.person_id),
+                                data=json.dumps(payload),
+                                content_type='application/vnd.api+json')
+        assert response.status_code == 200
+        assert json.loads(response.get_data())['data']['attributes']['tags'][0]['key'] == 'new_key'
 
 
 def test_delete_detail(client, register_routes, person):
@@ -920,7 +1007,6 @@ def test_sqlalchemy_data_layer_create_object_error(session, person_model, person
     with pytest.raises(JsonApiException):
         dl = SqlalchemyDataLayer(dict(session=session, model=person_model, resource=person_list))
         dl.create_object(dict(), dict())
-
 
 def test_sqlalchemy_data_layer_get_object_error(session, person_model):
     with pytest.raises(Exception):
