@@ -330,10 +330,11 @@ def get_object_mock():
 
 def test_add_pagination_links(app):
     with app.app_context():
-        qs = {'page[number]': '15', 'page[size]': '10'}
+        qs = {'page[number]': '2', 'page[size]': '10'}
         qsm = QSManager(qs, None)
-        add_pagination_links(dict(), 1000, qsm, str())
-
+        pagination_data = dict()
+        add_pagination_links(pagination_data, 43, qsm, str())
+        assert pagination_data['links']['last'] == '?page%5Bsize%5D=10&page%5Bnumber%5D=5'
 
 def test_Node(person_model, person_schema, monkeypatch):
     from copy import deepcopy
