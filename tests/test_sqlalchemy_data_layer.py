@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-from six.moves.urllib.parse import urlencode
+from six.moves.urllib.parse import urlencode, parse_qs
 import pytest
 
 from sqlalchemy import create_engine, Column, Integer, DateTime, String, ForeignKey
@@ -332,9 +332,11 @@ def test_add_pagination_links(app):
     with app.app_context():
         qs = {'page[number]': '2', 'page[size]': '10'}
         qsm = QSManager(qs, None)
-        pagination_data = dict()
-        add_pagination_links(pagination_data, 43, qsm, str())
-        assert pagination_data['links']['last'] == '?page%5Bsize%5D=10&page%5Bnumber%5D=5'
+        pagination_dict = dict()
+        add_pagination_links(pagination_dict, 43, qsm, str())
+        last_page_dict = parse_qs(pagination_dict['links']['last'][1:])
+        assert len(last_page_dict['page[number]']) == 1
+        assert last_page_dict['page[number]'][0] == '5'
 
 def test_Node(person_model, person_schema, monkeypatch):
     from copy import deepcopy
