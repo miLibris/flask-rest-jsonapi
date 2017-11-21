@@ -26,6 +26,9 @@ class Api(object):
         self.resource_registry = []
         self.decorators = decorators or tuple()
 
+        if app is not None:
+            self.init_app(app, blueprint)
+
     def init_app(self, app=None, blueprint=None):
         """Update flask application with our api
 
