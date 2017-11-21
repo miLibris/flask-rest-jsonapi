@@ -8,15 +8,18 @@ class JsonApiException(Exception):
 
     title = 'Unknown error'
     status = '500'
+    source = ''
 
-    def __init__(self, source, detail, title=None, status=None, code=None, id_=None, links=None, meta=None):
+    def __init__(self, detail, source=None, title=None, status=None, code=None, id_=None, links=None, meta=None):
         """Initialize a jsonapi exception
 
         :param dict source: the source of the error
         :param str detail: the detail of the error
         """
-        self.source = source
         self.detail = detail
+        if source is not None:
+            self.source = source
+        self.source = source
         self.code = code
         self.id = id_
         self.links = links or {}
@@ -49,14 +52,7 @@ class InvalidField(BadRequest):
     """Error to warn that a field specified in fields querystring is not in the requested resource schema"""
 
     title = "Invalid fields querystring parameter."
-
-    def __init__(self, detail):
-        """Initialize InvalidField error instance
-
-        :param str detail: the detail of the error
-        """
-        self.source = {'parameter': 'fields'}
-        self.detail = detail
+    source = {'parameter': 'fields'}
 
 
 class InvalidInclude(BadRequest):
@@ -65,42 +61,21 @@ class InvalidInclude(BadRequest):
     """
 
     title = 'Invalid include querystring parameter.'
-
-    def __init__(self, detail):
-        """Initialize InvalidInclude error instance
-
-        :param str detail: the detail of the error
-        """
-        self.source = {'parameter': 'include'}
-        self.detail = detail
+    source = {'parameter': 'include'}
 
 
 class InvalidFilters(BadRequest):
     """Error to warn that a specified filters in querystring parameter contains errors"""
 
     title = 'Invalid filters querystring parameter.'
-
-    def __init__(self, detail):
-        """Initialize InvalidField error instance
-
-        :param str detail: the detail of the error
-        """
-        self.source = {'parameter': 'filters'}
-        self.detail = detail
+    source = {'parameter': 'filters'}
 
 
 class InvalidSort(BadRequest):
     """Error to warn that a field specified in sort querystring parameter is not in the requested resource schema"""
 
     title = 'Invalid sort querystring parameter.'
-
-    def __init__(self, detail):
-        """Initialize InvalidField error instance
-
-        :param str detail: the detail of the error
-        """
-        self.source = {'parameter': 'sort'}
-        self.detail = detail
+    source = {'parameter': 'sort'}
 
 
 class ObjectNotFound(JsonApiException):

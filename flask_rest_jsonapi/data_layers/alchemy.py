@@ -53,7 +53,7 @@ class SqlalchemyDataLayer(BaseDataLayer):
             self.session.commit()
         except Exception as e:
             self.session.rollback()
-            raise JsonApiException({'pointer': '/data'}, "Object creation error: " + str(e))
+            raise JsonApiException("Object creation error: " + str(e), source={'pointer': '/data'})
 
         self.after_create_object(obj, data, view_kwargs)
 
@@ -126,8 +126,8 @@ class SqlalchemyDataLayer(BaseDataLayer):
         if obj is None:
             url_field = getattr(self, 'url_field', 'id')
             filter_value = view_kwargs[url_field]
-            raise ObjectNotFound({'parameter': url_field},
-                                 '{}: {} not found'.format(self.model.__name__, filter_value))
+            raise ObjectNotFound('{}: {} not found'.format(self.model.__name__, filter_value),
+                                 source={'parameter': url_field})
 
         self.before_update_object(obj, data, view_kwargs)
 
@@ -142,7 +142,7 @@ class SqlalchemyDataLayer(BaseDataLayer):
             self.session.commit()
         except Exception as e:
             self.session.rollback()
-            raise JsonApiException({'pointer': '/data'}, "Update object error: " + str(e))
+            raise JsonApiException("Update object error: " + str(e), source={'pointer': '/data'})
 
         self.after_update_object(obj, data, view_kwargs)
 
@@ -155,8 +155,8 @@ class SqlalchemyDataLayer(BaseDataLayer):
         if obj is None:
             url_field = getattr(self, 'url_field', 'id')
             filter_value = view_kwargs[url_field]
-            raise ObjectNotFound({'parameter': url_field},
-                                 '{}: {} not found'.format(self.model.__name__, filter_value))
+            raise ObjectNotFound('{}: {} not found'.format(self.model.__name__, filter_value),
+                                 source={'parameter': url_field})
 
         self.before_delete_object(obj, view_kwargs)
 
@@ -165,7 +165,7 @@ class SqlalchemyDataLayer(BaseDataLayer):
             self.session.commit()
         except Exception as e:
             self.session.rollback()
-            raise JsonApiException('', "Delete object error: " + str(e))
+            raise JsonApiException("Delete object error: " + str(e))
 
         self.after_delete_object(obj, view_kwargs)
 
@@ -185,11 +185,11 @@ class SqlalchemyDataLayer(BaseDataLayer):
         if obj is None:
             url_field = getattr(self, 'url_field', 'id')
             filter_value = view_kwargs[url_field]
-            raise ObjectNotFound({'parameter': url_field},
-                                 '{}: {} not found'.format(self.model.__name__, filter_value))
+            raise ObjectNotFound('{}: {} not found'.format(self.model.__name__, filter_value),
+                                 source={'parameter': url_field})
 
         if not hasattr(obj, relationship_field):
-            raise RelationNotFound('', "{} has no attribute {}".format(obj.__class__.__name__, relationship_field))
+            raise RelationNotFound("{} has no attribute {}".format(obj.__class__.__name__, relationship_field))
 
         related_model = getattr(obj.__class__, relationship_field).property.mapper.class_
 
@@ -219,7 +219,7 @@ class SqlalchemyDataLayer(BaseDataLayer):
             self.session.commit()
         except Exception as e:
             self.session.rollback()
-            raise JsonApiException('', "Create relationship error: " + str(e))
+            raise JsonApiException("Create relationship error: " + str(e))
 
         self.after_create_relationship(obj, updated, json_data, relationship_field, related_id_field, view_kwargs)
 
@@ -241,11 +241,11 @@ class SqlalchemyDataLayer(BaseDataLayer):
         if obj is None:
             url_field = getattr(self, 'url_field', 'id')
             filter_value = view_kwargs[url_field]
-            raise ObjectNotFound({'parameter': url_field},
-                                 '{}: {} not found'.format(self.model.__name__, filter_value))
+            raise ObjectNotFound('{}: {} not found'.format(self.model.__name__, filter_value),
+                                 source={'parameter': url_field})
 
         if not hasattr(obj, relationship_field):
-            raise RelationNotFound('', "{} has no attribute {}".format(obj.__class__.__name__, relationship_field))
+            raise RelationNotFound("{} has no attribute {}".format(obj.__class__.__name__, relationship_field))
 
         related_objects = getattr(obj, relationship_field)
 
@@ -277,11 +277,11 @@ class SqlalchemyDataLayer(BaseDataLayer):
         if obj is None:
             url_field = getattr(self, 'url_field', 'id')
             filter_value = view_kwargs[url_field]
-            raise ObjectNotFound({'parameter': url_field},
-                                 '{}: {} not found'.format(self.model.__name__, filter_value))
+            raise ObjectNotFound('{}: {} not found'.format(self.model.__name__, filter_value),
+                                 source={'parameter': url_field})
 
         if not hasattr(obj, relationship_field):
-            raise RelationNotFound('', "{} has no attribute {}".format(obj.__class__.__name__, relationship_field))
+            raise RelationNotFound("{} has no attribute {}".format(obj.__class__.__name__, relationship_field))
 
         related_model = getattr(obj.__class__, relationship_field).property.mapper.class_
 
@@ -315,7 +315,7 @@ class SqlalchemyDataLayer(BaseDataLayer):
             self.session.commit()
         except Exception as e:
             self.session.rollback()
-            raise JsonApiException('', "Update relationship error: " + str(e))
+            raise JsonApiException("Update relationship error: " + str(e))
 
         self.after_update_relationship(obj, updated, json_data, relationship_field, related_id_field, view_kwargs)
 
@@ -336,11 +336,11 @@ class SqlalchemyDataLayer(BaseDataLayer):
         if obj is None:
             url_field = getattr(self, 'url_field', 'id')
             filter_value = view_kwargs[url_field]
-            raise ObjectNotFound({'parameter': url_field},
-                                 '{}: {} not found'.format(self.model.__name__, filter_value))
+            raise ObjectNotFound('{}: {} not found'.format(self.model.__name__, filter_value),
+                                 source={'parameter': url_field})
 
         if not hasattr(obj, relationship_field):
-            raise RelationNotFound('', "{} has no attribute {}".format(obj.__class__.__name__, relationship_field))
+            raise RelationNotFound("{} has no attribute {}".format(obj.__class__.__name__, relationship_field))
 
         related_model = getattr(obj.__class__, relationship_field).property.mapper.class_
 
@@ -362,7 +362,7 @@ class SqlalchemyDataLayer(BaseDataLayer):
             self.session.commit()
         except Exception as e:
             self.session.rollback()
-            raise JsonApiException('', "Delete relationship error: " + str(e))
+            raise JsonApiException("Delete relationship error: " + str(e))
 
         self.after_delete_relationship(obj, updated, json_data, relationship_field, related_id_field, view_kwargs)
 
@@ -381,9 +381,9 @@ class SqlalchemyDataLayer(BaseDataLayer):
                                          .filter(getattr(related_model, related_id_field) == obj['id'])\
                                          .one()
         except NoResultFound:
-            raise RelatedObjectNotFound('', "{}.{}: {} not found".format(related_model.__name__,
-                                                                         related_id_field,
-                                                                         obj['id']))
+            raise RelatedObjectNotFound("{}.{}: {} not found".format(related_model.__name__,
+                                                                     related_id_field,
+                                                                     obj['id']))
 
         return related_object
 

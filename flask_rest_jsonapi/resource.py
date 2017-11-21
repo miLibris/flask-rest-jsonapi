@@ -75,8 +75,8 @@ class Resource(MethodView):
         except Exception as e:
             if current_app.config['DEBUG'] is True:
                 raise e
-            exc = JsonApiException(getattr(e, 'source', ''),
-                                   getattr(e, 'detail', str(e)),
+            exc = JsonApiException(getattr(e, 'detail', str(e)),
+                                   source=getattr(e, 'source', ''),
                                    title=getattr(e, 'title', None),
                                    status=getattr(e, 'status', None),
                                    code=getattr(e, 'code', None),
@@ -265,9 +265,11 @@ class ResourceDetail(with_metaclass(ResourceMeta, Resource)):
             return errors, 422
 
         if 'id' not in json_data['data']:
-            raise BadRequest('/data/id', 'Missing id in "data" node')
+            raise BadRequest('Missing id in "data" node',
+                             source={'pointer': '/data/id'})
         if json_data['data']['id'] != str(kwargs[self.data_layer.get('url_field', 'id')]):
-            raise BadRequest('/data/id', 'Value of id does not match the resource identifier in url')
+            raise BadRequest('Value of id does not match the resource identifier in url',
+                             source={'pointer': '/data/id'})
 
         self.before_patch(args, kwargs, data=data)
 
@@ -357,22 +359,23 @@ class ResourceRelationship(with_metaclass(ResourceMeta, Resource)):
         relationship_field, model_relationship_field, related_type_, related_id_field = self._get_relationship_data()
 
         if 'data' not in json_data:
-            raise BadRequest('/data', 'You must provide data with a "data" route node')
+            raise BadRequest('You must provide data with a "data" route node', source={'pointer': '/data'})
         if isinstance(json_data['data'], dict):
             if 'type' not in json_data['data']:
-                raise BadRequest('/data/type', 'Missing type in "data" node')
+                raise BadRequest('Missing type in "data" node', source={'pointer': '/data/type'})
             if 'id' not in json_data['data']:
-                raise BadRequest('/data/id', 'Missing id in "data" node')
+                raise BadRequest('Missing id in "data" node', source={'pointer': '/data/id'})
             if json_data['data']['type'] != related_type_:
-                raise InvalidType('/data/type', 'The type field does not match the resource type')
+                raise InvalidType('The type field does not match the resource type', source={'pointer': '/data/type'})
         if isinstance(json_data['data'], list):
             for obj in json_data['data']:
                 if 'type' not in obj:
-                    raise BadRequest('/data/type', 'Missing type in "data" node')
+                    raise BadRequest('Missing type in "data" node', source={'pointer': '/data/type'})
                 if 'id' not in obj:
-                    raise BadRequest('/data/id', 'Missing id in "data" node')
+                    raise BadRequest('Missing id in "data" node', source={'pointer': '/data/id'})
                 if obj['type'] != related_type_:
-                    raise InvalidType('/data/type', 'The type provided does not match the resource type')
+                    raise InvalidType('The type provided does not match the resource type',
+                                      source={'pointer': '/data/type'})
 
         self.before_post(args, kwargs, json_data=json_data)
 
@@ -406,22 +409,23 @@ class ResourceRelationship(with_metaclass(ResourceMeta, Resource)):
         relationship_field, model_relationship_field, related_type_, related_id_field = self._get_relationship_data()
 
         if 'data' not in json_data:
-            raise BadRequest('/data', 'You must provide data with a "data" route node')
+            raise BadRequest('You must provide data with a "data" route node', source={'pointer': '/data'})
         if isinstance(json_data['data'], dict):
             if 'type' not in json_data['data']:
-                raise BadRequest('/data/type', 'Missing type in "data" node')
+                raise BadRequest('Missing type in "data" node', source={'pointer': '/data/type'})
             if 'id' not in json_data['data']:
-                raise BadRequest('/data/id', 'Missing id in "data" node')
+                raise BadRequest('Missing id in "data" node', source={'pointer': '/data/id'})
             if json_data['data']['type'] != related_type_:
-                raise InvalidType('/data/type', 'The type field does not match the resource type')
+                raise InvalidType('The type field does not match the resource type', source={'pointer': '/data/type'})
         if isinstance(json_data['data'], list):
             for obj in json_data['data']:
                 if 'type' not in obj:
-                    raise BadRequest('/data/type', 'Missing type in "data" node')
+                    raise BadRequest('Missing type in "data" node', source={'pointer': '/data/type'})
                 if 'id' not in obj:
-                    raise BadRequest('/data/id', 'Missing id in "data" node')
+                    raise BadRequest('Missing id in "data" node', source={'pointer': '/data/id'})
                 if obj['type'] != related_type_:
-                    raise InvalidType('/data/type', 'The type provided does not match the resource type')
+                    raise InvalidType('The type provided does not match the resource type',
+                                      source={'pointer': '/data/type'})
 
         self.before_patch(args, kwargs, json_data=json_data)
 
@@ -455,22 +459,23 @@ class ResourceRelationship(with_metaclass(ResourceMeta, Resource)):
         relationship_field, model_relationship_field, related_type_, related_id_field = self._get_relationship_data()
 
         if 'data' not in json_data:
-            raise BadRequest('/data', 'You must provide data with a "data" route node')
+            raise BadRequest('You must provide data with a "data" route node', source={'pointer': '/data'})
         if isinstance(json_data['data'], dict):
             if 'type' not in json_data['data']:
-                raise BadRequest('/data/type', 'Missing type in "data" node')
+                raise BadRequest('Missing type in "data" node', source={'pointer': '/data/type'})
             if 'id' not in json_data['data']:
-                raise BadRequest('/data/id', 'Missing id in "data" node')
+                raise BadRequest('Missing id in "data" node', source={'pointer': '/data/id'})
             if json_data['data']['type'] != related_type_:
-                raise InvalidType('/data/type', 'The type field does not match the resource type')
+                raise InvalidType('The type field does not match the resource type', source={'pointer': '/data/type'})
         if isinstance(json_data['data'], list):
             for obj in json_data['data']:
                 if 'type' not in obj:
-                    raise BadRequest('/data/type', 'Missing type in "data" node')
+                    raise BadRequest('Missing type in "data" node', source={'pointer': '/data/type'})
                 if 'id' not in obj:
-                    raise BadRequest('/data/id', 'Missing id in "data" node')
+                    raise BadRequest('Missing id in "data" node', source={'pointer': '/data/id'})
                 if obj['type'] != related_type_:
-                    raise InvalidType('/data/type', 'The type provided does not match the resource type')
+                    raise InvalidType('The type provided does not match the resource type',
+                                      source={'pointer': '/data/type'})
 
         self.before_delete(args, kwargs, json_data=json_data)
 
@@ -499,7 +504,7 @@ class ResourceRelationship(with_metaclass(ResourceMeta, Resource)):
         relationship_field = request.path.split('/')[-1]
 
         if relationship_field not in get_relationships(self.schema):
-            raise RelationNotFound('', "{} has no attribute {}".format(self.schema.__name__, relationship_field))
+            raise RelationNotFound("{} has no attribute {}".format(self.schema.__name__, relationship_field))
 
         related_type_ = self.schema._declared_fields[relationship_field].type_
         related_id_field = self.schema._declared_fields[relationship_field].id_field
