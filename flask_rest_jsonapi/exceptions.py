@@ -7,9 +7,9 @@ class JsonApiException(Exception):
     """Base exception class for unknown errors"""
 
     title = 'Unknown error'
-    status = 500
+    status = '500'
 
-    def __init__(self, source, detail, title=None, status=None):
+    def __init__(self, source, detail, title=None, status=None, code=None, id_=None, links=None, meta=None):
         """Initialize a jsonapi exception
 
         :param dict source: the source of the error
@@ -17,6 +17,10 @@ class JsonApiException(Exception):
         """
         self.source = source
         self.detail = detail
+        self.code = code
+        self.id = id_
+        self.links = links or {}
+        self.meta = meta or {}
         if title is not None:
             self.title = title
         if status is not None:
@@ -27,14 +31,18 @@ class JsonApiException(Exception):
         return {'status': self.status,
                 'source': self.source,
                 'title': self.title,
-                'detail': self.detail}
+                'detail': self.detail,
+                'id': self.id,
+                'code': self.code,
+                'links': self.links,
+                'meta': self.meta}
 
 
 class BadRequest(JsonApiException):
     """BadRequest error"""
 
-    title = "Bad request"
-    status = 400
+    title = 'Bad request'
+    status = '400'
 
 
 class InvalidField(BadRequest):
@@ -56,7 +64,7 @@ class InvalidInclude(BadRequest):
     resource schema
     """
 
-    title = "Invalid include querystring parameter."
+    title = 'Invalid include querystring parameter.'
 
     def __init__(self, detail):
         """Initialize InvalidInclude error instance
@@ -70,7 +78,7 @@ class InvalidInclude(BadRequest):
 class InvalidFilters(BadRequest):
     """Error to warn that a specified filters in querystring parameter contains errors"""
 
-    title = "Invalid filters querystring parameter."
+    title = 'Invalid filters querystring parameter.'
 
     def __init__(self, detail):
         """Initialize InvalidField error instance
@@ -84,7 +92,7 @@ class InvalidFilters(BadRequest):
 class InvalidSort(BadRequest):
     """Error to warn that a field specified in sort querystring parameter is not in the requested resource schema"""
 
-    title = "Invalid sort querystring parameter."
+    title = 'Invalid sort querystring parameter.'
 
     def __init__(self, detail):
         """Initialize InvalidField error instance
@@ -98,24 +106,24 @@ class InvalidSort(BadRequest):
 class ObjectNotFound(JsonApiException):
     """Error to warn that an object is not found in a database"""
 
-    title = "Object not found"
-    status = 404
+    title = 'Object not found'
+    status = '404'
 
 
 class RelatedObjectNotFound(ObjectNotFound):
     """Error to warn that a related object is not found"""
 
-    title = "Related object not found"
+    title = 'Related object not found'
 
 
 class RelationNotFound(JsonApiException):
     """Error to warn that a relationship is not found on a model"""
 
-    title = "Relation not found"
+    title = 'Relation not found'
 
 
 class InvalidType(JsonApiException):
     """Error to warn that there is a conflit between resource types"""
 
-    title = "Invalid type"
-    status = 409
+    title = 'Invalid type'
+    status = '409'

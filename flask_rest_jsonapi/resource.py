@@ -75,7 +75,14 @@ class Resource(MethodView):
         except Exception as e:
             if current_app.config['DEBUG'] is True:
                 raise e
-            exc = JsonApiException('', str(e))
+            exc = JsonApiException(getattr(e, 'source', ''),
+                                   getattr(e, 'detail', str(e)),
+                                   title=getattr(e, 'title', None),
+                                   status=getattr(e, 'status', None),
+                                   code=getattr(e, 'code', None),
+                                   id_=getattr(e, 'id', None),
+                                   links=getattr(e, 'links', None),
+                                   meta=getattr(e, 'meta', None))
             return make_response(jsonify(jsonapi_errors([exc.to_dict()])),
                                  exc.status,
                                  headers)

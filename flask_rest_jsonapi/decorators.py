@@ -22,13 +22,13 @@ def check_headers(func):
                 error = jsonify(jsonapi_errors([{'source': '',
                                                  'detail': "Content-Type header must be application/vnd.api+json",
                                                  'title': 'InvalidRequestHeader',
-                                                 'status': 415}]))
+                                                 'status': '415'}]))
                 return make_response(error, 415, {'Content-Type': 'application/vnd.api+json'})
         if request.headers.get('Accept') and 'application/vnd.api+json' not in request.accept_mimetypes:
             error = jsonify(jsonapi_errors([{'source': '',
                                              'detail': "Accept header must be application/vnd.api+json",
                                              'title': 'InvalidRequestHeader',
-                                             'status': 406}]))
+                                             'status': '406'}]))
             return make_response(error, 406, {'Content-Type': 'application/vnd.api+json'})
         return func(*args, **kwargs)
     return wrapper
