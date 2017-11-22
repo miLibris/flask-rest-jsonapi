@@ -754,7 +754,7 @@ def test_wrong_accept_header(client, register_routes):
 # test Content-Type error
 def test_wrong_content_type(client, register_routes):
     with client:
-        response = client.post('/persons')
+        response = client.post('/persons', headers={'Content-Type': 'application/vnd.api+json;q=0.8'})
         assert response.status_code == 415
 
 

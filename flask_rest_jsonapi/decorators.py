@@ -29,10 +29,10 @@ def check_headers(func):
         if 'Accept' in request.headers:
             flag = False
             for accept in request.headers['Accept'].split(','):
-                if accept == 'application/vnd.api+json':
+                if accept.strip() == 'application/vnd.api+json':
                     flag = False
                     break
-                if 'application/vnd.api+json' in accept and accept != 'application/vnd.api+json':
+                if 'application/vnd.api+json' in accept and accept.strip() != 'application/vnd.api+json':
                     flag = True
             if flag is True:
                 error = jsonify(jsonapi_errors([{'source': '',
