@@ -8,7 +8,7 @@ class JsonApiException(Exception):
 
     title = 'Unknown error'
     status = '500'
-    source = ''
+    source = None
 
     def __init__(self, detail, source=None, title=None, status=None, code=None, id_=None, links=None, meta=None):
         """Initialize a jsonapi exception
@@ -17,8 +17,6 @@ class JsonApiException(Exception):
         :param str detail: the detail of the error
         """
         self.detail = detail
-        if source is not None:
-            self.source = source
         self.source = source
         self.code = code
         self.id = id_

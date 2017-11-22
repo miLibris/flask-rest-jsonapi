@@ -338,6 +338,7 @@ def test_add_pagination_links(app):
         assert len(last_page_dict['page[number]']) == 1
         assert last_page_dict['page[number]'][0] == '5'
 
+
 def test_Node(person_model, person_schema, monkeypatch):
     from copy import deepcopy
     filt = {
@@ -376,8 +377,7 @@ def test_check_method_requirements(monkeypatch):
     request = type('request', (object,), dict(method='GET'))
     monkeypatch.setattr(flask_rest_jsonapi.decorators, 'request', request)
     with pytest.raises(Exception):
-        flask_rest_jsonapi.\
-            decorators.check_method_requirements(lambda: 1)(self())
+        flask_rest_jsonapi.decorators.check_method_requirements(lambda: 1)(self())
 
 
 def test_json_api_exception():
@@ -738,14 +738,16 @@ def test_single_accept_header(client, register_routes):
         response = client.get('/persons', content_type='application/vnd.api+json', headers={'Accept': 'application/vnd.api+json'})
         assert response.status_code == 200
 
+
 def test_multiple_accept_header(client, register_routes):
     with client:
-        response = client.get('/persons', content_type='application/vnd.api+json', headers={'Accept': '*/*, application/vnd.api+json'})
+        response = client.get('/persons', content_type='application/vnd.api+json', headers={'Accept': '*/*, application/vnd.api+json, application/vnd.api+json;q=0.9'})
         assert response.status_code == 200
+
 
 def test_wrong_accept_header(client, register_routes):
     with client:
-        response = client.get('/persons', content_type='application/vnd.api+json', headers={'Accept': 'error'})
+        response = client.get('/persons', content_type='application/vnd.api+json', headers={'Accept': 'application/vnd.api+json;q=0.7, application/vnd.api+json;q=0.9'})
         assert response.status_code == 406
 
 
