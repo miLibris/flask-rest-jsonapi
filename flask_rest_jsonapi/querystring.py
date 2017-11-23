@@ -111,6 +111,9 @@ class QueryStringManager(object):
             except ValueError:
                 raise BadRequest("Parse error", source={'parameter': 'page[{}]'.format(key)})
 
+        if current_app.config.get('ALLOW_DISABLE_PAGINATION', True) is False and int(result.get('size', 1)) == 0:
+            raise BadRequest("You are not allowed to disable pagination", source={'parameter': 'page[size]'})
+
         if current_app.config.get('MAX_PAGE_SIZE') is not None and 'size' in result:
             if int(result['size']) > current_app.config['MAX_PAGE_SIZE']:
                 raise BadRequest("Maximum page size is {}".format(current_app.config['MAX_PAGE_SIZE']),
