@@ -23,7 +23,7 @@ def check_headers(func):
                     request.headers['Content-Type'] != 'application/vnd.api+json':
                 error = jsonify(jsonapi_errors([{'source': '',
                                                  'detail': "Content-Type header must be application/vnd.api+json",
-                                                 'title': 'InvalidRequestHeader',
+                                                 'title': 'Invalid request header',
                                                  'status': '415'}]))
                 return make_response(error, 415, {'Content-Type': 'application/vnd.api+json'})
         if 'Accept' in request.headers:
@@ -36,8 +36,9 @@ def check_headers(func):
                     flag = True
             if flag is True:
                 error = jsonify(jsonapi_errors([{'source': '',
-                                                 'detail': "Accept header must be application/vnd.api+json",
-                                                 'title': 'InvalidRequestHeader',
+                                                 'detail': ('Accept header must be application/vnd.api+json without'
+                                                            'media type parameters'),
+                                                 'title': 'Invalid request header',
                                                  'status': '406'}]))
                 return make_response(error, 406, {'Content-Type': 'application/vnd.api+json'})
         return func(*args, **kwargs)
