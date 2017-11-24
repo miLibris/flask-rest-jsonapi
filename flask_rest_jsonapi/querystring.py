@@ -59,13 +59,18 @@ class QueryStringManager(object):
 
         return results
 
+    def _simple_filters(self, dict_):
+        return [{"name": key, "op": "eq", "val": value}
+                for (key, value) in dict_.items()]
+
     @property
     def querystring(self):
         """Return original querystring but containing only managed keys
 
         :return dict: dict of managed querystring parameter
         """
-        return {key: value for (key, value) in self.qs.items() if key.startswith(self.MANAGED_KEYS)}
+        return {key: value for (key, value) in self.qs.items()
+                if key.startswith(self.MANAGED_KEYS) or self._get_key_values('filter[')}
 
     @property
     def filters(self):
@@ -79,6 +84,8 @@ class QueryStringManager(object):
                 filters = json.loads(filters)
             except (ValueError, TypeError):
                 raise InvalidFilters("Parse error")
+        elif self._get_key_values('filter['):
+            filters = self._simple_filters(self._get_key_values('filter['))
 
         return filters
 
