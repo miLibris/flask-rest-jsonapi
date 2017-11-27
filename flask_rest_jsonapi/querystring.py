@@ -78,16 +78,16 @@ class QueryStringManager(object):
 
         :return list: filter information
         """
+        results = []
         filters = self.qs.get('filter')
         if filters is not None:
             try:
-                filters = json.loads(filters)
+                results.extend(json.loads(filters))
             except (ValueError, TypeError):
                 raise InvalidFilters("Parse error")
-        elif self._get_key_values('filter['):
-            filters = self._simple_filters(self._get_key_values('filter['))
-
-        return filters
+        if self._get_key_values('filter['):
+            results.extend(self._simple_filters(self._get_key_values('filter[')))
+        return results
 
     @property
     def pagination(self):
