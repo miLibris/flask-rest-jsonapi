@@ -70,7 +70,7 @@ class Resource(MethodView):
             response = method(*args, **kwargs)
         except JsonApiException as e:
             return make_response(jsonify(jsonapi_errors([e.to_dict()])),
-                                 e.status,
+                                 e.http_status,
                                  headers)
         except Exception as e:
             if current_app.config['DEBUG'] is True:

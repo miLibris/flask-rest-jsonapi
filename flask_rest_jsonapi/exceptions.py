@@ -38,6 +38,10 @@ class JsonApiException(Exception):
                 'links': self.links,
                 'meta': self.meta}
 
+    @property
+    def http_status(self):
+        return "{} {}".format(self.status, self.title)
+
 
 class BadRequest(JsonApiException):
     """BadRequest error"""

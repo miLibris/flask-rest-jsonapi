@@ -860,6 +860,7 @@ def test_post_relationship_related_object_not_found(client, register_routes, per
                                data=json.dumps(payload),
                                content_type='application/vnd.api+json')
         assert response.status_code == 404
+        assert response.status == '404 Related object not found'
 
 
 def test_get_relationship_relationship_field_not_found(client, register_routes, person):
@@ -874,6 +875,7 @@ def test_get_list_invalid_filters_val(client, register_routes):
         querystring = urlencode({'filter': json.dumps([{'name': 'computers', 'op': 'any'}])})
         response = client.get('/persons' + '?' + querystring, content_type='application/vnd.api+json')
         assert response.status_code == 400
+        assert response.status == '400 Invalid filters querystring parameter.'
 
 
 def test_get_list_name(client, register_routes):
@@ -881,6 +883,7 @@ def test_get_list_name(client, register_routes):
         querystring = urlencode({'filter': json.dumps([{'name': 'computers__serial', 'op': 'any', 'val': '1'}])})
         response = client.get('/persons' + '?' + querystring, content_type='application/vnd.api+json')
         assert response.status_code == 200
+        assert response.status == '200 OK'
 
 
 def test_get_list_no_name(client, register_routes):
