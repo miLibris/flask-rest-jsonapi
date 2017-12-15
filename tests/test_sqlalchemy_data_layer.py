@@ -40,6 +40,18 @@ def person_tag_model(base):
     yield Person_Tag
 
 @pytest.fixture(scope="module")
+def person_single_tag_model(base):
+    class Person_Single_Tag(base):
+
+        __tablename__ = 'person_single_tag'
+
+        id = Column(Integer, ForeignKey('person.person_id'), primary_key=True, index=True)
+        key = Column(String)
+        value = Column(String)
+    yield Person_Single_Tag
+
+
+@pytest.fixture(scope="module")
 def person_model(base):
     class Person(base):
 
@@ -50,6 +62,7 @@ def person_model(base):
         birth_date = Column(DateTime)
         computers = relationship("Computer", backref="person")
         tags = relationship("Person_Tag", cascade="save-update, merge, delete, delete-orphan")
+        single_tag = relationship("Person_Single_Tag", uselist=False, cascade="save-update, merge, delete, delete-orphan")
 
     yield Person
 
@@ -67,9 +80,10 @@ def computer_model(base):
 
 
 @pytest.fixture(scope="module")
-def engine(person_tag_model, person_model, computer_model):
+def engine(person_tag_model, person_single_tag_model, person_model, computer_model):
     engine = create_engine("sqlite:///:memory:")
     person_tag_model.metadata.create_all(engine)
+    person_single_tag_model.metadata.create_all(engine)
     person_model.metadata.create_all(engine)
     computer_model.metadata.create_all(engine)
     return engine
@@ -134,7 +148,18 @@ def person_tag_schema():
     yield PersonTagSchema
 
 @pytest.fixture(scope="module")
-def person_schema(person_tag_schema):
+def person_single_tag_schema():
+    class PersonSingleTagSchema(MarshmallowSchema):
+        class Meta:
+            type_ = 'person_single_tag'
+
+        id = fields.Str(dump_only=True, load_only=True)
+        key = fields.Str()
+        value = fields.Str()
+    yield PersonSingleTagSchema
+
+@pytest.fixture(scope="module")
+def person_schema(person_tag_schema, person_single_tag_schema):
     class PersonSchema(Schema):
         class Meta:
             type_ = 'person'
@@ -148,7 +173,8 @@ def person_schema(person_tag_schema):
                                  schema='ComputerSchema',
                                  type_='computer',
                                  many=True)
-        tags = fields.List(fields.Nested(person_tag_schema))
+        tags = fields.Nested(person_tag_schema, many=True)
+        single_tag = fields.Nested(person_single_tag_schema)
 
     yield PersonSchema
 
@@ -634,7 +660,8 @@ def test_patch_detail_nested(client, register_routes, computer, person):
                 'name': 'test2',
                 'tags': [
                     {'key': 'new_key', 'value': 'new_value' }
-                ]
+                ],
+                'single_tag': {'key': 'new_single_key', 'value': 'new_single_value' }
             },
             'relationships': {
                 'computers': {
@@ -654,7 +681,10 @@ def test_patch_detail_nested(client, register_routes, computer, person):
                                 data=json.dumps(payload),
                                 content_type='application/vnd.api+json')
         assert response.status_code == 200
-        assert json.loads(response.get_data())['data']['attributes']['tags'][0]['key'] == 'new_key'
+        response_dict = json.loads(response.get_data())
+        assert response_dict['data']['attributes']['tags'][0]['key'] == 'new_key'
+        assert response_dict['data']['attributes']['single_tag']['key'] == 'new_single_key'
+
 
 
 def test_delete_detail(client, register_routes, person):

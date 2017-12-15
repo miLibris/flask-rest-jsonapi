@@ -46,8 +46,8 @@ class Person_Tag(db.Model):
 
 class Person_Single_Tag(db.Model):
     id = db.Column(db.Integer, db.ForeignKey('person.id'), primary_key=True, index=True)
-    key = db.Column(db.String, primary_key=True)
-    value = db.Column(db.String, primary_key=True)
+    key = db.Column(db.String)
+    value = db.Column(db.String)
 
 db.create_all()
 
