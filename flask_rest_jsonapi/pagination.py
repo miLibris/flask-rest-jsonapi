@@ -2,6 +2,7 @@
 
 """Helper to create pagination links according to jsonapi specification"""
 
+from __future__ import division
 from six.moves.urllib.parse import urlencode
 from math import ceil
 from copy import copy

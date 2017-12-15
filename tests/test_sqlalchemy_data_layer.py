@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-from six.moves.urllib.parse import urlencode
+from six.moves.urllib.parse import urlencode, parse_qs
 import pytest
 
 from sqlalchemy import create_engine, Column, Integer, DateTime, String, ForeignKey
@@ -356,9 +356,13 @@ def get_object_mock():
 
 def test_add_pagination_links(app):
     with app.app_context():
-        qs = {'page[number]': '15', 'page[size]': '10'}
+        qs = {'page[number]': '2', 'page[size]': '10'}
         qsm = QSManager(qs, None)
-        add_pagination_links(dict(), 1000, qsm, str())
+        pagination_dict = dict()
+        add_pagination_links(pagination_dict, 43, qsm, str())
+        last_page_dict = parse_qs(pagination_dict['links']['last'][1:])
+        assert len(last_page_dict['page[number]']) == 1
+        assert last_page_dict['page[number]'][0] == '5'
 
 
 def test_Node(person_model, person_schema, monkeypatch):
@@ -399,8 +403,7 @@ def test_check_method_requirements(monkeypatch):
     request = type('request', (object,), dict(method='GET'))
     monkeypatch.setattr(flask_rest_jsonapi.decorators, 'request', request)
     with pytest.raises(Exception):
-        flask_rest_jsonapi.\
-            decorators.check_method_requirements(lambda: 1)(self())
+        flask_rest_jsonapi.decorators.check_method_requirements(lambda: 1)(self())
 
 
 def test_json_api_exception():
@@ -822,21 +825,23 @@ def test_single_accept_header(client, register_routes):
         response = client.get('/persons', content_type='application/vnd.api+json', headers={'Accept': 'application/vnd.api+json'})
         assert response.status_code == 200
 
+
 def test_multiple_accept_header(client, register_routes):
     with client:
-        response = client.get('/persons', content_type='application/vnd.api+json', headers={'Accept': '*/*, application/vnd.api+json'})
+        response = client.get('/persons', content_type='application/vnd.api+json', headers={'Accept': '*/*, application/vnd.api+json, application/vnd.api+json;q=0.9'})
         assert response.status_code == 200
+
 
 def test_wrong_accept_header(client, register_routes):
     with client:
-        response = client.get('/persons', content_type='application/vnd.api+json', headers={'Accept': 'error'})
+        response = client.get('/persons', content_type='application/vnd.api+json', headers={'Accept': 'application/vnd.api+json;q=0.7, application/vnd.api+json;q=0.9'})
         assert response.status_code == 406
 
 
 # test Content-Type error
 def test_wrong_content_type(client, register_routes):
     with client:
-        response = client.post('/persons')
+        response = client.post('/persons', headers={'Content-Type': 'application/vnd.api+json;q=0.8'})
         assert response.status_code == 415
 
 

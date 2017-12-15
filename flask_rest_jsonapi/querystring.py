@@ -55,7 +55,7 @@ class QueryStringManager(object):
                     item_value = value
                 results.update({item_key: item_value})
             except Exception:
-                raise BadRequest({'parameter': key}, "Parse error")
+                raise BadRequest("Parse error", source={'parameter': key})
 
         return results
 
@@ -105,16 +105,19 @@ class QueryStringManager(object):
         result = self._get_key_values('page')
         for key, value in result.items():
             if key not in ('number', 'size'):
-                raise BadRequest({'parameter': 'page'}, "{} is not a valid parameter of pagination".format(key))
+                raise BadRequest("{} is not a valid parameter of pagination".format(key), source={'parameter': 'page'})
             try:
                 int(value)
             except ValueError:
-                raise BadRequest({'parameter': 'page[{}]'.format(key)}, "Parse error")
+                raise BadRequest("Parse error", source={'parameter': 'page[{}]'.format(key)})
+
+        if current_app.config.get('ALLOW_DISABLE_PAGINATION', True) is False and int(result.get('size', 1)) == 0:
+            raise BadRequest("You are not allowed to disable pagination", source={'parameter': 'page[size]'})
 
         if current_app.config.get('MAX_PAGE_SIZE') is not None and 'size' in result:
             if int(result['size']) > current_app.config['MAX_PAGE_SIZE']:
-                raise BadRequest({'parameter': 'page[size]'},
-                                 "Maximum page size is {}".format(current_app.config['MAX_PAGE_SIZE']))
+                raise BadRequest("Maximum page size is {}".format(current_app.config['MAX_PAGE_SIZE']),
+                                 source={'parameter': 'page[size]'})
 
         return result
 
