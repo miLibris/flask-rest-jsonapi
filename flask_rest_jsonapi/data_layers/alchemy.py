@@ -447,6 +447,8 @@ class SqlalchemyDataLayer(BaseDataLayer):
                         nested_objects.append(nested_object)
 
                     nested_fields_to_apply.append({'field': key, 'value': nested_objects})
+                else:
+                    nested_fields_to_apply.append({'field': key, 'value': nested_model(**value)})
 
         for nested_field in nested_fields_to_apply:
             setattr(obj, nested_field['field'], nested_field['value'])
