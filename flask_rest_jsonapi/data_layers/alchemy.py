@@ -5,14 +5,15 @@
 from sqlalchemy.orm.exc import NoResultFound
 from sqlalchemy.orm.collections import InstrumentedList
 from sqlalchemy.inspection import inspect
-from sqlalchemy.orm import joinedload
+from sqlalchemy.orm.attributes import QueryableAttribute
+from sqlalchemy.orm import joinedload, ColumnProperty, RelationshipProperty
 from marshmallow import class_registry
 from marshmallow.base import SchemaABC
 
 from flask import current_app
 from flask_rest_jsonapi.data_layers.base import BaseDataLayer
 from flask_rest_jsonapi.exceptions import RelationNotFound, RelatedObjectNotFound, JsonApiException,\
-    InvalidSort, ObjectNotFound, InvalidInclude
+    InvalidSort, ObjectNotFound, InvalidInclude, InvalidType
 from flask_rest_jsonapi.data_layers.filtering.alchemy import create_filters
 from flask_rest_jsonapi.schema import get_model_field, get_related_schema, get_relationships, get_nested_fields, get_schema_field
 
@@ -437,18 +438,28 @@ class SqlalchemyDataLayer(BaseDataLayer):
         nested_fields = get_nested_fields(self.resource.schema, model_field=True)
         for key, value in data.items():
             if key in nested_fields:
-                nested_model = getattr(obj.__class__, key).property.mapper.class_
+                nested_field_inspection = inspect(getattr(obj.__class__, key))
 
-                if isinstance(value, list):
-                    nested_objects = []
+                if not isinstance(nested_field_inspection, QueryableAttribute):
+                    raise InvalidType("Unrecognized nested field type: not a queryable attribute.")
 
-                    for identifier in value:
-                        nested_object = nested_model(**identifier)
-                        nested_objects.append(nested_object)
+                if isinstance(nested_field_inspection.property, RelationshipProperty):
+                    nested_model = getattr(obj.__class__, key).property.mapper.class_
 
-                    nested_fields_to_apply.append({'field': key, 'value': nested_objects})
+                    if isinstance(value, list):
+                        nested_objects = []
+
+                        for identifier in value:
+                            nested_object = nested_model(**identifier)
+                            nested_objects.append(nested_object)
+
+                        nested_fields_to_apply.append({'field': key, 'value': nested_objects})
+                    else:
+                        nested_fields_to_apply.append({'field': key, 'value': nested_model(**value)})
+                elif isinstance(nested_field_inspection.property, ColumnProperty):
+                    nested_fields_to_apply.append({'field': key, 'value': value})
                 else:
-                    nested_fields_to_apply.append({'field': key, 'value': nested_model(**value)})
+                    raise InvalidType("Unrecognized nested field type: not a RelationshipProperty or ColumnProperty.")
 
         for nested_field in nested_fields_to_apply:
             setattr(obj, nested_field['field'], nested_field['value'])

@@ -90,7 +90,7 @@ class PersonSchema(Schema):
                              many=True,
                              schema='ComputerSchema',
                              type_='computer')
-    tags = fields.List(fields.Nested(PersonTagSchema))
+    tags = fields.Nested(PersonTagSchema, many=True)
 
 
 class ComputerSchema(Schema):
