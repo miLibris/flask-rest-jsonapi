@@ -29,6 +29,7 @@ class Person(db.Model):
     password = db.Column(db.String)
     tags = db.relationship("Person_Tag", cascade="save-update, merge, delete, delete-orphan")
     single_tag = db.relationship("Person_Single_Tag", uselist=False, cascade="save-update, merge, delete, delete-orphan")
+    json_tags = db.Column(db.JSON)
 
 
 class Computer(db.Model):
