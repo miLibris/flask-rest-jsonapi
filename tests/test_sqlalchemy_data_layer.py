@@ -52,6 +52,46 @@ def person_single_tag_model(base):
 
 
 @pytest.fixture(scope="module")
+def string_json_attribute_person_model(base):
+    """
+    This approach to faking JSON support for testing with sqlite is borrowed from:
+    https://avacariu.me/articles/2016/compiling-json-as-text-for-sqlite-with-sqlalchemy
+    """
+    import sqlalchemy.types as types
+    import json
+
+    class StringyJSON(types.TypeDecorator):
+        """Stores and retrieves JSON as TEXT."""
+
+        impl = types.TEXT
+
+        def process_bind_param(self, value, dialect):
+            if value is not None:
+                value = json.dumps(value)
+            return value
+
+        def process_result_value(self, value, dialect):
+            if value is not None:
+                value = json.loads(value)
+            return value
+
+    # TypeEngine.with_variant says "use StringyJSON instead when
+    # connecting to 'sqlite'"
+    MagicJSON = types.JSON().with_variant(StringyJSON, 'sqlite')
+
+    class StringJsonAttributePerson(base):
+
+        __tablename__ = 'string_json_attribute_person'
+
+        person_id = Column(Integer, primary_key=True)
+        name = Column(String, nullable=False)
+        birth_date = Column(DateTime)
+        # This model uses a String type for "json_tags" to avoid dependency on a nonstandard SQL type in testing, \
+        # while still demonstrating support
+        address = Column(MagicJSON)
+    yield StringJsonAttributePerson
+
+@pytest.fixture(scope="module")
 def person_model(base):
     class Person(base):
 
@@ -80,12 +120,13 @@ def computer_model(base):
 
 
 @pytest.fixture(scope="module")
-def engine(person_tag_model, person_single_tag_model, person_model, computer_model):
+def engine(person_tag_model, person_single_tag_model, person_model, computer_model, string_json_attribute_person_model):
     engine = create_engine("sqlite:///:memory:")
     person_tag_model.metadata.create_all(engine)
     person_single_tag_model.metadata.create_all(engine)
     person_model.metadata.create_all(engine)
     computer_model.metadata.create_all(engine)
+    string_json_attribute_person_model.metadata.create_all(engine)
     return engine
 
 
@@ -157,6 +198,32 @@ def person_single_tag_schema():
         key = fields.Str()
         value = fields.Str()
     yield PersonSingleTagSchema
+
+
+@pytest.fixture(scope="module")
+def address_schema():
+    class AddressSchema(MarshmallowSchema):
+        street = fields.String(required=True)
+        city = fields.String(required=True)
+        state = fields.String(missing='NC')
+        zip = fields.String(required=True)
+
+    yield AddressSchema
+
+@pytest.fixture(scope="module")
+def string_json_attribute_person_schema(address_schema):
+    class StringJsonAttributePersonSchema(Schema):
+        class Meta:
+            type_ = 'string_json_attribute_person'
+            self_view = 'api.string_json_attribute_person_detail'
+            self_view_kwargs = {'person_id': '<id>'}
+        id = fields.Integer(as_string=True, dump_only=True, attribute='person_id')
+        name = fields.Str(required=True)
+        birth_date = fields.DateTime()
+        address = fields.Nested(address_schema, many=False)
+
+    yield StringJsonAttributePersonSchema
+
 
 @pytest.fixture(scope="module")
 def person_schema(person_tag_schema, person_single_tag_schema):
@@ -340,6 +407,25 @@ def computer_owner(session, computer_model, dummy_decorator, computer_schema):
 
 
 @pytest.fixture(scope="module")
+def string_json_attribute_person_detail(session, string_json_attribute_person_model, string_json_attribute_person_schema):
+    class StringJsonAttributePersonDetail(ResourceDetail):
+        schema = string_json_attribute_person_schema
+        data_layer = {'session': session,
+                      'model': string_json_attribute_person_model}
+
+    yield StringJsonAttributePersonDetail
+
+
+@pytest.fixture(scope="module")
+def string_json_attribute_person_list(session, string_json_attribute_person_model, string_json_attribute_person_schema):
+    class StringJsonAttributePersonList(ResourceList):
+        schema = string_json_attribute_person_schema
+        data_layer = {'session': session,
+                      'model': string_json_attribute_person_model}
+
+    yield StringJsonAttributePersonList
+
+@pytest.fixture(scope="module")
 def api_blueprint(client):
     bp = Blueprint('api', __name__)
     yield bp
@@ -348,7 +434,8 @@ def api_blueprint(client):
 @pytest.fixture(scope="module")
 def register_routes(client, app, api_blueprint, person_list, person_detail, person_computers,
                     person_list_raise_jsonapiexception, person_list_raise_exception, person_list_response,
-                    person_list_without_schema, computer_list, computer_detail, computer_owner):
+                    person_list_without_schema, computer_list, computer_detail, computer_owner,
+                    string_json_attribute_person_detail, string_json_attribute_person_list):
     api = Api(blueprint=api_blueprint)
     api.route(person_list, 'person_list', '/persons')
     api.route(person_detail, 'person_detail', '/persons/<int:person_id>')
@@ -361,6 +448,9 @@ def register_routes(client, app, api_blueprint, person_list, person_detail, pers
     api.route(computer_list, 'computer_list', '/computers', '/persons/<int:person_id>/computers')
     api.route(computer_list, 'computer_detail', '/computers/<int:id>')
     api.route(computer_owner, 'computer_owner', '/computers/<int:id>/relationships/owner')
+    api.route(string_json_attribute_person_list, 'string_json_attribute_person_list', '/string_json_attribute_persons')
+    api.route(string_json_attribute_person_detail, 'string_json_attribute_person_detail',
+              '/string_json_attribute_persons/<int:person_id>')
     api.init_app(app)
 
 
@@ -564,6 +654,26 @@ def test_post_list(client, register_routes, computer):
         response = client.post('/persons', data=json.dumps(payload), content_type='application/vnd.api+json')
         assert response.status_code == 201
 
+def test_post_list_nested_no_join(client, register_routes, computer):
+    payload = {
+        'data': {
+            'type': 'string_json_attribute_person',
+            'attributes': {
+                'name': 'test_name',
+                'address': {
+                    'street': 'test_street',
+                    'city': 'test_city',
+                    'state': 'NC',
+                    'zip': '00000'
+                }
+            }
+        }
+    }
+    with client:
+        response = client.post('/string_json_attribute_persons', data=json.dumps(payload), content_type='application/vnd.api+json')
+        print(response.get_data())
+        assert response.status_code == 201
+        assert json.loads(response.get_data())['data']['attributes']['address']['street'] == 'test_street'
 
 def test_post_list_nested(client, register_routes, computer):
     payload = {
