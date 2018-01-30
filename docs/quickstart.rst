@@ -425,7 +425,7 @@ Response:
 
     {
       "meta": {
-        "Object successful deleted"
+        "message": "Object successfully deleted"
       },
       "jsonapi": {
         "version": "1.0"
@@ -604,7 +604,7 @@ Response:
             ],
             "links": {
               "related": "/persons/1/computers",
-              "self": "/persons/1/relationship/computers"
+              "self": "/persons/1/relationships/computers"
             }
           }
         },
@@ -630,7 +630,7 @@ Response:
         }
       ],
       "links": {
-        "self": "/persons/2"
+        "self": "/persons/1"
       },
       "jsonapi": {
         "version": "1.0"
