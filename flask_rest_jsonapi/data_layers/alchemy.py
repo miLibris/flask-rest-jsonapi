@@ -67,19 +67,7 @@ class SqlalchemyDataLayer(BaseDataLayer):
         """
         self.before_get_object(view_kwargs)
 
-        id_field = getattr(self, 'id_field', inspect(self.model).primary_key[0].key)
-        try:
-            filter_field = getattr(self.model, id_field)
-        except Exception:
-            raise Exception("{} has no attribute {}".format(self.model.__name__, id_field))
-
-        url_field = getattr(self, 'url_field', 'id')
-        filter_value = view_kwargs[url_field]
-
-        try:
-            obj = self.session.query(self.model).filter(filter_field == filter_value).one()
-        except NoResultFound:
-            obj = None
+        obj = self.retrieve_object(view_kwargs)
 
         self.after_get_object(obj, view_kwargs)
 
@@ -94,7 +82,7 @@ class SqlalchemyDataLayer(BaseDataLayer):
         """
         self.before_get_collection(qs, view_kwargs)
 
-        query = self.query(view_kwargs)
+        query = self.get_collection_query(view_kwargs)
 
         if qs.filters:
             query = self.filter_query(query, qs.filters, self.model)
@@ -510,7 +498,28 @@ class SqlalchemyDataLayer(BaseDataLayer):
 
         return query
 
-    def query(self, view_kwargs):
+    def retrieve_object(self, view_kwargs):
+        """Construct the base query to retrieve wanted object
+
+        :param dict view_kwargs: kwargs from the resource view
+        """
+        id_field = getattr(self, 'id_field', inspect(self.model).primary_key[0].key)
+        try:
+            filter_field = getattr(self.model, id_field)
+        except Exception:
+            raise Exception("{} has no attribute {}".format(self.model.__name__, id_field))
+
+        url_field = getattr(self, 'url_field', 'id')
+        filter_value = view_kwargs[url_field]
+
+        try:
+            obj = self.session.query(self.model).filter(filter_field == filter_value).one()
+        except NoResultFound:
+            obj = None
+
+        return obj
+
+    def get_collection_query(self, view_kwargs):
         """Construct the base query to retrieve wanted data
 
         :param dict view_kwargs: kwargs from the resource view
