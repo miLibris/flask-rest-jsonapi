@@ -82,7 +82,7 @@ class SqlalchemyDataLayer(BaseDataLayer):
         """
         self.before_get_collection(qs, view_kwargs)
 
-        query = self.get_collection_query(view_kwargs)
+        query = self.query(view_kwargs)
 
         if qs.filters:
             query = self.filter_query(query, qs.filters, self.model)
@@ -519,7 +519,7 @@ class SqlalchemyDataLayer(BaseDataLayer):
 
         return obj
 
-    def get_collection_query(self, view_kwargs):
+    def query(self, view_kwargs):
         """Construct the base query to retrieve wanted data
 
         :param dict view_kwargs: kwargs from the resource view
