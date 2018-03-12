@@ -138,7 +138,7 @@ class ResourceList(with_metaclass(ResourceMeta, Resource)):
         add_pagination_links(result,
                              objects_count,
                              qs,
-                             url_for(self.view, **view_kwargs))
+                             url_for(self.view, _external=True, **view_kwargs))
 
         result.update({'meta': {'count': objects_count}})
 
