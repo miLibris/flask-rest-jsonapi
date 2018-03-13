@@ -365,7 +365,7 @@ class SqlalchemyDataLayer(BaseDataLayer):
         :return DeclarativeMeta: a related object
         """
         try:
-            related_object = self.session.query(related_model)\
+            related_object = self.query()\
                                          .filter(getattr(related_model, related_id_field) == obj['id'])\
                                          .one()
         except NoResultFound:
@@ -513,7 +513,7 @@ class SqlalchemyDataLayer(BaseDataLayer):
         filter_value = view_kwargs[url_field]
 
         try:
-            obj = self.session.query(self.model).filter(filter_field == filter_value).one()
+            obj = self.query().filter(filter_field == filter_value).one()
         except NoResultFound:
             obj = None
 
