@@ -98,3 +98,10 @@ class InvalidType(JsonApiException):
 
     title = 'Invalid type'
     status = '409'
+
+
+class AccessDenied(JsonApiException):
+    """Throw this error when requested resource owner doesn't match the user of the ticket"""
+
+    title = 'Access denied'
+    status = '403'
