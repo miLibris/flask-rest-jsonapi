@@ -56,7 +56,8 @@ Now let's create the logical abstraction to illustrate this concept.
                                  related_view_kwargs={'id': '<id>'},
                                  many=True,
                                  schema='ComputerSchema',
-                                 type_='computer')
+                                 type_='computer',
+                                 id_field='computer_id')
 
 
     class ComputerSchema(Schema):
@@ -81,6 +82,7 @@ First, take a look of Person compared to PersonSchema:
 
 * we can see that Person has an attribute named "password" and we don't want to expose it through the api so it is not set in PersonSchema
 * PersonSchema has an attribute named "display_name" that is the result of concatenation of name and email
+* In the computers Relationship() defined on PersonSchema we have set the id_field to "computer_id" as that is the primary key on the Computer(db.model). Without seeting id_field the relationship looks for a field called "id".
 
 Second, take a look of Computer compared to ComputerSchema:
 
