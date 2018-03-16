@@ -7,7 +7,7 @@ methods, speficy which blueprint to use, define the Api routes and plug addition
 import inspect
 from functools import wraps
 
-from flask_rest_jsonapi.resource import ResourceList
+from flask_rest_jsonapi.resource import ResourceList, ResourceRelationship
 
 
 class Api(object):
@@ -120,6 +120,9 @@ class Api(object):
                                 'PATCH': 'update',
                                 'DELETE': 'delete'}
             prefix = method_to_prefix[method]
+
+            if ResourceRelationship in inspect.getmro(resource):
+                prefix = '_'.join([prefix, 'relationship'])
 
         return '_'.join([prefix, resource.schema.opts.type_])
 
