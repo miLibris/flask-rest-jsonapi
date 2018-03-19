@@ -149,7 +149,7 @@ class ResourceList(with_metaclass(ResourceMeta, Resource)):
     @check_method_requirements
     def post(self, *args, **kwargs):
         """Create an object"""
-        json_data = request.get_json()
+        json_data = request.get_json() or {}
 
         qs = QSManager(request.args, self.schema)
 
@@ -232,7 +232,7 @@ class ResourceDetail(with_metaclass(ResourceMeta, Resource)):
     @check_method_requirements
     def patch(self, *args, **kwargs):
         """Update an object"""
-        json_data = request.get_json()
+        json_data = request.get_json() or {}
 
         qs = QSManager(request.args, self.schema)
         schema_kwargs = getattr(self, 'patch_schema_kwargs', dict())
@@ -354,7 +354,7 @@ class ResourceRelationship(with_metaclass(ResourceMeta, Resource)):
     @check_method_requirements
     def post(self, *args, **kwargs):
         """Add / create relationship(s)"""
-        json_data = request.get_json()
+        json_data = request.get_json() or {}
 
         relationship_field, model_relationship_field, related_type_, related_id_field = self._get_relationship_data()
 
@@ -404,7 +404,7 @@ class ResourceRelationship(with_metaclass(ResourceMeta, Resource)):
     @check_method_requirements
     def patch(self, *args, **kwargs):
         """Update a relationship"""
-        json_data = request.get_json()
+        json_data = request.get_json() or {}
 
         relationship_field, model_relationship_field, related_type_, related_id_field = self._get_relationship_data()
 
@@ -454,7 +454,7 @@ class ResourceRelationship(with_metaclass(ResourceMeta, Resource)):
     @check_method_requirements
     def delete(self, *args, **kwargs):
         """Delete relationship(s)"""
-        json_data = request.get_json()
+        json_data = request.get_json() or {}
 
         relationship_field, model_relationship_field, related_type_, related_id_field = self._get_relationship_data()
 
