@@ -75,6 +75,10 @@ class Resource(MethodView):
         except Exception as e:
             if current_app.config['DEBUG'] is True:
                 raise e
+
+            if 'sentry' in current_app.extensions:
+                current_app.extensions['sentry'].captureException()
+
             exc = JsonApiException(getattr(e, 'detail', str(e)),
                                    source=getattr(e, 'source', ''),
                                    title=getattr(e, 'title', None),
