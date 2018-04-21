@@ -513,7 +513,7 @@ class SqlalchemyDataLayer(BaseDataLayer):
         filter_value = view_kwargs[url_field]
 
         try:
-            obj = self.session.query(self.model).filter(filter_field == filter_value).one()
+            obj = self.query(view_kwargs).filter(filter_field == filter_value).one()
         except NoResultFound:
             obj = None
 
