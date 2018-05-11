@@ -60,7 +60,6 @@ class Api(object):
         :param dict kwargs: additional options of the route
         """
         resource.view = view
-        view_func = resource.as_view(view)
         url_rule_options = kwargs.get('url_rule_options') or dict()
 
         for decorator in self.decorators:
@@ -68,6 +67,8 @@ class Api(object):
                 resource.decorators += self.decorators
             else:
                 resource.decorators = self.decorators
+
+        view_func = resource.as_view(view)
 
         if self.blueprint is not None:
             resource.view = '.'.join([self.blueprint.name, resource.view])
