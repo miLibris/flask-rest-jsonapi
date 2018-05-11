@@ -388,22 +388,16 @@ class ResourceRelationship(with_metaclass(ResourceMeta, Resource)):
                                                              related_id_field,
                                                              kwargs)
 
-        qs = QSManager(request.args, self.schema)
-        includes = qs.include
-        if relationship_field not in qs.include:
-            includes.append(relationship_field)
-        schema = compute_schema(self.schema, dict(), qs, includes)
+        status_code = 200
+        result = {'meta': {'message': 'Relationship successfully created'}}
 
         if updated is False:
-            return '', 204
-
-        result = schema.dump(obj_).data
-        if result.get('links', {}).get('self') is not None:
-            result['links']['self'] = request.path
+            result = ''
+            status_code = 204
 
         self.after_post(result)
 
-        return result, 200
+        return result, status_code
 
     @check_method_requirements
     def patch(self, *args, **kwargs):
@@ -438,22 +432,16 @@ class ResourceRelationship(with_metaclass(ResourceMeta, Resource)):
                                                              related_id_field,
                                                              kwargs)
 
-        qs = QSManager(request.args, self.schema)
-        includes = qs.include
-        if relationship_field not in qs.include:
-            includes.append(relationship_field)
-        schema = compute_schema(self.schema, dict(), qs, includes)
+        status_code = 200
+        result = {'meta': {'message': 'Relationship successfully updated'}}
 
         if updated is False:
-            return '', 204
-
-        result = schema.dump(obj_).data
-        if result.get('links', {}).get('self') is not None:
-            result['links']['self'] = request.path
+            result = ''
+            status_code = 204
 
         self.after_patch(result)
 
-        return result, 200
+        return result, status_code
 
     @check_method_requirements
     def delete(self, *args, **kwargs):
@@ -488,16 +476,12 @@ class ResourceRelationship(with_metaclass(ResourceMeta, Resource)):
                                                              related_id_field,
                                                              kwargs)
 
-        qs = QSManager(request.args, self.schema)
-        includes = qs.include
-        if relationship_field not in qs.include:
-            includes.append(relationship_field)
-        schema = compute_schema(self.schema, dict(), qs, includes)
+        status_code = 200
+        result = {'meta': {'message': 'Relationship successfully updated'}}
 
-        status_code = 200 if updated is True else 204
-        result = schema.dump(obj_).data
-        if result.get('links', {}).get('self') is not None:
-            result['links']['self'] = request.path
+        if updated is False:
+            result = ''
+            status_code = 204
 
         self.after_delete(result)
 
