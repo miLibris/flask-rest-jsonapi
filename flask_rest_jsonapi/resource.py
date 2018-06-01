@@ -73,7 +73,7 @@ class Resource(MethodView):
                                  e.status,
                                  headers)
         except Exception as e:
-            if current_app.config['DEBUG'] is True:
+            if current_app.config['DEBUG'] or current_app.config.get('CATCH_EXCEPTIONS', True) is False:
                 raise e
 
             if 'sentry' in current_app.extensions:
