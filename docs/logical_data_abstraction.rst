@@ -5,7 +5,7 @@ Logical data abstraction
 
 .. currentmodule:: flask_rest_jsonapi
 
-The first thing to do in Flask-REST-JSONAPI is to create a logical data abstraction. This part of the api discribes schemas of resources exposed by the api that is not the exact mapping of data architecture. The declaration of schemas is made my `Marshmallow <https://marshmallow.readthedocs.io/en/latest/>`_ / `marshmallow-jsonapi <https://marshmallow-jsonapi.readthedocs.io/>`_. Marshmallow is a very popular serialization / deserialization library that offer lot a features to abstract your data architecture. Moreover there is an other library called marshmallow-jsonapi that fit the JSONAPI 1.0 specification and provides Flask integration.
+The first thing to do in Flask-REST-JSONAPI is to create a logical data abstraction. This part of the api discribes schemas of resources exposed by the api that is not the exact mapping of data architecture. The declaration of schemas is made by `Marshmallow <https://marshmallow.readthedocs.io/en/latest/>`_ / `marshmallow-jsonapi <https://marshmallow-jsonapi.readthedocs.io/>`_. Marshmallow is a very popular serialization / deserialization library that offers a lot of features to abstract your data architecture. Moreover there is an other library called marshmallow-jsonapi that fit the JSONAPI 1.0 specification and provides Flask integration.
 
 Example:
 
