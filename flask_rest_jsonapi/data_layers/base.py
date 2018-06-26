@@ -27,7 +27,7 @@ class BaseDataLayer(object):
                           'after_update_relationship',
                           'before_delete_relationship',
                           'after_delete_relationship',
-                          'retrieve_object')
+                          'retrieve_object_query')
 
     def __init__(self, kwargs):
         """Intialize an data layer instance with kwargs

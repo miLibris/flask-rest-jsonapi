@@ -218,9 +218,9 @@ class ResourceDetail(with_metaclass(ResourceMeta, Resource)):
         """Get object details"""
         self.before_get(args, kwargs)
 
-        obj = self._data_layer.get_object(kwargs)
-
         qs = QSManager(request.args, self.schema)
+
+        obj = self._data_layer.get_object(qs, kwargs)
 
         schema = compute_schema(self.schema,
                                 getattr(self, 'get_schema_kwargs', dict()),
