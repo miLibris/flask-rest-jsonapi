@@ -220,7 +220,7 @@ class ResourceDetail(with_metaclass(ResourceMeta, Resource)):
 
         qs = QSManager(request.args, self.schema)
 
-        obj = self._data_layer.get_object(qs, kwargs)
+        obj = self._data_layer.get_object(kwargs, qs=qs)
 
         schema = compute_schema(self.schema,
                                 getattr(self, 'get_schema_kwargs', dict()),

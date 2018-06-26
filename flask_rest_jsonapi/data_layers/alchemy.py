@@ -59,7 +59,7 @@ class SqlalchemyDataLayer(BaseDataLayer):
 
         return obj
 
-    def get_object(self, qs, view_kwargs):
+    def get_object(self, view_kwargs, qs=None):
         """Retrieve an object through sqlalchemy
 
         :params dict view_kwargs: kwargs from the resource view
