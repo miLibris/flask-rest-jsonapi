@@ -77,7 +77,9 @@ class SqlalchemyDataLayer(BaseDataLayer):
         filter_value = view_kwargs[url_field]
 
         query = self.retrieve_object_query(view_kwargs, filter_field, filter_value)
-        query = self.eagerload_includes(query, qs)
+
+        if qs is not None:
+            query = self.eagerload_includes(query, qs)
 
         try:
             obj = query.one()

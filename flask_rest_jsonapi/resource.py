@@ -277,7 +277,7 @@ class ResourceDetail(with_metaclass(ResourceMeta, Resource)):
 
         self.before_patch(args, kwargs, data=data)
 
-        obj = self._data_layer.get_object(kwargs)
+        obj = self._data_layer.get_object(kwargs, qs=qs)
         self._data_layer.update_object(obj, data, kwargs)
 
         result = schema.dump(obj).data
