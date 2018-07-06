@@ -56,10 +56,6 @@ def check_method_requirements(func):
         error_message = "You must provide {error_field} in {cls} to get access to the default {method} method"
         error_data = {'cls': args[0].__class__.__name__, 'method': request.method.lower()}
 
-        if not hasattr(args[0], '_data_layer'):
-            error_data.update({'error_field': 'a data layer class'})
-            raise Exception(error_message.format(**error_data))
-
         if request.method != 'DELETE':
             if not hasattr(args[0], 'schema'):
                 error_data.update({'error_field': 'a schema class'})
