@@ -126,7 +126,8 @@ class ResourceList(with_metaclass(ResourceMeta, Resource)):
         self.before_get(args, kwargs)
 
         qs = QSManager(request.args, self.schema)
-        objects_count, objects = self._data_layer.get_collection(qs, kwargs)
+
+        objects_count, objects = self.get_collection(qs, kwargs)
 
         schema_kwargs = getattr(self, 'get_schema_kwargs', dict())
         schema_kwargs.update({'many': True})
@@ -185,13 +186,18 @@ class ResourceList(with_metaclass(ResourceMeta, Resource)):
 
         self.before_post(args, kwargs, data=data)
 
-        obj = self._data_layer.create_object(data, kwargs)
+        obj = self.create_object(data, kwargs)
 
         result = schema.dump(obj).data
 
         self.after_post(result)
 
-        return result, 201, {'Location': result['data']['links']['self']}
+        if result['data'].get('links', {}).get('self'):
+            final_result = (result, 201, {'Location': result['data']['links']['self']})
+        else:
+            final_result = (result, 201)
+
+        return final_result
 
     def before_get(self, args, kwargs):
         """Hook to make custom work before get method"""
@@ -209,6 +215,12 @@ class ResourceList(with_metaclass(ResourceMeta, Resource)):
         """Hook to make custom work after post method"""
         pass
 
+    def get_collection(self, qs, kwargs):
+        return self._data_layer.get_collection(qs, kwargs)
+
+    def create_object(self, data, kwargs):
+        return self._data_layer.create_object(data, kwargs)
+
 
 class ResourceDetail(with_metaclass(ResourceMeta, Resource)):
     """Base class of a resource detail manager"""
@@ -220,7 +232,7 @@ class ResourceDetail(with_metaclass(ResourceMeta, Resource)):
 
         qs = QSManager(request.args, self.schema)
 
-        obj = self._data_layer.get_object(kwargs, qs=qs)
+        obj = self.get_object(kwargs, qs)
 
         schema = compute_schema(self.schema,
                                 getattr(self, 'get_schema_kwargs', dict()),
@@ -277,8 +289,7 @@ class ResourceDetail(with_metaclass(ResourceMeta, Resource)):
 
         self.before_patch(args, kwargs, data=data)
 
-        obj = self._data_layer.get_object(kwargs, qs=qs)
-        self._data_layer.update_object(obj, data, kwargs)
+        obj = self.update_object(data, qs, kwargs)
 
         result = schema.dump(obj).data
 
@@ -291,8 +302,7 @@ class ResourceDetail(with_metaclass(ResourceMeta, Resource)):
         """Delete an object"""
         self.before_delete(args, kwargs)
 
-        obj = self._data_layer.get_object(kwargs)
-        self._data_layer.delete_object(obj, kwargs)
+        self.delete_object(kwargs)
 
         result = {'meta': {'message': 'Object successfully deleted'}}
 
@@ -323,6 +333,19 @@ class ResourceDetail(with_metaclass(ResourceMeta, Resource)):
     def after_delete(self, result):
         """Hook to make custom work after delete method"""
         pass
+
+    def get_object(self, kwargs, qs):
+        return self._data_layer.get_object(kwargs, qs=qs)
+
+    def update_object(self, data, qs, kwargs):
+        obj = self._data_layer.get_object(kwargs, qs=qs)
+        self._data_layer.update_object(obj, data, kwargs)
+
+        return obj
+
+    def delete_object(self, kwargs):
+        obj = self._data_layer.get_object(kwargs)
+        self._data_layer.delete_object(obj, kwargs)
 
 
 class ResourceRelationship(with_metaclass(ResourceMeta, Resource)):
