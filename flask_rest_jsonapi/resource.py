@@ -79,7 +79,9 @@ class Resource(MethodView):
             if 'sentry' in current_app.extensions:
                 current_app.extensions['sentry'].captureException()
 
-            exc = JsonApiException(getattr(e, 'detail', str(e)),
+            exc = JsonApiException(getattr(e,
+                                           'detail',
+                                           current_app.config.get('GLOBAL_ERROR_MESSAGE') or str(e)),
                                    source=getattr(e, 'source', ''),
                                    title=getattr(e, 'title', None),
                                    status=getattr(e, 'status', None),
