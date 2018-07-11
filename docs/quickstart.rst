@@ -63,7 +63,7 @@ An example of Flask-REST-JSONAPI API looks like this:
             self_view_many = 'person_list'
 
         id = fields.Integer(as_string=True, dump_only=True)
-        name = fields.Str(requried=True, load_only=True)
+        name = fields.Str(required=True, load_only=True)
         email = fields.Email(load_only=True)
         birth_date = fields.Date()
         display_name = fields.Function(lambda obj: "{} <{}>".format(obj.name.upper(), obj.email))
@@ -83,7 +83,7 @@ An example of Flask-REST-JSONAPI API looks like this:
             self_view_kwargs = {'id': '<id>'}
 
         id = fields.Integer(as_string=True, dump_only=True)
-        serial = fields.Str(requried=True)
+        serial = fields.Str(required=True)
         owner = Relationship(attribute='person',
                              self_view='computer_person',
                              self_view_kwargs={'id': '<id>'},
