@@ -389,9 +389,9 @@ def test_query_string_manager(person_schema):
     qsm = QSManager(query_string, person_schema)
     with pytest.raises(BadRequest):
         qsm.pagination
-    qsm.qs['sort'] = 'computers'
-    with pytest.raises(InvalidSort):
-        qsm.sorting
+    #qsm.qs['sort'] = 'computers'
+    #with pytest.raises(InvalidSort):
+        #qsm.sorting
 
 
 def test_resource(app, person_model, person_schema, session, monkeypatch):
@@ -440,6 +440,46 @@ def test_get_list(client, register_routes, person, person_2):
                                  'page[size]': 1,
                                  'fields[person]': 'name,birth_date',
                                  'sort': '-name',
+                                 'include': 'computers.owner',
+                                 'filter': json.dumps(
+                                     [
+                                         {
+                                             'and': [
+                                                 {
+                                                     'name': 'computers',
+                                                     'op': 'any',
+                                                     'val': {
+                                                         'name': 'serial',
+                                                         'op': 'eq',
+                                                         'val': '0000'
+                                                     }
+                                                 },
+                                                 {
+                                                     'or': [
+                                                         {
+                                                             'name': 'name',
+                                                             'op': 'like',
+                                                             'val': '%test%'
+                                                         },
+                                                         {
+                                                             'name': 'name',
+                                                             'op': 'like',
+                                                             'val': '%test2%'
+                                                         }
+                                                     ]
+                                                 }
+                                             ]
+                                         }
+                                     ])})
+        response = client.get('/persons' + '?' + querystring, content_type='application/vnd.api+json')
+        assert response.status_code == 200
+
+def test_get_list_sort_relationship(client, register_routes, person, person_2):
+    with client:
+        querystring = urlencode({'page[number]': 1,
+                                 'page[size]': 1,
+                                 'fields[person]': 'name,birth_date',
+                                 'sort': '-computers',
                                  'include': 'computers.owner',
                                  'filter': json.dumps(
                                      [
