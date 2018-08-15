@@ -455,7 +455,7 @@ class SqlalchemyDataLayer(BaseDataLayer):
             if sort_opt['relationship']:
                 relationField = getattr(self.model, field)
                 relationClass = relationField.mapper.class_
-                query = query.join(relationField).order_by(getattr(getattr(relationClass, 'id'), sort_opt['order'])()
+                query = query.join(relationField).order_by(getattr(getattr(relationClass, 'id'), sort_opt['order'])())
             else:
                 query = query.order_by(getattr(getattr(self.model, field), sort_opt['order'])())
         return query
