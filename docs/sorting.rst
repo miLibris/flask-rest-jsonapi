@@ -18,8 +18,8 @@ Example:
     GET /persons?sort=name HTTP/1.1
     Accept: application/vnd.api+json
 
-Muliple sort
-------------
+Multiple sort
+-------------
 
 You can sort on multiple fields like that:
 
@@ -28,7 +28,7 @@ You can sort on multiple fields like that:
     GET /persons?sort=name,birth_date HTTP/1.1
     Accept: application/vnd.api+json
 
-Descendant sort
+Descending sort
 ---------------
 
 You can make desc sort with the character "-" like that:
@@ -38,8 +38,8 @@ You can make desc sort with the character "-" like that:
     GET /persons?sort=-name HTTP/1.1
     Accept: application/vnd.api+json
 
-Muliple sort + Descendant sort
-------------------------------
+Multiple sort + Descending sort
+-------------------------------
 
 Of course, you can combine both like that:
 
