@@ -174,7 +174,7 @@ def person_list(session, person_model, dummy_decorator, person_schema, before_cr
         schema = person_schema
         data_layer = {'model': person_model,
                       'session': session,
-                      'mzthods': {'before_create_object': before_create_object}}
+                      'methods': {'before_create_object': before_create_object}}
         get_decorators = [dummy_decorator]
         post_decorators = [dummy_decorator]
         get_schema_kwargs = dict()
@@ -307,7 +307,7 @@ def register_routes(client, app, api_blueprint, person_list, person_detail, pers
     api.route(person_list_response, 'person_list_response', '/persons_response')
     api.route(person_list_without_schema, 'person_list_without_schema', '/persons_without_schema')
     api.route(computer_list, 'computer_list', '/computers', '/persons/<int:person_id>/computers')
-    api.route(computer_list, 'computer_detail', '/computers/<int:id>')
+    api.route(computer_detail, 'computer_detail', '/computers/<int:id>')
     api.route(computer_owner, 'computer_owner', '/computers/<int:id>/relationships/owner')
     api.init_app(app)
 
