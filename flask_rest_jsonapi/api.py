@@ -8,6 +8,7 @@ import inspect
 from functools import wraps
 
 from flask_rest_jsonapi.resource import ResourceList, ResourceRelationship
+from flask_rest_jsonapi.decorators import jsonapi_exception_formatter
 
 
 class Api(object):
@@ -147,6 +148,7 @@ class Api(object):
                 return view
 
             @wraps(view)
+            @jsonapi_exception_formatter
             def decorated(*view_args, **view_kwargs):
                 self.check_permissions(view, view_args, view_kwargs, *args, **kwargs)
                 return view(*view_args, **view_kwargs)
