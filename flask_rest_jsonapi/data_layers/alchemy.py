@@ -196,9 +196,11 @@ class SqlalchemyDataLayer(BaseDataLayer):
         if not hasattr(obj, relationship_field):
             raise RelationNotFound("{} has no attribute {}".format(obj.__class__.__name__, relationship_field))
 
-        related_model = getattr(obj.__class__, relationship_field).property.mapper.class_
-
         updated = False
+        related_model = None
+
+        if hasattr(getattr(obj.__class__, relationship_field).property, 'mapper'):
+            related_model = getattr(obj.__class__, relationship_field).property.mapper.class_
 
         if isinstance(json_data['data'], list):
             obj_ids = {str(getattr(obj__, related_id_field)) for obj__ in getattr(obj, relationship_field)}
@@ -210,12 +212,19 @@ class SqlalchemyDataLayer(BaseDataLayer):
                     updated = True
         else:
             related_object = None
+            obj_id = None
+            new_obj_id = None
 
-            if json_data['data'] is not None:
-                related_object = self.get_related_object(related_model, related_id_field, json_data['data'])
+            if related_model is None:
+                obj_id = getattr(obj, relationship_field, None)
+                new_obj_id = json_data['data'][related_id_field]
+                related_object = new_obj_id
+            else:
+                if json_data['data'] is not None:
+                    related_object = self.get_related_object(related_model, related_id_field, json_data['data'])
+                obj_id = getattr(getattr(obj, relationship_field), related_id_field, None)
+                new_obj_id = getattr(related_object, related_id_field, None)
 
-            obj_id = getattr(getattr(obj, relationship_field), related_id_field, None)
-            new_obj_id = getattr(related_object, related_id_field, None)
             if obj_id != new_obj_id:
                 setattr(obj, relationship_field, related_object)
                 updated = True
@@ -256,6 +265,8 @@ class SqlalchemyDataLayer(BaseDataLayer):
 
         if related_objects is None:
             return obj, related_objects
+        if isinstance(related_objects, str):
+            return obj, {'type': related_type_, 'id': related_objects}
 
         self.after_get_relationship(obj, related_objects, relationship_field, related_type_, related_id_field,
                                     view_kwargs)
@@ -288,9 +299,11 @@ class SqlalchemyDataLayer(BaseDataLayer):
         if not hasattr(obj, relationship_field):
             raise RelationNotFound("{} has no attribute {}".format(obj.__class__.__name__, relationship_field))
 
-        related_model = getattr(obj.__class__, relationship_field).property.mapper.class_
-
         updated = False
+        related_model = None
+
+        if hasattr(getattr(obj.__class__, relationship_field).property, 'mapper'):
+            related_model = getattr(obj.__class__, relationship_field).property.mapper.class_
 
         if isinstance(json_data['data'], list):
             related_objects = []
@@ -306,12 +319,20 @@ class SqlalchemyDataLayer(BaseDataLayer):
 
         else:
             related_object = None
+            obj_id = None
+            new_obj_id = None
 
-            if json_data['data'] is not None:
-                related_object = self.get_related_object(related_model, related_id_field, json_data['data'])
+            if related_model is None:
+                obj_id = getattr(obj, relationship_field, None)
+                new_obj_id = json_data['data'][related_id_field]
+                related_object = new_obj_id
+            else:
+                if json_data['data'] is not None:
+                    related_object = self.get_related_object(related_model, related_id_field, json_data['data'])
 
-            obj_id = getattr(getattr(obj, relationship_field), related_id_field, None)
-            new_obj_id = getattr(related_object, related_id_field, None)
+                obj_id = getattr(getattr(obj, relationship_field), related_id_field, None)
+                new_obj_id = getattr(related_object, related_id_field, None)
+
             if obj_id != new_obj_id:
                 setattr(obj, relationship_field, related_object)
                 updated = True
@@ -347,12 +368,11 @@ class SqlalchemyDataLayer(BaseDataLayer):
         if not hasattr(obj, relationship_field):
             raise RelationNotFound("{} has no attribute {}".format(obj.__class__.__name__, relationship_field))
 
-        related_model = getattr(obj.__class__, relationship_field).property.mapper.class_
-
         updated = False
 
         if isinstance(json_data['data'], list):
             obj_ids = {str(getattr(obj__, related_id_field)) for obj__ in getattr(obj, relationship_field)}
+            related_model = getattr(obj.__class__, relationship_field).property.mapper.class_
 
             for obj_ in json_data['data']:
                 if obj_['id'] in obj_ids:
@@ -403,25 +423,28 @@ class SqlalchemyDataLayer(BaseDataLayer):
         relationship_fields = get_relationships(self.resource.schema, model_field=True)
         for key, value in data.items():
             if key in relationship_fields:
-                related_model = getattr(obj.__class__, key).property.mapper.class_
-                schema_field = get_schema_field(self.resource.schema, key)
-                related_id_field = self.resource.schema._declared_fields[schema_field].id_field
+                if hasattr(getattr(obj.__class__, key).property, 'mapper'):
+                    related_model = getattr(obj.__class__, key).property.mapper.class_
+                    schema_field = get_schema_field(self.resource.schema, key)
+                    related_id_field = self.resource.schema._declared_fields[schema_field].id_field
 
-                if isinstance(value, list):
-                    related_objects = []
+                    if isinstance(value, list):
+                        related_objects = []
 
-                    for identifier in value:
-                        related_object = self.get_related_object(related_model, related_id_field, {'id': identifier})
-                        related_objects.append(related_object)
+                        for identifier in value:
+                            related_object = self.get_related_object(related_model, related_id_field, {'id': identifier})
+                            related_objects.append(related_object)
 
-                    relationships_to_apply.append({'field': key, 'value': related_objects})
+                        relationships_to_apply.append({'field': key, 'value': related_objects})
+                    else:
+                        related_object = None
+
+                        if value is not None:
+                            related_object = self.get_related_object(related_model, related_id_field, {'id': value})
+
+                        relationships_to_apply.append({'field': key, 'value': related_object})
                 else:
-                    related_object = None
-
-                    if value is not None:
-                        related_object = self.get_related_object(related_model, related_id_field, {'id': value})
-
-                    relationships_to_apply.append({'field': key, 'value': related_object})
+                    relationships_to_apply.append({'field': key, 'value': value})
 
         for relationship in relationships_to_apply:
             setattr(obj, relationship['field'], relationship['value'])

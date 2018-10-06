@@ -3,7 +3,7 @@
 from six.moves.urllib.parse import urlencode, parse_qs
 import pytest
 
-from sqlalchemy import create_engine, Column, Integer, DateTime, String, ForeignKey
+from sqlalchemy import create_engine, Column, Integer, DateTime, String, ForeignKey, Enum
 from sqlalchemy.orm import sessionmaker, relationship
 from sqlalchemy.ext.declarative import declarative_base
 from flask import Blueprint, make_response, json
@@ -37,6 +37,7 @@ def person_model(base):
         person_id = Column(Integer, primary_key=True)
         name = Column(String, nullable=False)
         birth_date = Column(DateTime)
+        gender = Column(Enum('male', 'female'), nullable=True)
         computers = relationship("Computer", backref="person")
     yield Person
 
@@ -119,6 +120,12 @@ def person_schema():
         id = fields.Integer(as_string=True, dump_only=True, attribute='person_id')
         name = fields.Str(required=True)
         birth_date = fields.DateTime()
+        gender = Relationship(attribute='gender',
+                              related_view='api.gender_detail',
+                              related_view_kwargs={'gender_id': '<gender>'},
+                              schema='GenderSchema',
+                              id_field='id',
+                              type_='gender')
         computers = Relationship(related_view='api.computer_list',
                                  related_view_kwargs={'person_id': '<person_id>'},
                                  schema='ComputerSchema',
@@ -145,6 +152,18 @@ def computer_schema():
                              id_field='person_id',
                              type_='person')
     yield ComputerSchema
+
+
+@pytest.fixture(scope="module")
+def gender_schema():
+    class GenderSchema(Schema):
+        class Meta:
+            type_ = 'gender'
+            self_view = 'api.gender_detail'
+            self_view_kwargs = {'gender_id': '<id>'}
+        id = fields.Str(dump_only=True)
+        name = fields.Str(required=True)
+    yield GenderSchema
 
 
 @pytest.fixture(scope="module")
@@ -212,6 +231,18 @@ def person_computers(session, person_model, dummy_decorator, person_schema):
         patch_decorators = [dummy_decorator]
         delete_decorators = [dummy_decorator]
     yield PersonComputersRelationship
+
+
+@pytest.fixture(scope="module")
+def person_gender(session, person_model, dummy_decorator, person_schema):
+    class PersonGenderRelationship(ResourceRelationship):
+        schema = person_schema
+        data_layer = {'session': session,
+                      'model': person_model,
+                      'url_field': 'person_id'}
+        get_decorators = [dummy_decorator]
+        delete_decorators = [dummy_decorator]
+    yield PersonGenderRelationship
 
 
 @pytest.fixture(scope="module")
@@ -288,20 +319,59 @@ def computer_owner(session, computer_model, dummy_decorator, computer_schema):
 
 
 @pytest.fixture(scope="module")
+def gender_datalayer(session):
+    class genderDataLayer(BaseDataLayer):
+        genders = {
+            'male': {'id': 'male', 'name': 'male'},
+            'female': {'id': 'female', 'name': 'female'},
+        }
+
+        def get_object(self, view_kwargs, qs):
+            return self.genders[view_kwargs['gender_id']]
+
+        def get_collection(self, qs, view_kwargs):
+            return len(self.genders), [
+                self.genders[key] for key in self.genders.keys()
+            ]
+
+    yield genderDataLayer
+
+
+@pytest.fixture(scope="module")
+def gender_list(session, gender_schema, gender_datalayer):
+    class GenderList(ResourceList):
+        schema = gender_schema
+        data_layer = {'class': gender_datalayer}
+        methods = ['GET']
+    yield GenderList
+
+
+@pytest.fixture(scope="module")
+def gender_detail(session, gender_schema, gender_datalayer):
+    class GenderDetail(ResourceDetail):
+        schema = gender_schema
+        data_layer = {'class': gender_datalayer}
+        methods = ['GET']
+    yield GenderDetail
+
+
+@pytest.fixture(scope="module")
 def api_blueprint(client):
     bp = Blueprint('api', __name__)
     yield bp
 
 
 @pytest.fixture(scope="module")
-def register_routes(client, app, api_blueprint, person_list, person_detail, person_computers,
+def register_routes(client, app, api_blueprint, person_list, person_detail, person_computers,  person_gender,
                     person_list_raise_jsonapiexception, person_list_raise_exception, person_list_response,
-                    person_list_without_schema, computer_list, computer_detail, computer_owner):
+                    person_list_without_schema, computer_list, computer_detail, computer_owner,
+                    gender_list, gender_detail):
     api = Api(blueprint=api_blueprint)
     api.route(person_list, 'person_list', '/persons')
     api.route(person_detail, 'person_detail', '/persons/<int:person_id>')
     api.route(person_computers, 'person_computers', '/persons/<int:person_id>/relationships/computers')
     api.route(person_computers, 'person_computers_error', '/persons/<int:person_id>/relationships/computer')
+    api.route(person_gender, 'person_gender', '/persons/<int:person_id>/relationships/gender')
     api.route(person_list_raise_jsonapiexception, 'person_list_jsonapiexception', '/persons_jsonapiexception')
     api.route(person_list_raise_exception, 'person_list_exception', '/persons_exception')
     api.route(person_list_response, 'person_list_response', '/persons_response')
@@ -309,6 +379,8 @@ def register_routes(client, app, api_blueprint, person_list, person_detail, pers
     api.route(computer_list, 'computer_list', '/computers', '/persons/<int:person_id>/computers')
     api.route(computer_detail, 'computer_detail', '/computers/<int:id>')
     api.route(computer_owner, 'computer_owner', '/computers/<int:id>/relationships/owner')
+    api.route(gender_list, 'gender_list', '/genders')
+    api.route(gender_detail, 'gender_detail', '/genders/<gender_id>')
     api.init_app(app)
 
 
@@ -542,6 +614,22 @@ def test_get_detail(client, register_routes, person):
         assert response.status_code == 200
 
 
+def test_get_detail_custom_datalayer(client, register_routes):
+    with client:
+        response = client.get('/genders/male', content_type='application/vnd.api+json')
+        assert response.status_code == 200
+        assert (json.loads(response.get_data()))['data']['attributes']['name'] == 'male'
+
+
+def test_get_collection_custom_datalayer(client, register_routes):
+    with client:
+        response = client.get('/genders', content_type='application/vnd.api+json')
+        assert response.status_code == 200
+        genders = [attrs['attributes']['name'] for attrs in (json.loads(response.get_data()))['data']]
+        assert 'male' in genders
+        assert 'female' in genders
+
+
 def test_patch_detail(client, register_routes, computer, person):
     payload = {
         'data': {
@@ -614,6 +702,20 @@ def test_get_relationship_single_empty(session, client, register_routes, compute
         assert response.status_code == 200
 
 
+def test_get_relationship_custom_datalayer(session, client, register_routes, person):
+    session_ = session
+    person.gender = 'female'
+    session_.commit()
+
+    with client:
+        response = client.get('/persons/' + str(person.person_id) + '/relationships/gender',
+                              content_type='application/vnd.api+json')
+        assert response.status_code == 200
+        response_json = json.loads(response.get_data())
+        assert response_json['links']['related'] == '/genders/' + person.gender
+        assert str(person.gender) == response_json['data']['id']
+
+
 def test_issue_49(session, client, register_routes, person, person_2):
     with client:
         for p in [person, person_2]:
@@ -638,6 +740,23 @@ def test_post_relationship(client, register_routes, computer, person):
                                data=json.dumps(payload),
                                content_type='application/vnd.api+json')
         assert response.status_code == 200
+
+
+def test_post_relationship_custom_datalayer(session, client, register_routes, person_model, person):
+    payload = {
+        'data': {
+            'type': 'gender',
+            'id': 'female'
+        }
+    }
+
+    with client:
+        response = client.post('/persons/' + str(person.person_id) + '/relationships/gender',
+                               data=json.dumps(payload),
+                               content_type='application/vnd.api+json')
+        assert response.status_code == 200
+        person_ = session.query(person_model).filter_by(person_id=person.person_id).one()
+        assert person_.gender == payload['data']['id']
 
 
 def test_post_relationship_not_list(client, register_routes, computer, person):
@@ -686,6 +805,27 @@ def test_patch_relationship_single(client, register_routes, computer, person):
         assert response.status_code == 200
 
 
+def test_patch_relationship_custom_datalayer(session, client, register_routes, person_model, person):
+    session_ = session
+    person.gender = 'male'
+    session_.commit()
+
+    payload = {
+        'data': {
+            'type': 'gender',
+            'id': 'female'
+        }
+    }
+
+    with client:
+        response = client.patch('/persons/' + str(person.person_id) + '/relationships/gender',
+                               data=json.dumps(payload),
+                               content_type='application/vnd.api+json')
+        assert response.status_code == 200
+        person_ = session.query(person_model).filter_by(person_id=person.person_id).one()
+        assert person_.gender == payload['data']['id']
+
+
 def test_delete_relationship(session, client, register_routes, computer, person):
     session_ = session
     person.computers = [computer]
@@ -721,6 +861,25 @@ def test_delete_relationship_single(session, client, register_routes, computer, 
 
     with client:
         response = client.delete('/computers/' + str(computer.id) + '/relationships/owner',
+                                 data=json.dumps(payload),
+                                 content_type='application/vnd.api+json')
+        assert response.status_code == 200
+
+
+def test_delete_relationship_custom_datalayer(session, client, register_routes, person_model, person):
+    session_ = session
+    person.gender = 'male'
+    session_.commit()
+
+    payload = {
+        'data': {
+            'type': 'gender',
+            'id': person.gender
+        }
+    }
+
+    with client:
+        response = client.delete('/persons/' + str(person.person_id) + '/relationships/gender',
                                  data=json.dumps(payload),
                                  content_type='application/vnd.api+json')
         assert response.status_code == 200
