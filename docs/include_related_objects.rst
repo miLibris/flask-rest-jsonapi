@@ -174,4 +174,4 @@ Response:
       }
     }
 
-I know it is an absurd example because it will include details of related person computers and details of the person that is already in reponse. But it is just for example.
+I know it is an absurd example because it will include details of related person computers and details of the person that is already in the response. But it is just for example.
