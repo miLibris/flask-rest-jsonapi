@@ -15,7 +15,7 @@ from flask_rest_jsonapi.errors import jsonapi_errors
 from flask_rest_jsonapi.querystring import QueryStringManager as QSManager
 from flask_rest_jsonapi.pagination import add_pagination_links
 from flask_rest_jsonapi.exceptions import InvalidType, BadRequest, JsonApiException, RelationNotFound
-from flask_rest_jsonapi.decorators import check_headers, check_method_requirements
+from flask_rest_jsonapi.decorators import check_headers, check_method_requirements, jsonapi_exception_formatter
 from flask_rest_jsonapi.schema import compute_schema, get_relationships, get_model_field
 from flask_rest_jsonapi.data_layers.base import BaseDataLayer
 from flask_rest_jsonapi.data_layers.alchemy import SqlalchemyDataLayer
@@ -57,6 +57,7 @@ class Resource(MethodView):
 
         return super(Resource, cls).__new__(cls)
 
+    @jsonapi_exception_formatter
     def dispatch_request(self, *args, **kwargs):
         """Logic of how to handle a request"""
         method = getattr(self, request.method.lower(), None)
@@ -66,32 +67,7 @@ class Resource(MethodView):
 
         headers = {'Content-Type': 'application/vnd.api+json'}
 
-        try:
-            response = method(*args, **kwargs)
-        except JsonApiException as e:
-            return make_response(jsonify(jsonapi_errors([e.to_dict()])),
-                                 e.status,
-                                 headers)
-        except Exception as e:
-            if current_app.config['DEBUG'] is True:
-                raise e
-
-            if 'sentry' in current_app.extensions:
-                current_app.extensions['sentry'].captureException()
-
-            exc = JsonApiException(getattr(e,
-                                           'detail',
-                                           current_app.config.get('GLOBAL_ERROR_MESSAGE') or str(e)),
-                                   source=getattr(e, 'source', ''),
-                                   title=getattr(e, 'title', None),
-                                   status=getattr(e, 'status', None),
-                                   code=getattr(e, 'code', None),
-                                   id_=getattr(e, 'id', None),
-                                   links=getattr(e, 'links', None),
-                                   meta=getattr(e, 'meta', None))
-            return make_response(jsonify(jsonapi_errors([exc.to_dict()])),
-                                 exc.status,
-                                 headers)
+        response = method(*args, **kwargs)
 
         if isinstance(response, Response):
             response.headers.add('Content-Type', 'application/vnd.api+json')
