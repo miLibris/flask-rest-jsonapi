@@ -15,7 +15,6 @@ SQLAlchemy
 ----------
 
 The filtering system of SQLAlchemy data layer has exactly the same interface as the filtering system of `Flask-Restless <https://flask-restless.readthedocs.io/en/stable/searchformat.html#query-format>`_.
-
 So this is a first example:
 
 .. sourcecode:: http
@@ -132,3 +131,37 @@ Common available operators:
 .. note::
 
     Availables operators depend on field type in your model
+
+Simple filters
+--------------
+
+Simple filter adds support for a simplified form of filters and supports only *eq* operator.
+Each simple filter transforms to original filter and appends to list of filters.
+
+For example
+
+.. sourcecode:: http
+
+    GET /persons?filter[name]=John HTTP/1.1
+    Accept: application/vnd.api+json
+
+equals to:
+
+.. sourcecode:: http
+
+    GET /persons?filter[name]=[{"name":"name","op":"eq","val":"John"}] HTTP/1.1
+    Accept: application/vnd.api+json
+
+
+You can also use more than one simple filter in request:
+
+.. sourcecode:: http
+
+    GET /persons?filter[name]=John&filter[gender]=male HTTP/1.1
+    Accept: application/vnd.api+json
+
+which equals to:
+
+.. sourcecode:: http
+
+    GET /persons?filter[name]=[{"name":"name","op":"eq","val":"John"}, {"name":"gender","op":"eq","val":"male"}] HTTP/1.1

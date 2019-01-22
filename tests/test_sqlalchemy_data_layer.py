@@ -487,6 +487,16 @@ def test_get_list(client, register_routes, person, person_2):
         response = client.get('/persons' + '?' + querystring, content_type='application/vnd.api+json')
         assert response.status_code == 200
 
+def test_get_list_with_simple_filter(client, register_routes, person, person_2):
+    with client:
+        querystring = urlencode({'page[number]': 1,
+                                 'page[size]': 1,
+                                 'fields[person]': 'name,birth_date',
+                                 'sort': '-name',
+                                 'filter[name]': 'test'
+                                 })
+        response = client.get('/persons' + '?' + querystring, content_type='application/vnd.api+json')
+        assert response.status_code == 200
 
 def test_get_list_disable_pagination(client, register_routes):
     with client:
