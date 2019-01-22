@@ -437,6 +437,15 @@ def test_compute_schema(person_schema):
     flask_rest_jsonapi.schema.compute_schema(person_schema, dict(only=list()), qsm, list())
 
 
+def test_compute_schema_propagate_context(person_schema, computer_schema):
+    query_string = {}
+    qsm = QSManager(query_string, person_schema)
+    schema = flask_rest_jsonapi.schema.compute_schema(person_schema, dict(), qsm, ['computers'])
+    assert schema.declared_fields['computers'].__dict__['_Relationship__schema'].__dict__['context'] == dict()
+    schema = flask_rest_jsonapi.schema.compute_schema(person_schema, dict(context=dict(foo='bar')), qsm, ['computers'])
+    assert schema.declared_fields['computers'].__dict__['_Relationship__schema'].__dict__['context'] == dict(foo='bar')
+
+
 # test good cases
 def test_get_list(client, register_routes, person, person_2):
     with client:
