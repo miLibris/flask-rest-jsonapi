@@ -15,7 +15,7 @@ from flask_rest_jsonapi.errors import jsonapi_errors
 from flask_rest_jsonapi.querystring import QueryStringManager as QSManager
 from flask_rest_jsonapi.pagination import add_pagination_links
 from flask_rest_jsonapi.exceptions import InvalidType, BadRequest, JsonApiException, RelationNotFound
-from flask_rest_jsonapi.decorators import check_headers, check_method_requirements
+from flask_rest_jsonapi.decorators import check_headers, check_method_requirements, jsonapi_exception_formatter
 from flask_rest_jsonapi.schema import compute_schema, get_relationships, get_model_field
 from flask_rest_jsonapi.data_layers.base import BaseDataLayer
 from flask_rest_jsonapi.data_layers.alchemy import SqlalchemyDataLayer
@@ -57,6 +57,7 @@ class Resource(MethodView):
 
         return super(Resource, cls).__new__(cls)
 
+    @jsonapi_exception_formatter
     def dispatch_request(self, *args, **kwargs):
         """Logic of how to handle a request"""
         method = getattr(self, request.method.lower(), None)
@@ -66,26 +67,7 @@ class Resource(MethodView):
 
         headers = {'Content-Type': 'application/vnd.api+json'}
 
-        try:
-            response = method(*args, **kwargs)
-        except JsonApiException as e:
-            return make_response(jsonify(jsonapi_errors([e.to_dict()])),
-                                 e.status,
-                                 headers)
-        except Exception as e:
-            if current_app.config['DEBUG'] is True:
-                raise e
-            exc = JsonApiException(getattr(e, 'detail', str(e)),
-                                   source=getattr(e, 'source', ''),
-                                   title=getattr(e, 'title', None),
-                                   status=getattr(e, 'status', None),
-                                   code=getattr(e, 'code', None),
-                                   id_=getattr(e, 'id', None),
-                                   links=getattr(e, 'links', None),
-                                   meta=getattr(e, 'meta', None))
-            return make_response(jsonify(jsonapi_errors([exc.to_dict()])),
-                                 exc.status,
-                                 headers)
+        response = method(*args, **kwargs)
 
         if isinstance(response, Response):
             response.headers.add('Content-Type', 'application/vnd.api+json')
@@ -122,10 +104,13 @@ class ResourceList(with_metaclass(ResourceMeta, Resource)):
         self.before_get(args, kwargs)
 
         qs = QSManager(request.args, self.schema)
-        objects_count, objects = self._data_layer.get_collection(qs, kwargs)
+
+        objects_count, objects = self.get_collection(qs, kwargs)
 
         schema_kwargs = getattr(self, 'get_schema_kwargs', dict())
         schema_kwargs.update({'many': True})
+
+        self.before_marshmallow(args, kwargs)
 
         schema = compute_schema(self.schema,
                                 schema_kwargs,
@@ -138,7 +123,7 @@ class ResourceList(with_metaclass(ResourceMeta, Resource)):
         add_pagination_links(result,
                              objects_count,
                              qs,
-                             url_for(self.view, **view_kwargs))
+                             url_for(self.view, _external=True, **view_kwargs))
 
         result.update({'meta': {'count': objects_count}})
 
@@ -149,7 +134,7 @@ class ResourceList(with_metaclass(ResourceMeta, Resource)):
     @check_method_requirements
     def post(self, *args, **kwargs):
         """Create an object"""
-        json_data = request.get_json()
+        json_data = request.get_json() or {}
 
         qs = QSManager(request.args, self.schema)
 
@@ -181,13 +166,18 @@ class ResourceList(with_metaclass(ResourceMeta, Resource)):
 
         self.before_post(args, kwargs, data=data)
 
-        obj = self._data_layer.create_object(data, kwargs)
+        obj = self.create_object(data, kwargs)
 
         result = schema.dump(obj).data
 
         self.after_post(result)
 
-        return result, 201, {'Location': result['data']['links']['self']}
+        if result['data'].get('links', {}).get('self'):
+            final_result = (result, 201, {'Location': result['data']['links']['self']})
+        else:
+            final_result = (result, 201)
+
+        return final_result
 
     def before_get(self, args, kwargs):
         """Hook to make custom work before get method"""
@@ -205,6 +195,15 @@ class ResourceList(with_metaclass(ResourceMeta, Resource)):
         """Hook to make custom work after post method"""
         pass
 
+    def before_marshmallow(self, args, kwargs):
+        pass
+
+    def get_collection(self, qs, kwargs):
+        return self._data_layer.get_collection(qs, kwargs)
+
+    def create_object(self, data, kwargs):
+        return self._data_layer.create_object(data, kwargs)
+
 
 class ResourceDetail(with_metaclass(ResourceMeta, Resource)):
     """Base class of a resource detail manager"""
@@ -214,9 +213,11 @@ class ResourceDetail(with_metaclass(ResourceMeta, Resource)):
         """Get object details"""
         self.before_get(args, kwargs)
 
-        obj = self._data_layer.get_object(kwargs)
-
         qs = QSManager(request.args, self.schema)
+
+        obj = self.get_object(kwargs, qs)
+
+        self.before_marshmallow(args, kwargs)
 
         schema = compute_schema(self.schema,
                                 getattr(self, 'get_schema_kwargs', dict()),
@@ -232,11 +233,13 @@ class ResourceDetail(with_metaclass(ResourceMeta, Resource)):
     @check_method_requirements
     def patch(self, *args, **kwargs):
         """Update an object"""
-        json_data = request.get_json()
+        json_data = request.get_json() or {}
 
         qs = QSManager(request.args, self.schema)
         schema_kwargs = getattr(self, 'patch_schema_kwargs', dict())
         schema_kwargs.update({'partial': True})
+
+        self.before_marshmallow(args, kwargs)
 
         schema = compute_schema(self.schema,
                                 schema_kwargs,
@@ -273,8 +276,7 @@ class ResourceDetail(with_metaclass(ResourceMeta, Resource)):
 
         self.before_patch(args, kwargs, data=data)
 
-        obj = self._data_layer.get_object(kwargs)
-        self._data_layer.update_object(obj, data, kwargs)
+        obj = self.update_object(data, qs, kwargs)
 
         result = schema.dump(obj).data
 
@@ -287,8 +289,7 @@ class ResourceDetail(with_metaclass(ResourceMeta, Resource)):
         """Delete an object"""
         self.before_delete(args, kwargs)
 
-        obj = self._data_layer.get_object(kwargs)
-        self._data_layer.delete_object(obj, kwargs)
+        self.delete_object(kwargs)
 
         result = {'meta': {'message': 'Object successfully deleted'}}
 
@@ -319,6 +320,22 @@ class ResourceDetail(with_metaclass(ResourceMeta, Resource)):
     def after_delete(self, result):
         """Hook to make custom work after delete method"""
         pass
+
+    def before_marshmallow(self, args, kwargs):
+        pass
+
+    def get_object(self, kwargs, qs):
+        return self._data_layer.get_object(kwargs, qs=qs)
+
+    def update_object(self, data, qs, kwargs):
+        obj = self._data_layer.get_object(kwargs, qs=qs)
+        self._data_layer.update_object(obj, data, kwargs)
+
+        return obj
+
+    def delete_object(self, kwargs):
+        obj = self._data_layer.get_object(kwargs)
+        self._data_layer.delete_object(obj, kwargs)
 
 
 class ResourceRelationship(with_metaclass(ResourceMeta, Resource)):
@@ -354,7 +371,7 @@ class ResourceRelationship(with_metaclass(ResourceMeta, Resource)):
     @check_method_requirements
     def post(self, *args, **kwargs):
         """Add / create relationship(s)"""
-        json_data = request.get_json()
+        json_data = request.get_json() or {}
 
         relationship_field, model_relationship_field, related_type_, related_id_field = self._get_relationship_data()
 
@@ -384,27 +401,21 @@ class ResourceRelationship(with_metaclass(ResourceMeta, Resource)):
                                                              related_id_field,
                                                              kwargs)
 
-        qs = QSManager(request.args, self.schema)
-        includes = qs.include
-        if relationship_field not in qs.include:
-            includes.append(relationship_field)
-        schema = compute_schema(self.schema, dict(), qs, includes)
+        status_code = 200
+        result = {'meta': {'message': 'Relationship successfully created'}}
 
         if updated is False:
-            return '', 204
-
-        result = schema.dump(obj_).data
-        if result.get('links', {}).get('self') is not None:
-            result['links']['self'] = request.path
+            result = ''
+            status_code = 204
 
         self.after_post(result)
 
-        return result, 200
+        return result, status_code
 
     @check_method_requirements
     def patch(self, *args, **kwargs):
         """Update a relationship"""
-        json_data = request.get_json()
+        json_data = request.get_json() or {}
 
         relationship_field, model_relationship_field, related_type_, related_id_field = self._get_relationship_data()
 
@@ -434,27 +445,21 @@ class ResourceRelationship(with_metaclass(ResourceMeta, Resource)):
                                                              related_id_field,
                                                              kwargs)
 
-        qs = QSManager(request.args, self.schema)
-        includes = qs.include
-        if relationship_field not in qs.include:
-            includes.append(relationship_field)
-        schema = compute_schema(self.schema, dict(), qs, includes)
+        status_code = 200
+        result = {'meta': {'message': 'Relationship successfully updated'}}
 
         if updated is False:
-            return '', 204
-
-        result = schema.dump(obj_).data
-        if result.get('links', {}).get('self') is not None:
-            result['links']['self'] = request.path
+            result = ''
+            status_code = 204
 
         self.after_patch(result)
 
-        return result, 200
+        return result, status_code
 
     @check_method_requirements
     def delete(self, *args, **kwargs):
         """Delete relationship(s)"""
-        json_data = request.get_json()
+        json_data = request.get_json() or {}
 
         relationship_field, model_relationship_field, related_type_, related_id_field = self._get_relationship_data()
 
@@ -484,16 +489,12 @@ class ResourceRelationship(with_metaclass(ResourceMeta, Resource)):
                                                              related_id_field,
                                                              kwargs)
 
-        qs = QSManager(request.args, self.schema)
-        includes = qs.include
-        if relationship_field not in qs.include:
-            includes.append(relationship_field)
-        schema = compute_schema(self.schema, dict(), qs, includes)
+        status_code = 200
+        result = {'meta': {'message': 'Relationship successfully updated'}}
 
-        status_code = 200 if updated is True else 204
-        result = schema.dump(obj_).data
-        if result.get('links', {}).get('self') is not None:
-            result['links']['self'] = request.path
+        if updated is False:
+            result = ''
+            status_code = 204
 
         self.after_delete(result)
 
@@ -501,7 +502,7 @@ class ResourceRelationship(with_metaclass(ResourceMeta, Resource)):
 
     def _get_relationship_data(self):
         """Get useful data for relationship management"""
-        relationship_field = request.path.split('/')[-1]
+        relationship_field = request.path.split('/')[-1].replace('-', '_')
 
         if relationship_field not in get_relationships(self.schema):
             raise RelationNotFound("{} has no attribute {}".format(self.schema.__name__, relationship_field))

@@ -7,7 +7,8 @@ methods, speficy which blueprint to use, define the Api routes and plug addition
 import inspect
 from functools import wraps
 
-from flask_rest_jsonapi.resource import ResourceList
+from flask_rest_jsonapi.resource import ResourceList, ResourceRelationship
+from flask_rest_jsonapi.decorators import jsonapi_exception_formatter
 
 
 class Api(object):
@@ -60,7 +61,6 @@ class Api(object):
         :param dict kwargs: additional options of the route
         """
         resource.view = view
-        view_func = resource.as_view(view)
         url_rule_options = kwargs.get('url_rule_options') or dict()
 
         for decorator in self.decorators:
@@ -68,6 +68,8 @@ class Api(object):
                 resource.decorators += self.decorators
             else:
                 resource.decorators = self.decorators
+
+        view_func = resource.as_view(view)
 
         if self.blueprint is not None:
             resource.view = '.'.join([self.blueprint.name, resource.view])
@@ -121,6 +123,9 @@ class Api(object):
                                 'DELETE': 'delete'}
             prefix = method_to_prefix[method]
 
+            if ResourceRelationship in inspect.getmro(resource):
+                prefix = '_'.join([prefix, 'relationship'])
+
         return '_'.join([prefix, resource.schema.opts.type_])
 
     def permission_manager(self, permission_manager):
@@ -144,6 +149,7 @@ class Api(object):
                 return view
 
             @wraps(view)
+            @jsonapi_exception_formatter
             def decorated(*view_args, **view_kwargs):
                 self.check_permissions(view, view_args, view_kwargs, *args, **kwargs)
                 return view(*view_args, **view_kwargs)

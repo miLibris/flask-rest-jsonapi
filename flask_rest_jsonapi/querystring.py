@@ -18,7 +18,8 @@ class QueryStringManager(object):
         'page',
         'fields',
         'sort',
-        'include'
+        'include',
+        'q'
     )
 
     def __init__(self, querystring, schema):

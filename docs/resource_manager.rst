@@ -5,9 +5,9 @@ Resource Manager
 
 .. currentmodule:: flask_rest_jsonapi
 
-Resource manager is the link between your logical data abstraction, your data layer and optionally other softwares. It is the place where logic management of your resource is located.
+Resource manager is the link between your logical data abstraction, your data layer and optionally other software. It is the place where logic management of your resource is located.
 
-Flask-REST-JSONAPI provides 3 kinds of resource manager with default methods implementation according to JSONAPI 1.0 specification:
+Flask-REST-JSONAPI provides 3 kinds of resource manager with default methods implementation according to the JSONAPI 1.0 specification:
 
 * **ResourceList**: provides get and post methods to retrieve a collection of objects or create one.
 * **ResourceDetail**: provides get, patch and delete methods to retrieve details of an object, update an object and delete an object
@@ -40,19 +40,19 @@ Example:
 Optional attributes
 -------------------
 
-All resource mangers are inherited from flask.views.MethodView so you can provides optional attributes to your resource manager:
+All resource managers are inherited from flask.views.MethodView so you can provides optional attributes to your resource manager:
 
     :methods: a list of methods this resource manager can handle. If you don't specify any method, all methods are handled.
     :decorators: a tuple of decorators plugged to all methods that the resource manager can handle
 
-You can provide default schema kwargs for each resource manager methods with this optional attributes:
+You can provide default schema kwargs for each resource manager methods with these optional attributes:
 
 * **get_schema_kwargs**: a dict of default schema kwargs in get method
 * **post_schema_kwargs**: a dict of default schema kwargs in post method
 * **patch_schema_kwargs**: a dict of default schema kwargs in patch method
 * **delete_schema_kwargs**: a dict of default schema kwargs in delete method
 
-Each method of a resource manager got a pre and post process methods that take view args and kwargs as parameter for the pre process methods and the result of the method as parameter for the post process method. Thanks to this you can make custom work before and after the method process. Availables rewritable methods are:
+Each method of a resource manager gets a pre and post process methods that takes view args and kwargs as parameters for the pre process methods, and the result of the method as parameter for the post process method. Thanks to this you can make custom work before and after the method process. Available methods to override are:
 
     :before_get: pre process method of the get method
     :after_get: post process method of the get method
@@ -92,7 +92,7 @@ Example:
 ResourceList
 ------------
 
-ResourceList manager has his own optional attributes:
+ResourceList manager has its own optional attributes:
 
     :view_kwargs: if you set this flag to True view kwargs will be used to compute the list url. If you have a list url pattern with parameter like that: /persons/<int:id>/computers you have to set this flag to True
 
@@ -112,7 +112,7 @@ Example:
 
 This minimal ResourceList configuration provides GET and POST interface to retrieve a collection of objects and create an object with all powerful features like pagination, sorting, sparse fieldsets, filtering and including related objects.
 
-If your schema has relationship(s) field(s) you can create an object and link related object(s) to it in the same time. If you want to see example go to  :ref:`quickstart`.
+If your schema has relationship field(s) you can create an object and link related object(s) to it in the same time. For an example see :ref:`quickstart`.
 
 ResourceDetail
 --------------
@@ -133,7 +133,7 @@ Example:
 
 This minimal ResourceDetail configuration provides GET, PATCH and DELETE interface to retrieve details of objects, update an objects and delete an object with all powerful features like sparse fieldsets and including related objects.
 
-If your schema has relationship(s) field(s) you can update an object and also update his link(s) to related object(s) in the same time. If you want to see example go to  :ref:`quickstart`.
+If your schema has relationship field(s) you can update an object and also update his link(s) to related object(s) in the same time. For an example see :ref:`quickstart`.
 
 ResourceRelationship
 --------------------
@@ -152,4 +152,4 @@ Example:
         data_layer = {'session': db.session,
                       'model': Person}
 
-This minimal ResourceRelationship configuration provides GET, POST, PATCH and DELETE interface to retrieve relationship(s), create relationsip(s), update relationship(s) and delete relationship(s) between objects with all powerful features like sparse fieldsets and including related objects.
+This minimal ResourceRelationship configuration provides GET, POST, PATCH and DELETE interface to retrieve relationship(s), create relationship(s), update relationship(s) and delete relationship(s) between objects with all powerful features like sparse fieldsets and including related objects.

@@ -51,6 +51,9 @@ class SqlalchemyDataLayer(BaseDataLayer):
         self.session.add(obj)
         try:
             self.session.commit()
+        except JsonApiException as e:
+            self.session.rollback()
+            raise e
         except Exception as e:
             self.session.rollback()
             raise JsonApiException("Object creation error: " + str(e), source={'pointer': '/data'})
@@ -59,7 +62,7 @@ class SqlalchemyDataLayer(BaseDataLayer):
 
         return obj
 
-    def get_object(self, view_kwargs):
+    def get_object(self, view_kwargs, qs=None):
         """Retrieve an object through sqlalchemy
 
         :params dict view_kwargs: kwargs from the resource view
@@ -76,8 +79,13 @@ class SqlalchemyDataLayer(BaseDataLayer):
         url_field = getattr(self, 'url_field', 'id')
         filter_value = view_kwargs[url_field]
 
+        query = self.retrieve_object_query(view_kwargs, filter_field, filter_value)
+
+        if qs is not None:
+            query = self.eagerload_includes(query, qs)
+
         try:
-            obj = self.session.query(self.model).filter(filter_field == filter_value).one()
+            obj = query.one()
         except NoResultFound:
             obj = None
 
@@ -140,6 +148,9 @@ class SqlalchemyDataLayer(BaseDataLayer):
 
         try:
             self.session.commit()
+        except JsonApiException as e:
+            self.session.rollback()
+            raise e
         except Exception as e:
             self.session.rollback()
             raise JsonApiException("Update object error: " + str(e), source={'pointer': '/data'})
@@ -163,6 +174,9 @@ class SqlalchemyDataLayer(BaseDataLayer):
         self.session.delete(obj)
         try:
             self.session.commit()
+        except JsonApiException as e:
+            self.session.rollback()
+            raise e
         except Exception as e:
             self.session.rollback()
             raise JsonApiException("Delete object error: " + str(e))
@@ -217,6 +231,9 @@ class SqlalchemyDataLayer(BaseDataLayer):
 
         try:
             self.session.commit()
+        except JsonApiException as e:
+            self.session.rollback()
+            raise e
         except Exception as e:
             self.session.rollback()
             raise JsonApiException("Create relationship error: " + str(e))
@@ -313,6 +330,9 @@ class SqlalchemyDataLayer(BaseDataLayer):
 
         try:
             self.session.commit()
+        except JsonApiException as e:
+            self.session.rollback()
+            raise e
         except Exception as e:
             self.session.rollback()
             raise JsonApiException("Update relationship error: " + str(e))
@@ -360,6 +380,9 @@ class SqlalchemyDataLayer(BaseDataLayer):
 
         try:
             self.session.commit()
+        except JsonApiException as e:
+            self.session.rollback()
+            raise e
         except Exception as e:
             self.session.rollback()
             raise JsonApiException("Delete relationship error: " + str(e))
@@ -486,9 +509,9 @@ class SqlalchemyDataLayer(BaseDataLayer):
                         raise InvalidInclude(str(e))
 
                     if joinload_object is None:
-                        joinload_object = joinedload(field, innerjoin=True)
+                        joinload_object = joinedload(field)
                     else:
-                        joinload_object = joinload_object.joinedload(field, innerjoin=True)
+                        joinload_object = joinload_object.joinedload(field)
 
                     related_schema_cls = get_related_schema(current_schema, obj)
 
@@ -504,11 +527,21 @@ class SqlalchemyDataLayer(BaseDataLayer):
                 except Exception as e:
                     raise InvalidInclude(str(e))
 
-                joinload_object = joinedload(field, innerjoin=True)
+                joinload_object = joinedload(field)
 
             query = query.options(joinload_object)
 
         return query
+
+    def retrieve_object_query(self, view_kwargs, filter_field, filter_value):
+        """Build query to retrieve object
+
+        :param dict view_kwargs: kwargs from the resource view
+        :params sqlalchemy_field filter_field: the field to filter on
+        :params filter_value: the value to filter with
+        :return sqlalchemy query: a query from sqlalchemy
+        """
+        return self.session.query(self.model).filter(filter_field == filter_value)
 
     def query(self, view_kwargs):
         """Construct the base query to retrieve wanted data
