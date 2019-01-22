@@ -514,7 +514,7 @@ class ResourceRelationship(with_metaclass(ResourceMeta, Resource)):
 
     def _get_relationship_data(self):
         """Get useful data for relationship management"""
-        relationship_field = request.path.split('/')[-1]
+        relationship_field = request.path.split('/')[-1].replace('-', '_')
 
         if relationship_field not in get_relationships(self.schema):
             raise RelationNotFound("{} has no attribute {}".format(self.schema.__name__, relationship_field))
