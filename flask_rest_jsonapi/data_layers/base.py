@@ -8,7 +8,7 @@ import types
 class BaseDataLayer(object):
     """Base class of a data layer"""
 
-    ADDITIONAL_METHODS = ('query',
+    REWRITABLE_METHODS = ('query',
                           'before_create_object',
                           'after_create_object',
                           'before_get_object',
@@ -19,14 +19,15 @@ class BaseDataLayer(object):
                           'after_update_object',
                           'before_delete_object',
                           'after_delete_object',
-                          'before_create_relationship'
+                          'before_create_relationship',
                           'after_create_relationship',
                           'before_get_relationship',
                           'after_get_relationship',
                           'before_update_relationship',
                           'after_update_relationship',
                           'before_delete_relationship',
-                          'after_delete_relationship')
+                          'after_delete_relationship',
+                          'retrieve_object_query')
 
     def __init__(self, kwargs):
         """Intialize an data layer instance with kwargs
@@ -34,7 +35,7 @@ class BaseDataLayer(object):
         :param dict kwargs: information about data layer instance
         """
         if kwargs.get('methods') is not None:
-            self.bound_additional_methods(kwargs['methods'])
+            self.bound_rewritable_methods(kwargs['methods'])
             kwargs.pop('methods')
 
         kwargs.pop('class', None)
@@ -314,11 +315,11 @@ class BaseDataLayer(object):
         """
         raise NotImplementedError
 
-    def bound_additional_methods(self, methods):
+    def bound_rewritable_methods(self, methods):
         """Bound additional methods to current instance
 
         :param class meta: information from Meta class used to configure the data layer instance
         """
         for key, value in methods.items():
-            if key in self.ADDITIONAL_METHODS:
+            if key in self.REWRITABLE_METHODS:
                 setattr(self, key, types.MethodType(value, self))

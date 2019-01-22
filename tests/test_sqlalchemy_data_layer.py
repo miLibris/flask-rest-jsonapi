@@ -104,6 +104,7 @@ def person_model(base):
         tags = relationship("Person_Tag", cascade="save-update, merge, delete, delete-orphan")
         single_tag = relationship("Person_Single_Tag", uselist=False, cascade="save-update, merge, delete, delete-orphan")
 
+        computers_owned = relationship("Computer")
     yield Person
 
 
@@ -240,8 +241,11 @@ def person_schema(person_tag_schema, person_single_tag_schema):
                                  schema='ComputerSchema',
                                  type_='computer',
                                  many=True)
+
         tags = fields.Nested(person_tag_schema, many=True)
         single_tag = fields.Nested(person_single_tag_schema)
+
+        computers_owned = computers
 
     yield PersonSchema
 
@@ -440,6 +444,7 @@ def register_routes(client, app, api_blueprint, person_list, person_detail, pers
     api.route(person_list, 'person_list', '/persons')
     api.route(person_detail, 'person_detail', '/persons/<int:person_id>')
     api.route(person_computers, 'person_computers', '/persons/<int:person_id>/relationships/computers')
+    api.route(person_computers, 'person_computers_owned', '/persons/<int:person_id>/relationships/computers-owned')
     api.route(person_computers, 'person_computers_error', '/persons/<int:person_id>/relationships/computer')
     api.route(person_list_raise_jsonapiexception, 'person_list_jsonapiexception', '/persons_jsonapiexception')
     api.route(person_list_raise_exception, 'person_list_exception', '/persons_exception')
@@ -557,6 +562,7 @@ def test_resource(app, person_model, person_schema, session, monkeypatch):
         rd.schema = person_schema
         monkeypatch.setattr(flask_rest_jsonapi.resource, 'request', request)
         monkeypatch.setattr(flask_rest_jsonapi.resource, 'current_app', app)
+        monkeypatch.setattr(flask_rest_jsonapi.decorators, 'current_app', app)
         monkeypatch.setattr(flask_rest_jsonapi.decorators, 'request', request)
         monkeypatch.setattr(rl.schema, 'load', schema_load_mock)
         r = super(flask_rest_jsonapi.resource.Resource, ResourceList)\
@@ -573,6 +579,15 @@ def test_compute_schema(person_schema):
     with pytest.raises(InvalidInclude):
         flask_rest_jsonapi.schema.compute_schema(person_schema, dict(), qsm, ['id'])
     flask_rest_jsonapi.schema.compute_schema(person_schema, dict(only=list()), qsm, list())
+
+
+def test_compute_schema_propagate_context(person_schema, computer_schema):
+    query_string = {}
+    qsm = QSManager(query_string, person_schema)
+    schema = flask_rest_jsonapi.schema.compute_schema(person_schema, dict(), qsm, ['computers'])
+    assert schema.declared_fields['computers'].__dict__['_Relationship__schema'].__dict__['context'] == dict()
+    schema = flask_rest_jsonapi.schema.compute_schema(person_schema, dict(context=dict(foo='bar')), qsm, ['computers'])
+    assert schema.declared_fields['computers'].__dict__['_Relationship__schema'].__dict__['context'] == dict(foo='bar')
 
 
 # test good cases
@@ -616,6 +631,16 @@ def test_get_list(client, register_routes, person, person_2):
         response = client.get('/persons' + '?' + querystring, content_type='application/vnd.api+json')
         assert response.status_code == 200
 
+def test_get_list_with_simple_filter(client, register_routes, person, person_2):
+    with client:
+        querystring = urlencode({'page[number]': 1,
+                                 'page[size]': 1,
+                                 'fields[person]': 'name,birth_date',
+                                 'sort': '-name',
+                                 'filter[name]': 'test'
+                                 })
+        response = client.get('/persons' + '?' + querystring, content_type='application/vnd.api+json')
+        assert response.status_code == 200
 
 def test_get_list_disable_pagination(client, register_routes):
     with client:
@@ -1775,3 +1800,8 @@ def test_api_resources(app, person_list):
     api = Api()
     api.route(person_list, 'person_list2', '/persons', '/person_list')
     api.init_app(app)
+
+
+def test_relationship_containing_hyphens(client, register_routes, person_computers, computer_schema, person):
+    response = client.get('/persons/{}/relationships/computers-owned'.format(person.person_id), content_type='application/vnd.api+json')
+    assert response.status_code == 200

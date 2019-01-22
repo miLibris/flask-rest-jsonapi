@@ -5,7 +5,7 @@ Filtering
 
 .. currentmodule:: flask_rest_jsonapi
 
-Flask-REST-JSONAPI as a very flexible filtering system. The filtering system is completely related to the data layer used by the ResourceList manager. I will explain the filtering interface for SQLAlchemy data layer but you can use the same interface to your filtering implementation of your custom data layer. The only requirement is that you have to use the "filter" querystring parameter to make filtering according to JSONAPI 1.0 specification.
+Flask-REST-JSONAPI as a very flexible filtering system. The filtering system is completely related to the data layer used by the ResourceList manager. I will explain the filtering interface for SQLAlchemy data layer but you can use the same interface to your filtering implementation of your custom data layer. The only requirement is that you have to use the "filter" querystring parameter to make filtering according to the JSONAPI 1.0 specification.
 
 .. note::
 
@@ -15,7 +15,6 @@ SQLAlchemy
 ----------
 
 The filtering system of SQLAlchemy data layer has exactly the same interface as the filtering system of `Flask-Restless <https://flask-restless.readthedocs.io/en/stable/searchformat.html#query-format>`_.
-
 So this is a first example:
 
 .. sourcecode:: http
@@ -66,7 +65,7 @@ There is a shortcut to achieve the same filter:
     GET /persons?filter=[{"name":"computers__serial","op":"ilike","val":"%Amstrad%"}] HTTP/1.1
     Accept: application/vnd.api+json
 
-You can also use boolean combinaison of operations:
+You can also use boolean combination of operations:
 
 .. sourcecode:: http
 
@@ -116,8 +115,8 @@ Common available operators:
 * gt: check if field is greater than to something
 * has: used to filter on to one relationships
 * ilike: check if field contains a string (case insensitive)
-* in_: check if field is in a list of values
-* is_: check if field is a value
+* in\_: check if field is in a list of values
+* is\_: check if field is a value
 * isnot: check if field is not a value
 * like: check if field contains a string
 * le: check if field is less than or equal to something
@@ -125,10 +124,44 @@ Common available operators:
 * match: check if field match against a string or pattern
 * ne: check if field is not equal to something
 * notilike: check if field does not contains a string (case insensitive)
-* notin_: check if field is not in a list of values
+* notin\_: check if field is not in a list of values
 * notlike: check if field does not contains a string
 * startswith: check if field starts with a string
 
 .. note::
 
     Availables operators depend on field type in your model
+
+Simple filters
+--------------
+
+Simple filter adds support for a simplified form of filters and supports only *eq* operator.
+Each simple filter transforms to original filter and appends to list of filters.
+
+For example
+
+.. sourcecode:: http
+
+    GET /persons?filter[name]=John HTTP/1.1
+    Accept: application/vnd.api+json
+
+equals to:
+
+.. sourcecode:: http
+
+    GET /persons?filter[name]=[{"name":"name","op":"eq","val":"John"}] HTTP/1.1
+    Accept: application/vnd.api+json
+
+
+You can also use more than one simple filter in request:
+
+.. sourcecode:: http
+
+    GET /persons?filter[name]=John&filter[gender]=male HTTP/1.1
+    Accept: application/vnd.api+json
+
+which equals to:
+
+.. sourcecode:: http
+
+    GET /persons?filter[name]=[{"name":"name","op":"eq","val":"John"}, {"name":"gender","op":"eq","val":"male"}] HTTP/1.1

@@ -7,13 +7,13 @@ Data layer
 
 | The data layer is a CRUD interface between resource manager and data. It is a very flexible system to use any ORM or data storage. You can even create a data layer that use multiple ORMs and data storage to manage your own objects. The data layer implements a CRUD interface for objects and relationships. It also manage pagination, filtering and sorting.
 |
-| Flask-REST-JSONAPI got a full featured data layer that use the popular ORM `SQLAlchemy <https://www.sqlalchemy.org/>`_.
+| Flask-REST-JSONAPI has a full featured data layer that use the popular ORM `SQLAlchemy <https://www.sqlalchemy.org/>`_.
 
 .. note::
 
     The default data layer used by a resource manager is the SQLAlchemy one. So if you want to use it, you don't have to specify the class of the data layer in the resource manager
 
-To configure the data layer you have to set his required parameters in the resource manager.
+To configure the data layer you have to set its required parameters in the resource manager.
 
 Example:
 
@@ -28,9 +28,9 @@ Example:
         data_layer = {'session': db.session,
                       'model': Person}
 
-You can also plug additional methods to your data layer in the resource manager. There is 2 kind of additional methods:
+You can also plug additional methods to your data layer in the resource manager. There are two kinds of additional methods:
 
-* query: the "query" additional method takes view_kwargs as parameter and return an alternative query to retrieve the collection of objects in the get method of the ResourceList manager.
+* query: the "query" additional method takes view_kwargs as parameter and return an alternative query to retrieve the collection of objects in the GET method of the ResourceList manager.
 
 * pre / post process methods: all CRUD and relationship(s) operations have a pre / post process methods. Thanks to it you can make additional work before and after each operations of the data layer. Parameters of each pre / post process methods are available in the `flask_rest_jsonapi.data_layers.base.Base <https://github.com/miLibris/flask-rest-jsonapi/blob/master/flask_rest_jsonapi/data_layers/base.py>`_ base class.
 
@@ -68,7 +68,7 @@ Example:
 
 .. note::
 
-    You don't have to declare additonals data layer methods in the resource manager. You can declare them in a dedicated module or in the declaration of the model.
+    You don't have to declare additional data layer methods in the resource manager. You can declare them in a dedicated module or in the declaration of the model.
 
 Example:
 

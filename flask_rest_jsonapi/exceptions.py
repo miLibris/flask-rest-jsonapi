@@ -29,14 +29,12 @@ class JsonApiException(Exception):
 
     def to_dict(self):
         """Return values of each fields of an jsonapi error"""
-        return {'status': self.status,
-                'source': self.source,
-                'title': self.title,
-                'detail': self.detail,
-                'id': self.id,
-                'code': self.code,
-                'links': self.links,
-                'meta': self.meta}
+        error_dict = {}
+        for field in ('status', 'source', 'title', 'detail', 'id', 'code', 'links', 'meta'):
+            if getattr(self, field, None):
+                error_dict.update({field: getattr(self, field)})
+
+        return error_dict
 
 
 class BadRequest(JsonApiException):
@@ -100,3 +98,10 @@ class InvalidType(JsonApiException):
 
     title = 'Invalid type'
     status = '409'
+
+
+class AccessDenied(JsonApiException):
+    """Throw this error when requested resource owner doesn't match the user of the ticket"""
+
+    title = 'Access denied'
+    status = '403'

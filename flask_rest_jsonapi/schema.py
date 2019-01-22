@@ -66,6 +66,8 @@ def compute_schema(schema_cls, default_kwargs, qs, include):
             relation_field = schema.declared_fields[field]
             related_schema_cls = schema.declared_fields[field].__dict__['_Relationship__schema']
             related_schema_kwargs = {}
+            if 'context' in default_kwargs:
+                related_schema_kwargs['context'] = default_kwargs['context']
             if isinstance(related_schema_cls, SchemaABC):
                 related_schema_kwargs['many'] = related_schema_cls.many
                 related_schema_cls = related_schema_cls.__class__
