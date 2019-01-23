@@ -561,7 +561,6 @@ def test_resource(app, person_model, person_schema, session, monkeypatch):
         rd._data_layer = dl
         rd.schema = person_schema
         monkeypatch.setattr(flask_rest_jsonapi.resource, 'request', request)
-        monkeypatch.setattr(flask_rest_jsonapi.resource, 'current_app', app)
         monkeypatch.setattr(flask_rest_jsonapi.decorators, 'current_app', app)
         monkeypatch.setattr(flask_rest_jsonapi.decorators, 'request', request)
         monkeypatch.setattr(rl.schema, 'load', schema_load_mock)
