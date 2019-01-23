@@ -3,22 +3,23 @@
 """This module contains the logic of resource management"""
 
 import inspect
+import json
 from six import with_metaclass
 
 from werkzeug.wrappers import Response
-from flask import request, url_for, make_response, current_app, jsonify
+from flask import request, url_for, make_response
 from flask.views import MethodView, MethodViewType
 from marshmallow_jsonapi.exceptions import IncorrectTypeError
 from marshmallow import ValidationError
 
-from flask_rest_jsonapi.errors import jsonapi_errors
 from flask_rest_jsonapi.querystring import QueryStringManager as QSManager
 from flask_rest_jsonapi.pagination import add_pagination_links
-from flask_rest_jsonapi.exceptions import InvalidType, BadRequest, JsonApiException, RelationNotFound
+from flask_rest_jsonapi.exceptions import InvalidType, BadRequest, RelationNotFound
 from flask_rest_jsonapi.decorators import check_headers, check_method_requirements, jsonapi_exception_formatter
 from flask_rest_jsonapi.schema import compute_schema, get_relationships, get_model_field
 from flask_rest_jsonapi.data_layers.base import BaseDataLayer
 from flask_rest_jsonapi.data_layers.alchemy import SqlalchemyDataLayer
+from flask_rest_jsonapi.utils import JSONEncoder
 
 
 class ResourceMeta(MethodViewType):
@@ -76,7 +77,7 @@ class Resource(MethodView):
         if not isinstance(response, tuple):
             if isinstance(response, dict):
                 response.update({'jsonapi': {'version': '1.0'}})
-            return make_response(jsonify(response), 200, headers)
+            return make_response(json.dumps(response, cls=JSONEncoder), 200, headers)
 
         try:
             data, status_code, headers = response
@@ -92,7 +93,7 @@ class Resource(MethodView):
         if isinstance(data, dict):
             data.update({'jsonapi': {'version': '1.0'}})
 
-        return make_response(jsonify(data), status_code, headers)
+        return make_response(json.dumps(data, cls=JSONEncoder), status_code, headers)
 
 
 class ResourceList(with_metaclass(ResourceMeta, Resource)):
