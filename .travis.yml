@@ -15,3 +15,21 @@ script:
   - coverage run --source flask_rest_jsonapi -m pytest -v
 after_success:
   - coveralls
+before_deploy: "python setup.py sdist"
+deploy:
+  - provider: releases
+    api_key:
+      secure: your_github_password_encrypted_using_your_travis_project_private_key
+    file_glob: true
+    file: dist/Flask-REST-JSONAPI-*.tar.gz
+    skip_cleanup: true
+    on:
+      tags: true
+      repo: miLibris/flask-rest-jsonapi
+  - provider: pypi
+    user: akira-dev
+    password:
+      secure: your_pypi_password_encrypted_using_your_travis_project_private_key
+    on:
+      tags: true
+      repo: miLibris/flask-rest-jsonapi
