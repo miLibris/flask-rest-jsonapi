@@ -30,7 +30,7 @@ class Api(object):
         if app is not None:
             self.init_app(app, blueprint)
 
-    def init_app(self, app=None, blueprint=None):
+    def init_app(self, app=None, blueprint=None, additional_blueprints=None):
         """Update flask application with our api
 
         :param Application app: a flask application
@@ -49,6 +49,10 @@ class Api(object):
 
         if self.blueprint is not None:
             self.app.register_blueprint(self.blueprint)
+
+        if additional_blueprints is not None:
+            for blueprint in additional_blueprints:
+                self.app.register_blueprint(blueprint)
 
         self.app.config.setdefault('PAGE_SIZE', 30)
 
@@ -71,7 +75,11 @@ class Api(object):
 
         view_func = resource.as_view(view)
 
-        if self.blueprint is not None:
+        if 'blueprint' in kwargs:
+            resource.view = '.'.join([kwargs['blueprint'].name, resource.view])
+            for url in urls:
+                kwargs['blueprint'].add_url_rule(url, view_func=view_func, **url_rule_options)
+        elif self.blueprint is not None:
             resource.view = '.'.join([self.blueprint.name, resource.view])
             for url in urls:
                 self.blueprint.add_url_rule(url, view_func=view_func, **url_rule_options)
