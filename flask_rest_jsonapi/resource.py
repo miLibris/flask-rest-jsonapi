@@ -128,9 +128,9 @@ class ResourceList(with_metaclass(ResourceMeta, Resource)):
 
         result.update({'meta': {'count': objects_count}})
 
-        self.after_get(result)
+        final_result = self.after_get(result)
 
-        return result
+        return final_result
 
     @check_method_requirements
     def post(self, *args, **kwargs):
@@ -171,14 +171,14 @@ class ResourceList(with_metaclass(ResourceMeta, Resource)):
 
         result = schema.dump(obj).data
 
-        self.after_post(result)
-
         if result['data'].get('links', {}).get('self'):
             final_result = (result, 201, {'Location': result['data']['links']['self']})
         else:
             final_result = (result, 201)
 
-        return final_result
+        result = self.after_post(final_result)
+
+        return result
 
     def before_get(self, args, kwargs):
         """Hook to make custom work before get method"""
@@ -186,7 +186,7 @@ class ResourceList(with_metaclass(ResourceMeta, Resource)):
 
     def after_get(self, result):
         """Hook to make custom work after get method"""
-        pass
+        return result
 
     def before_post(self, args, kwargs, data=None):
         """Hook to make custom work before post method"""
@@ -194,7 +194,7 @@ class ResourceList(with_metaclass(ResourceMeta, Resource)):
 
     def after_post(self, result):
         """Hook to make custom work after post method"""
-        pass
+        return result
 
     def before_marshmallow(self, args, kwargs):
         pass
@@ -227,9 +227,9 @@ class ResourceDetail(with_metaclass(ResourceMeta, Resource)):
 
         result = schema.dump(obj).data
 
-        self.after_get(result)
+        final_result = self.after_get(result)
 
-        return result
+        return final_result
 
     @check_method_requirements
     def patch(self, *args, **kwargs):
@@ -281,9 +281,9 @@ class ResourceDetail(with_metaclass(ResourceMeta, Resource)):
 
         result = schema.dump(obj).data
 
-        self.after_patch(result)
+        final_result = self.after_patch(result)
 
-        return result
+        return final_result
 
     @check_method_requirements
     def delete(self, *args, **kwargs):
@@ -294,9 +294,9 @@ class ResourceDetail(with_metaclass(ResourceMeta, Resource)):
 
         result = {'meta': {'message': 'Object successfully deleted'}}
 
-        self.after_delete(result)
+        final_result = self.after_delete(result)
 
-        return result
+        return final_result
 
     def before_get(self, args, kwargs):
         """Hook to make custom work before get method"""
@@ -304,7 +304,7 @@ class ResourceDetail(with_metaclass(ResourceMeta, Resource)):
 
     def after_get(self, result):
         """Hook to make custom work after get method"""
-        pass
+        return result
 
     def before_patch(self, args, kwargs, data=None):
         """Hook to make custom work before patch method"""
@@ -312,7 +312,7 @@ class ResourceDetail(with_metaclass(ResourceMeta, Resource)):
 
     def after_patch(self, result):
         """Hook to make custom work after patch method"""
-        pass
+        return result
 
     def before_delete(self, args, kwargs):
         """Hook to make custom work before delete method"""
@@ -320,7 +320,7 @@ class ResourceDetail(with_metaclass(ResourceMeta, Resource)):
 
     def after_delete(self, result):
         """Hook to make custom work after delete method"""
-        pass
+        return result
 
     def before_marshmallow(self, args, kwargs):
         pass
@@ -365,9 +365,9 @@ class ResourceRelationship(with_metaclass(ResourceMeta, Resource)):
             serialized_obj = schema.dump(obj)
             result['included'] = serialized_obj.data.get('included', dict())
 
-        self.after_get(result)
+        final_result = self.after_get(result)
 
-        return result
+        return final_result
 
     @check_method_requirements
     def post(self, *args, **kwargs):
@@ -409,9 +409,9 @@ class ResourceRelationship(with_metaclass(ResourceMeta, Resource)):
             result = ''
             status_code = 204
 
-        self.after_post(result)
+        final_result = self.after_post(result, status_code)
 
-        return result, status_code
+        return final_result
 
     @check_method_requirements
     def patch(self, *args, **kwargs):
@@ -453,9 +453,9 @@ class ResourceRelationship(with_metaclass(ResourceMeta, Resource)):
             result = ''
             status_code = 204
 
-        self.after_patch(result)
+        final_result = self.after_patch(result, status_code)
 
-        return result, status_code
+        return final_result
 
     @check_method_requirements
     def delete(self, *args, **kwargs):
@@ -497,9 +497,9 @@ class ResourceRelationship(with_metaclass(ResourceMeta, Resource)):
             result = ''
             status_code = 204
 
-        self.after_delete(result)
+        final_result = self.after_delete(result, status_code)
 
-        return result, status_code
+        return final_result
 
     def _get_relationship_data(self):
         """Get useful data for relationship management"""
@@ -520,28 +520,28 @@ class ResourceRelationship(with_metaclass(ResourceMeta, Resource)):
 
     def after_get(self, result):
         """Hook to make custom work after get method"""
-        pass
+        return result
 
     def before_post(self, args, kwargs, json_data=None):
         """Hook to make custom work before post method"""
         pass
 
-    def after_post(self, result):
+    def after_post(self, result, status_code):
         """Hook to make custom work after post method"""
-        pass
+        return result, status_code
 
     def before_patch(self, args, kwargs, json_data=None):
         """Hook to make custom work before patch method"""
         pass
 
-    def after_patch(self, result):
+    def after_patch(self, result, status_code):
         """Hook to make custom work after patch method"""
-        pass
+        return result, status_code
 
     def before_delete(self, args, kwargs, json_data=None):
         """Hook to make custom work before delete method"""
         pass
 
-    def after_delete(self, result):
+    def after_delete(self, result, status_code):
         """Hook to make custom work after delete method"""
-        pass
+        return result, status_code
