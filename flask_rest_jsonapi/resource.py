@@ -271,7 +271,7 @@ class ResourceDetail(with_metaclass(ResourceMeta, Resource)):
         if 'id' not in json_data['data']:
             raise BadRequest('Missing id in "data" node',
                              source={'pointer': '/data/id'})
-        if json_data['data']['id'] != str(kwargs[self.data_layer.get('url_field', 'id')]):
+        if (str(json_data['data']['id']) != str(kwargs[getattr(self._data_layer, 'url_field', 'id')])):
             raise BadRequest('Value of id does not match the resource identifier in url',
                              source={'pointer': '/data/id'})
 
