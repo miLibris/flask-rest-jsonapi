@@ -82,6 +82,9 @@ def jsonapi_exception_formatter(func):
             if current_app.config['DEBUG'] is True:
                 raise e
 
+            if 'sentry' in current_app.extensions:
+                current_app.extensions['sentry'].captureException()
+
             exc = JsonApiException(getattr(e,
                                            'detail',
                                            current_app.config.get('GLOBAL_ERROR_MESSAGE') or str(e)),
