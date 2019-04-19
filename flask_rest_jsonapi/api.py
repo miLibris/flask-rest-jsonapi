@@ -7,6 +7,8 @@ methods, speficy which blueprint to use, define the Api routes and plug addition
 import inspect
 from functools import wraps
 
+from flask import request, abort
+
 from flask_rest_jsonapi.resource import ResourceList, ResourceRelationship
 from flask_rest_jsonapi.decorators import jsonapi_exception_formatter
 
@@ -93,13 +95,24 @@ class Api(object):
 
         :param oauth_manager: the oauth manager
         """
-        for resource in self.resource_registry:
-            if getattr(resource, 'disable_oauth', None) is not True:
-                for method in getattr(resource, 'methods', ('GET', 'POST', 'PATCH', 'DELETE')):
-                    scope = self.get_scope(resource, method)
-                    setattr(resource,
-                            method.lower(),
-                            oauth_manager.require_oauth(scope)(getattr(resource, method.lower())))
+        @self.app.before_request
+        def before_request():
+            endpoint = request.endpoint
+            resource = self.app.view_functions[endpoint].view_class
+
+            scope = self.get_scope(resource, request.method)
+
+            valid, req = oauth_manager.verify_request([scope])
+
+            for func in oauth_manager._after_request_funcs:
+                valid, req = func(valid, req)
+
+            if not valid:
+                if oauth_manager._invalid_response:
+                    return oauth_manager._invalid_response(req)
+                return abort(401)
+
+            request.oauth = req
 
     def scope_setter(self, func):
         """Plug oauth scope setter function to the API
