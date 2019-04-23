@@ -100,9 +100,14 @@ class Api(object):
             endpoint = request.endpoint
             resource = self.app.view_functions[endpoint].view_class
 
-            scope = self.get_scope(resource, request.method)
+            scopes = None
 
-            valid, req = oauth_manager.verify_request([scope])
+            if request.args.get('scopes'):
+                scopes = scopes.split(',')
+            elif getattr(resource, 'schema'):
+                scopes = [self.build_scope(resource, request.method)]
+
+            valid, req = oauth_manager.verify_request(scopes)
 
             for func in oauth_manager._after_request_funcs:
                 valid, req = func(valid, req)
@@ -114,15 +119,8 @@ class Api(object):
 
             request.oauth = req
 
-    def scope_setter(self, func):
-        """Plug oauth scope setter function to the API
-
-        :param callable func: the callable to use a scope getter
-        """
-        self.get_scope = func
-
     @staticmethod
-    def get_scope(resource, method):
+    def build_scope(resource, method):
         """Compute the name of the scope for oauth
 
         :param Resource resource: the resource manager
