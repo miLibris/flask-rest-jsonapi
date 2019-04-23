@@ -100,24 +100,28 @@ class Api(object):
             endpoint = request.endpoint
             resource = self.app.view_functions[endpoint].view_class
 
-            scopes = None
+            if not getattr(resource, 'disable_oauth'):
+                scopes = request.args.get('scopes')
 
-            if request.args.get('scopes'):
-                scopes = scopes.split(',')
-            elif getattr(resource, 'schema'):
-                scopes = [self.build_scope(resource, request.method)]
+                if getattr(resource, 'schema'):
+                    scopes = [self.build_scope(resource, request.method)]
+                elif scopes:
+                    scopes = scopes.split(',')
 
-            valid, req = oauth_manager.verify_request(scopes)
+                    if scopes:
+                        scopes = scopes.split(',')
 
-            for func in oauth_manager._after_request_funcs:
-                valid, req = func(valid, req)
+                valid, req = oauth_manager.verify_request(scopes)
 
-            if not valid:
-                if oauth_manager._invalid_response:
-                    return oauth_manager._invalid_response(req)
-                return abort(401)
+                for func in oauth_manager._after_request_funcs:
+                    valid, req = func(valid, req)
 
-            request.oauth = req
+                if not valid:
+                    if oauth_manager._invalid_response:
+                        return oauth_manager._invalid_response(req)
+                    return abort(401)
+
+                request.oauth = req
 
     @staticmethod
     def build_scope(resource, method):
