@@ -35,6 +35,15 @@ class SqlalchemyDataLayer(BaseDataLayer):
             raise Exception("You must provide a model in data_layer_kwargs to use sqlalchemy data layer in {}"
                             .format(self.resource.__name__))
 
+    def _client_formatted(self, exc):
+        try:
+            data = self.unhandled_exception_formatter(exc)
+
+        except AttributeError:
+            data = None
+
+        return data
+
     def create_object(self, data, view_kwargs):
         """Create an object through sqlalchemy
 
@@ -62,7 +71,11 @@ class SqlalchemyDataLayer(BaseDataLayer):
             raise e
         except Exception as e:
             self.session.rollback()
-            raise JsonApiException("Object creation error: " + str(e), source={'pointer': '/data'})
+            e_data = self._client_formatted(e)
+            raise JsonApiException(**(
+                e_data if e_data
+                else {"source": {'pointer': '/data'}, "detail": "Object creation error: " + str(e)}
+            ))
 
         self.after_create_object(obj, data, view_kwargs)
 
@@ -164,7 +177,11 @@ class SqlalchemyDataLayer(BaseDataLayer):
             raise e
         except Exception as e:
             self.session.rollback()
-            raise JsonApiException("Update object error: " + str(e), source={'pointer': '/data'})
+            e_data = self._client_formatted(e)
+            raise JsonApiException(**(
+                e_data if e_data
+                else {"source": {'pointer': '/data'}, "detail": "Update object error: " + str(e)}
+            ))
 
         self.after_update_object(obj, data, view_kwargs)
 
@@ -190,7 +207,10 @@ class SqlalchemyDataLayer(BaseDataLayer):
             raise e
         except Exception as e:
             self.session.rollback()
-            raise JsonApiException("Delete object error: " + str(e))
+            e_data = self._client_formatted(e)
+            raise JsonApiException(**(
+                e_data if e_data else {"detail": "Delete object error: " + str(e)}
+            ))
 
         self.after_delete_object(obj, view_kwargs)
 
@@ -247,7 +267,10 @@ class SqlalchemyDataLayer(BaseDataLayer):
             raise e
         except Exception as e:
             self.session.rollback()
-            raise JsonApiException("Create relationship error: " + str(e))
+            e_data = self._client_formatted(e)
+            raise JsonApiException(**(
+                e_data if e_data else {"detail": "Create relationship error: " + str(e)}
+            ))
 
         self.after_create_relationship(obj, updated, json_data, relationship_field, related_id_field, view_kwargs)
 
@@ -346,7 +369,10 @@ class SqlalchemyDataLayer(BaseDataLayer):
             raise e
         except Exception as e:
             self.session.rollback()
-            raise JsonApiException("Update relationship error: " + str(e))
+            e_data = self._client_formatted(e)
+            raise JsonApiException(**(
+                e_data if e_data else {"detail": "Update relationship error: " + str(e)}
+            ))
 
         self.after_update_relationship(obj, updated, json_data, relationship_field, related_id_field, view_kwargs)
 
@@ -396,7 +422,10 @@ class SqlalchemyDataLayer(BaseDataLayer):
             raise e
         except Exception as e:
             self.session.rollback()
-            raise JsonApiException("Delete relationship error: " + str(e))
+            e_data = self._client_formatted(e)
+            raise JsonApiException(**(
+                e_data if e_data else {"detail": "Delete relationship error: " + str(e)}
+            ))
 
         self.after_delete_relationship(obj, updated, json_data, relationship_field, related_id_field, view_kwargs)
 
