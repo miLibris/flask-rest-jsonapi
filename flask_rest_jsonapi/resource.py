@@ -93,7 +93,12 @@ class Resource(MethodView):
         if isinstance(data, dict):
             data.update({'jsonapi': {'version': '1.0'}})
 
-        return make_response(json.dumps(data, cls=JSONEncoder), status_code, headers)
+        if isinstance(data, str):
+            json_reponse = data
+        else:
+            json_reponse = json.dumps(data, cls=JSONEncoder)
+
+        return make_response(json_reponse, status_code, headers)
 
 
 class ResourceList(with_metaclass(ResourceMeta, Resource)):

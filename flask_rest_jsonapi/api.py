@@ -98,9 +98,11 @@ class Api(object):
         @self.app.before_request
         def before_request():
             endpoint = request.endpoint
-            resource = self.app.view_functions[endpoint].view_class
+            resource = None
+            if endpoint:
+                resource = getattr(self.app.view_functions[endpoint], 'view_class', None)
 
-            if not getattr(resource, 'disable_oauth'):
+            if resource and not getattr(resource, 'disable_oauth', None):
                 scopes = request.args.get('scopes')
 
                 if getattr(resource, 'schema'):
@@ -145,19 +147,20 @@ class Api(object):
 
         return '_'.join([prefix, resource.schema.opts.type_])
 
-    def permission_manager(self, permission_manager):
+    def permission_manager(self, permission_manager, with_decorators=True):
         """Use permission manager to enable permission for API
 
         :param callable permission_manager: the permission manager
         """
         self.check_permissions = permission_manager
 
-        for resource in self.resource_registry:
-            if getattr(resource, 'disable_permission', None) is not True:
-                for method in getattr(resource, 'methods', ('GET', 'POST', 'PATCH', 'DELETE')):
-                    setattr(resource,
-                            method.lower(),
-                            self.has_permission()(getattr(resource, method.lower())))
+        if with_decorators:
+            for resource in self.resource_registry:
+                if getattr(resource, 'disable_permission', None) is not True:
+                    for method in getattr(resource, 'methods', ('GET', 'POST', 'PATCH', 'DELETE')):
+                        setattr(resource,
+                                method.lower(),
+                                self.has_permission()(getattr(resource, method.lower())))
 
     def has_permission(self, *args, **kwargs):
         """Decorator used to check permissions before to call resource manager method"""
