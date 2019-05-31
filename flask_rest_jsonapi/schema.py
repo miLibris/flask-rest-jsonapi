@@ -2,7 +2,7 @@
 
 from marshmallow import class_registry
 from marshmallow.base import SchemaABC
-from marshmallow_jsonapi.fields import Relationship
+from marshmallow_jsonapi.fields import Relationship, Nested
 
 from flask_rest_jsonapi.exceptions import InvalidField, InvalidInclude
 
@@ -94,4 +94,4 @@ def get_relationships(schema):
     :param list: list of dict with schema field and model field
     """
     return {get_model_field(schema, key): key for (key, value) in schema._declared_fields.items()
-            if isinstance(value, Relationship)}
+            if isinstance(value, Relationship) or isinstance(value, Nested)}
