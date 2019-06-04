@@ -144,6 +144,15 @@ class PersonRelationship(ResourceRelationship):
     data_layer = {'session': db.session,
                   'model': Person}
 
+class PersonTagList(ResourceList):
+    schema = PersonTagSchema
+    data_layer = {'session': db.session,
+                  'model': Person_Tag}
+
+class PersonTagDetail(ResourceDetail):
+    schema = PersonTagSchema
+    data_layer = {'session': db.session,
+                  'model': Person_Tag}
 
 class ComputerList(ResourceList):
     def query(self, view_kwargs):
@@ -189,6 +198,9 @@ api.route(PersonRelationship, 'person_computers', '/persons/<int:id>/relationshi
 api.route(ComputerList, 'computer_list', '/computers', '/persons/<int:id>/computers')
 api.route(ComputerDetail, 'computer_detail', '/computers/<int:id>')
 api.route(ComputerRelationship, 'computer_person', '/computers/<int:id>/relationships/owner')
+
+api.route(PersonTagList, 'person_tag_list', '/persontags')
+api.route(PersonTagDetail, 'person_tag_detail', '/persontags/<int:id>')
 
 if __name__ == '__main__':
     # Start application
