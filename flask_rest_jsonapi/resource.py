@@ -8,6 +8,7 @@ from six import with_metaclass
 
 from werkzeug.wrappers import Response
 from flask import request, url_for, make_response
+from flask.wrappers import Response as FlaskResponse
 from flask.views import MethodView, MethodViewType
 from marshmallow_jsonapi.exceptions import IncorrectTypeError
 from marshmallow import ValidationError
@@ -93,7 +94,11 @@ class Resource(MethodView):
         if isinstance(data, dict):
             data.update({'jsonapi': {'version': '1.0'}})
 
-        if isinstance(data, str):
+        if isinstance(data, FlaskResponse):
+            data.headers.add('Content-Type', 'application/vnd.api+json')
+            data.status_code = status_code
+            return data
+        elif isinstance(data, str):
             json_reponse = data
         else:
             json_reponse = json.dumps(data, cls=JSONEncoder)
