@@ -96,6 +96,7 @@ class Api(object):
         :param oauth_manager: the oauth manager
         """
         @self.app.before_request
+        @jsonapi_exception_formatter
         def before_request():
             endpoint = request.endpoint
             resource = None
