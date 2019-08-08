@@ -76,31 +76,29 @@ You can also use boolean combination of operations:
         "val":"%Amstrad%"
       },
       {
-        "or": {
-          [
-            {
-              "not": {
-                "name": "name",
-                "op": "eq",
-                "val":"John"
-              }
-            },
-            {
-              "and": [
-                {
-                  "name": "name",
-                  "op": "like",
-                  "val": "%Jim%"
-                },
-                {
-                  "name": "birth_date",
-                  "op": "gt",
-                  "val": "1990-01-01"
-                }
-              ]
+        "or": [
+          {
+            "not": {
+              "name": "name",
+              "op": "eq",
+              "val":"John"
             }
-          ]
-        }
+          },
+          {
+            "and": [
+              {
+                "name": "name",
+                "op": "like",
+                "val": "%Jim%"
+              },
+              {
+                "name": "birth_date",
+                "op": "gt",
+                "val": "1990-01-01"
+              }
+            ]
+          }
+        ]
       }
     ] HTTP/1.1
     Accept: application/vnd.api+json
