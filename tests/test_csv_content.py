@@ -6,6 +6,7 @@ import pytest
 
 from flask_rest_jsonapi import Api
 
+
 @pytest.fixture()
 def app():
     app = Flask(__name__)
@@ -15,6 +16,7 @@ def app():
 @pytest.yield_fixture()
 def client(app):
     return app.test_client()
+
 
 @pytest.fixture()
 def csv_api(app, person_list, person_detail, person_computers, computer_list, computer_detail,
