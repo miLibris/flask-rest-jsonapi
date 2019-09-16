@@ -3,24 +3,22 @@
 """This module contains the logic of resource management"""
 
 import inspect
-import json
+
+from flask import request, url_for
+from flask.views import MethodView, MethodViewType
+from marshmallow import ValidationError
+from marshmallow_jsonapi.exceptions import IncorrectTypeError
 from six import with_metaclass
 
-from werkzeug.wrappers import Response
-from flask import request, url_for, make_response
-from flask.wrappers import Response as FlaskResponse
-from flask.views import MethodView, MethodViewType
-from marshmallow_jsonapi.exceptions import IncorrectTypeError
-from marshmallow import ValidationError
-
-from flask_rest_jsonapi.querystring import QueryStringManager as QSManager
-from flask_rest_jsonapi.pagination import add_pagination_links
-from flask_rest_jsonapi.exceptions import InvalidType, BadRequest, RelationNotFound
-from flask_rest_jsonapi.decorators import check_headers, check_method_requirements, jsonapi_exception_formatter
-from flask_rest_jsonapi.schema import compute_schema, get_relationships, get_model_field
-from flask_rest_jsonapi.data_layers.base import BaseDataLayer
 from flask_rest_jsonapi.data_layers.alchemy import SqlalchemyDataLayer
-from flask_rest_jsonapi.utils import JSONEncoder
+from flask_rest_jsonapi.data_layers.base import BaseDataLayer
+from flask_rest_jsonapi.decorators import check_headers, check_method_requirements, jsonapi_exception_formatter
+from flask_rest_jsonapi.exceptions import InvalidType, BadRequest, RelationNotFound, InvalidContentType, \
+    InvalidAcceptType
+from flask_rest_jsonapi.pagination import add_pagination_links
+from flask_rest_jsonapi.querystring import QueryStringManager as QSManager
+from flask_rest_jsonapi.schema import compute_schema, get_relationships, get_model_field
+from flask_rest_jsonapi.content import render_json, parse_json
 
 
 class ResourceMeta(MethodViewType):
@@ -33,7 +31,7 @@ class ResourceMeta(MethodViewType):
             if not isinstance(d['data_layer'], dict):
                 raise Exception("You must provide a data layer information as dict in {}".format(cls.__name__))
 
-            if d['data_layer'].get('class') is not None\
+            if d['data_layer'].get('class') is not None \
                     and BaseDataLayer not in inspect.getmro(d['data_layer']['class']):
                 raise Exception("You must provide a data layer class inherited from BaseDataLayer in {}"
                                 .format(cls.__name__))
@@ -42,7 +40,7 @@ class ResourceMeta(MethodViewType):
             data_layer_kwargs = d['data_layer']
             rv._data_layer = data_layer_cls(data_layer_kwargs)
 
-        rv.decorators = (check_headers,)
+        rv.decorators = ()
         if 'decorators' in d:
             rv.decorators += d['decorators']
 
@@ -52,12 +50,32 @@ class ResourceMeta(MethodViewType):
 class Resource(MethodView):
     """Base resource class"""
 
-    def __new__(cls):
+    def __new__(cls, request_parsers=None, response_renderers=None):
         """Constructor of a resource instance"""
         if hasattr(cls, '_data_layer'):
             cls._data_layer.resource = cls
 
         return super(Resource, cls).__new__(cls)
+
+    def __init__(self, request_parsers=None, response_renderers=None):
+        # Start with default parsers, but accept user provided ones
+        self.request_parsers = {
+            'application/vnd.api+json': parse_json,
+            'application/json': parse_json
+        }
+        if request_parsers is not None:
+            self.request_parsers.update(request_parsers)
+
+        # Start with default renderers, but accept user provided ones
+        self.response_renderers = {
+            'application/vnd.api+json': render_json,
+            'application/json': render_json
+        }
+        if response_renderers is not None:
+            self.response_renderers.update(response_renderers)
+
+    def parse_request(self):
+        return self.request_parsers[request.content_type](request)
 
     @jsonapi_exception_formatter
     def dispatch_request(self, *args, **kwargs):
@@ -67,43 +85,31 @@ class Resource(MethodView):
             method = getattr(self, 'get', None)
         assert method is not None, 'Unimplemented method {}'.format(request.method)
 
-        headers = {'Content-Type': 'application/vnd.api+json'}
+        # Before we defer to the method function, parse the incoming request
+        if request.content_type not in self.request_parsers:
+            raise InvalidContentType(
+                'This endpoint only supports the following request content types: {}'.format(', '.join(
+                    self.request_parsers.keys())
+                )
+            )
+
+        # Choose a renderer based on the Accept header
+        if len(request.accept_mimetypes) < 1:
+            # If the request doesn't specify a mimetype, assume JSON API
+            accept_type = 'application/vnd.api+json'
+        elif request.accept_mimetypes.best not in self.response_renderers:
+            # Check if we support the response type
+            raise InvalidAcceptType(
+                'This endpoint only provides the following content types: {}'.format(', '.join(
+                    self.response_renderers.keys())
+                )
+            )
+        else:
+            accept_type = request.accept_mimetypes.best
+        renderer = self.response_renderers[accept_type]
 
         response = method(*args, **kwargs)
-
-        if isinstance(response, Response):
-            response.headers.add('Content-Type', 'application/vnd.api+json')
-            return response
-
-        if not isinstance(response, tuple):
-            if isinstance(response, dict):
-                response.update({'jsonapi': {'version': '1.0'}})
-            return make_response(json.dumps(response, cls=JSONEncoder), 200, headers)
-
-        try:
-            data, status_code, headers = response
-            headers.update({'Content-Type': 'application/vnd.api+json'})
-        except ValueError:
-            pass
-
-        try:
-            data, status_code = response
-        except ValueError:
-            pass
-
-        if isinstance(data, dict):
-            data.update({'jsonapi': {'version': '1.0'}})
-
-        if isinstance(data, FlaskResponse):
-            data.headers.add('Content-Type', 'application/vnd.api+json')
-            data.status_code = status_code
-            return data
-        elif isinstance(data, str):
-            json_reponse = data
-        else:
-            json_reponse = json.dumps(data, cls=JSONEncoder)
-
-        return make_response(json_reponse, status_code, headers)
+        return renderer(response)
 
 
 class ResourceList(with_metaclass(ResourceMeta, Resource)):
@@ -145,9 +151,8 @@ class ResourceList(with_metaclass(ResourceMeta, Resource)):
     @check_method_requirements
     def post(self, *args, **kwargs):
         """Create an object"""
-        json_data = request.get_json() or {}
-
         qs = QSManager(request.args, self.schema)
+        json_data = self.parse_request()
 
         schema = compute_schema(self.schema,
                                 getattr(self, 'post_schema_kwargs', dict()),
@@ -244,9 +249,8 @@ class ResourceDetail(with_metaclass(ResourceMeta, Resource)):
     @check_method_requirements
     def patch(self, *args, **kwargs):
         """Update an object"""
-        json_data = request.get_json() or {}
-
         qs = QSManager(request.args, self.schema)
+        json_data = self.parse_request()
         schema_kwargs = getattr(self, 'patch_schema_kwargs', dict())
         schema_kwargs.update({'partial': True})
 
@@ -382,7 +386,7 @@ class ResourceRelationship(with_metaclass(ResourceMeta, Resource)):
     @check_method_requirements
     def post(self, *args, **kwargs):
         """Add / create relationship(s)"""
-        json_data = request.get_json() or {}
+        json_data = self.parse_request()
 
         relationship_field, model_relationship_field, related_type_, related_id_field = self._get_relationship_data()
 
@@ -426,7 +430,7 @@ class ResourceRelationship(with_metaclass(ResourceMeta, Resource)):
     @check_method_requirements
     def patch(self, *args, **kwargs):
         """Update a relationship"""
-        json_data = request.get_json() or {}
+        json_data = self.parse_request()
 
         relationship_field, model_relationship_field, related_type_, related_id_field = self._get_relationship_data()
 
@@ -470,8 +474,7 @@ class ResourceRelationship(with_metaclass(ResourceMeta, Resource)):
     @check_method_requirements
     def delete(self, *args, **kwargs):
         """Delete relationship(s)"""
-        json_data = request.get_json() or {}
-
+        json_data = self.parse_request()
         relationship_field, model_relationship_field, related_type_, related_id_field = self._get_relationship_data()
 
         if 'data' not in json_data:
