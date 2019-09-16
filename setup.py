@@ -33,10 +33,10 @@ setup(
     setup_requires=['pytest-runner'],
     tests_require=['pytest'],
     extras_require={
-        'tests': [
-        'pytest',
-        'coveralls',
-        'coverage'
+        'dev': [
+            'pytest',
+            'coveralls',
+            'coverage'
         ],
         'docs': 'sphinx'
     }

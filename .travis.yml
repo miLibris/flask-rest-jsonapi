@@ -6,7 +6,7 @@ python:
   - '3.6'
   - 'pypy3'
 script:
-  - pip install .
+  - pip install .[dev]
   - coverage run --source flask_rest_jsonapi -m pytest -v
 after_success:
   - coveralls
