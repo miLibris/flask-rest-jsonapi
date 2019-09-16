@@ -32,5 +32,12 @@ setup(
     ],
     setup_requires=['pytest-runner'],
     tests_require=['pytest'],
-    extras_require={'tests': 'pytest', 'docs': 'sphinx'}
+    extras_require={
+        'tests': [
+        'pytest',
+        'coveralls',
+        'coverage'
+        ],
+        'docs': 'sphinx'
+    }
 )

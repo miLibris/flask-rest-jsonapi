@@ -5,13 +5,8 @@ python:
   - '3.5'
   - '3.6'
   - 'pypy3'
-install:
-  - pip install -r requirements.txt
-  - pip install coveralls coverage
-  - pip install -U setuptools
-  - pip install pytest --upgrade
 script:
-  - python setup.py install
+  - pip install .
   - coverage run --source flask_rest_jsonapi -m pytest -v
 after_success:
   - coveralls
