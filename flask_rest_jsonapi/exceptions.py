@@ -105,3 +105,17 @@ class AccessDenied(JsonApiException):
 
     title = 'Access denied'
     status = '403'
+
+
+class InvalidContentType(JsonApiException):
+    """When the request uses a content type the API doesn't understand"""
+
+    title = 'Bad request'
+    status = '415'
+
+
+class InvalidAcceptType(JsonApiException):
+    """When the request expects a content type that the API doesn't support"""
+
+    title = 'Bad request'
+    status = '406'
