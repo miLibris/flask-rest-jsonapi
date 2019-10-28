@@ -7,16 +7,17 @@ methods, speficy which blueprint to use, define the Api routes and plug addition
 import inspect
 from functools import wraps
 
-from flask import request, abort
+from flask import abort
+from flask import request
 
-from flask_rest_jsonapi.resource import ResourceList, ResourceRelationship
 from flask_rest_jsonapi.decorators import jsonapi_exception_formatter
+from flask_rest_jsonapi.resource import ResourceList, ResourceRelationship
 
 
 class Api(object):
     """The main class of the Api"""
 
-    def __init__(self, app=None, blueprint=None, decorators=None):
+    def __init__(self, app=None, blueprint=None, decorators=None, request_parsers=None, response_renderers=None):
         """Initialize an instance of the Api
 
         :param app: the flask application
@@ -29,8 +30,13 @@ class Api(object):
         self.resource_registry = []
         self.decorators = decorators or tuple()
 
+        # Store any custom parsers and renderers, which will be passed to the resources
+        self.request_parsers = request_parsers or {}
+        self.response_renderers = response_renderers or {}
+
         if app is not None:
             self.init_app(app, blueprint)
+
 
     def init_app(self, app=None, blueprint=None, additional_blueprints=None):
         """Update flask application with our api
@@ -69,7 +75,11 @@ class Api(object):
         resource.view = view
         url_rule_options = kwargs.get('url_rule_options') or dict()
 
-        view_func = resource.as_view(view)
+        view_func = resource.as_view(
+            view,
+            request_parsers=self.request_parsers,
+            response_renderers=self.response_renderers
+        )
 
         if 'blueprint' in kwargs:
             resource.view = '.'.join([kwargs['blueprint'].name, resource.view])
@@ -95,6 +105,7 @@ class Api(object):
 
         :param oauth_manager: the oauth manager
         """
+
         @self.app.before_request
         @jsonapi_exception_formatter
         def before_request():
@@ -165,6 +176,7 @@ class Api(object):
 
     def has_permission(self, *args, **kwargs):
         """Decorator used to check permissions before to call resource manager method"""
+
         def wrapper(view):
             if getattr(view, '_has_permissions_decorator', False) is True:
                 return view
@@ -174,8 +186,10 @@ class Api(object):
             def decorated(*view_args, **view_kwargs):
                 self.check_permissions(view, view_args, view_kwargs, *args, **kwargs)
                 return view(*view_args, **view_kwargs)
+
             decorated._has_permissions_decorator = True
             return decorated
+
         return wrapper
 
     @staticmethod
