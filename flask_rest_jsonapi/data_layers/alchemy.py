@@ -99,16 +99,20 @@ class SqlalchemyDataLayer(BaseDataLayer):
 
         return obj
 
-    def get_collection(self, qs, view_kwargs):
+    def get_collection(self, qs, view_kwargs, filters=None):
         """Retrieve a collection of objects through sqlalchemy
 
         :param QueryStringManager qs: a querystring manager to retrieve information from url
         :param dict view_kwargs: kwargs from the resource view
+        :param dict filters: A dictionary of key/value filters to apply to the eventual query
         :return tuple: the number of object and the list of objects
         """
         self.before_get_collection(qs, view_kwargs)
 
         query = self.query(view_kwargs)
+
+        if filters:
+            query = query.filter_by(**filters)
 
         if qs.filters:
             query = self.filter_query(query, qs.filters, self.model)
