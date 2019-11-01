@@ -21,6 +21,7 @@ from flask_rest_jsonapi.schema import compute_schema, get_relationships, get_mod
 from flask_rest_jsonapi.data_layers.base import BaseDataLayer
 from flask_rest_jsonapi.data_layers.alchemy import SqlalchemyDataLayer
 from flask_rest_jsonapi.utils import JSONEncoder
+from marshmallow_jsonapi.fields import BaseRelationship
 
 
 class ResourceMeta(MethodViewType):
@@ -116,7 +117,8 @@ class ResourceList(with_metaclass(ResourceMeta, Resource)):
 
         qs = QSManager(request.args, self.schema)
 
-        objects_count, objects = self.get_collection(qs, kwargs)
+        parent_filter = self._get_parent_filter(request.url, kwargs)
+        objects_count, objects = self.get_collection(qs, kwargs, filters=parent_filter)
 
         schema_kwargs = getattr(self, 'get_schema_kwargs', dict())
         schema_kwargs.update({'many': True})
@@ -190,6 +192,23 @@ class ResourceList(with_metaclass(ResourceMeta, Resource)):
 
         return result
 
+    def _get_parent_filter(self, url, kwargs):
+        """
+        Returns a dictionary of filters that should be applied to ensure only resources
+        belonging to the parent resource are returned
+        """
+
+        url_segments = url.split('/')
+        parent_segment = url_segments[-3]
+        parent_id = url_segments[-2]
+
+        for key, value in self.schema._declared_fields.items():
+            if isinstance(value, BaseRelationship):
+                if value.type_ == parent_segment:
+                    return {value.id_field: parent_id}
+
+        return {}
+
     def before_get(self, args, kwargs):
         """Hook to make custom work before get method"""
         pass
@@ -209,8 +228,8 @@ class ResourceList(with_metaclass(ResourceMeta, Resource)):
     def before_marshmallow(self, args, kwargs):
         pass
 
-    def get_collection(self, qs, kwargs):
-        return self._data_layer.get_collection(qs, kwargs)
+    def get_collection(self, qs, kwargs, filters=None):
+        return self._data_layer.get_collection(qs, kwargs, filters=filters)
 
     def create_object(self, data, kwargs):
         return self._data_layer.create_object(data, kwargs)
