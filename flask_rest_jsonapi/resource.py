@@ -54,14 +54,14 @@ class ResourceMeta(MethodViewType):
 class Resource(MethodView):
     """Base resource class"""
 
-    def __new__(cls, request_parsers=None, response_renderers=None):
+    def __new__(cls, **kwargs):
         """Constructor of a resource instance"""
         if hasattr(cls, '_data_layer'):
             cls._data_layer.resource = cls
 
         return super(Resource, cls).__new__(cls)
 
-    def __init__(self, request_parsers=None, response_renderers=None):
+    def __init__(self, endpoint=None, request_parsers=None, response_renderers=None):
         # Start with default parsers, but accept user provided ones
         self.request_parsers = {
             'application/vnd.api+json': parse_json,
@@ -77,6 +77,12 @@ class Resource(MethodView):
         }
         if response_renderers is not None:
             self.response_renderers.update(response_renderers)
+
+        # By default we assign each Resource class with a view/endpoint. However if the
+        # same resource is used for multiple routes, the endpoint will be overwritten.
+        # This ensures the Resource instances have the correct view
+        if endpoint is not None:
+            self.view = endpoint
 
     def parse_request(self):
         return self.request_parsers[request.content_type](request)
