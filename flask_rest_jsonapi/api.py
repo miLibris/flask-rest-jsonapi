@@ -72,9 +72,6 @@ class Api(object):
         :param list urls: the urls of the view
         :param dict kwargs: additional options of the route
         """
-        # Give the resource class a default endpoint. This will be overwritten if route()
-        # is called again for this resource
-        resource.view = view
         url_rule_options = kwargs.get('url_rule_options') or dict()
 
         # Find the parent object for this route, and also the correct endpoint name
@@ -90,6 +87,10 @@ class Api(object):
         else:
             view_name = resource.view
             blueprint = None
+
+        # Give the resource class a default endpoint. This will be overwritten if route()
+        # is called again for this resource
+        resource.view = view_name
 
         view_func = resource.as_view(
             view,
