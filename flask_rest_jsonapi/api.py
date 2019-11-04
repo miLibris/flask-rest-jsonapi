@@ -70,16 +70,16 @@ class Api(object):
 
         # Find the parent object for this route, and also the correct endpoint name
         if 'blueprint' in kwargs:
-            view_name = '.'.join([kwargs['blueprint'].name, resource.view])
+            view_name = '.'.join([kwargs['blueprint'].name, view])
             blueprint = kwargs['blueprint']
         elif self.blueprint is not None:
-            view_name = '.'.join([self.blueprint.name, resource.view])
+            view_name = '.'.join([self.blueprint.name, view])
             blueprint = self.blueprint
         elif self.app is not None:
-            view_name = resource.view
+            view_name = view
             blueprint = self.app
         else:
-            view_name = resource.view
+            view_name = view
             blueprint = None
 
         # Give the resource class a default endpoint. This will be overwritten if route()
