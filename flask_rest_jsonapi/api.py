@@ -66,10 +66,15 @@ class Api(object):
         :param list urls: the urls of the view
         :param dict kwargs: additional options of the route
         """
+        # Give the resource class a default endpoint. This will be overwritten if route()
+        # is called again for this resource
         resource.view = view
         url_rule_options = kwargs.get('url_rule_options') or dict()
 
-        view_func = resource.as_view(view)
+        view_func = resource.as_view(
+            view,
+            endpoint=view,
+        )
 
         if 'blueprint' in kwargs:
             resource.view = '.'.join([kwargs['blueprint'].name, resource.view])

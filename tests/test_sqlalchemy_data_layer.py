@@ -1800,6 +1800,24 @@ def test_api_resources(app, person_list):
     api.route(person_list, 'person_list2', '/persons', '/person_list')
     api.init_app(app)
 
+def test_api_resources_multiple_route(app, person_list):
+    """
+    If we use the same resource twice, each instance of that resource should have the
+    correct endpoint
+    """
+    api = Api()
+
+    class DummyResource(ResourceDetail):
+        def get(self):
+            return self.view
+
+    api.route(DummyResource, 'endpoint1', '/url1')
+    api.route(DummyResource, 'endpoint2', '/url2')
+    api.init_app(app)
+
+    with app.test_client() as client:
+        assert client.get('/url1', content_type='application/vnd.api+json').json == 'endpoint1'
+        assert client.get('/url2', content_type='application/vnd.api+json').json == 'endpoint2'
 
 def test_relationship_containing_hyphens(client, register_routes, person_computers, computer_schema, person):
     response = client.get('/persons/{}/relationships/computers-owned'.format(person.person_id), content_type='application/vnd.api+json')
