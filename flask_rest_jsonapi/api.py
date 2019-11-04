@@ -71,27 +71,35 @@ class Api(object):
         resource.view = view
         url_rule_options = kwargs.get('url_rule_options') or dict()
 
+        # Find the parent object for this route, and also the correct endpoint name
+        if 'blueprint' in kwargs:
+            view_name = '.'.join([kwargs['blueprint'].name, resource.view])
+            blueprint = kwargs['blueprint']
+        elif self.blueprint is not None:
+            view_name = '.'.join([self.blueprint.name, resource.view])
+            blueprint = self.blueprint
+        elif self.app is not None:
+            view_name = resource.view
+            blueprint = self.app
+        else:
+            view_name = resource.view
+            blueprint = None
+
         view_func = resource.as_view(
             view,
-            endpoint=view,
+            endpoint=view_name,
         )
 
-        if 'blueprint' in kwargs:
-            resource.view = '.'.join([kwargs['blueprint'].name, resource.view])
+        if blueprint is not None:
             for url in urls:
-                kwargs['blueprint'].add_url_rule(url, view_func=view_func, **url_rule_options)
-        elif self.blueprint is not None:
-            resource.view = '.'.join([self.blueprint.name, resource.view])
-            for url in urls:
-                self.blueprint.add_url_rule(url, view_func=view_func, **url_rule_options)
-        elif self.app is not None:
-            for url in urls:
-                self.app.add_url_rule(url, view_func=view_func, **url_rule_options)
+                blueprint.add_url_rule(url, view_func=view_func, **url_rule_options)
         else:
-            self.resources.append({'resource': resource,
-                                   'view': view,
-                                   'urls': urls,
-                                   'url_rule_options': url_rule_options})
+            self.resources.append({
+                'resource': resource,
+                'view': view,
+                'urls': urls,
+                'url_rule_options': url_rule_options
+            })
 
         self.resource_registry.append(resource)
 
