@@ -1,22 +1,10 @@
 dist: xenial
 language: python
 python:
-<<<<<<< HEAD
   - '3.5'
   - '3.6'
   - '3.7'
   - 'pypy3'
-=======
-  - '3.4'
-  - '3.5'
-  - '3.6'
-  - 'pypy3'
-install:
-  - pip install -r requirements.txt
-  - pip install coveralls coverage
-  - pip install -U setuptools
-  - pip install pytest --upgrade
->>>>>>> content-negotiation
 script:
   - pip install .[dev]
   - coverage run --source flask_rest_jsonapi -m pytest -v
