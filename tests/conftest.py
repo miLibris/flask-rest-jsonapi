@@ -107,7 +107,7 @@ def person_model(base):
         person_id = Column(Integer, primary_key=True)
         name = Column(String, nullable=False)
         birth_date = Column(DateTime)
-        computers = relationship("Computer", backref="person")
+        computers = relationship("Computer", back_populates="person")
         tags = relationship("Person_Tag", cascade="save-update, merge, delete, delete-orphan")
         single_tag = relationship("Person_Single_Tag", uselist=False,
                                   cascade="save-update, merge, delete, delete-orphan")
@@ -125,6 +125,8 @@ def computer_model(base):
         id = Column(Integer, primary_key=True)
         serial = Column(String, nullable=False)
         person_id = Column(Integer, ForeignKey('person.person_id'))
+
+        person = relationship("Person", back_populates="computers")
 
     yield Computer
 
