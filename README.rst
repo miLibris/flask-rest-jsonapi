@@ -8,6 +8,10 @@
     :target: http://flask-rest-jsonapi.readthedocs.io/en/latest/?badge=latest
     :alt: Documentation Status
 
+**Note: this is a fork of the original `miLibris/flask-rest-jsonapi <https://github.com/miLibris/flask-rest-jsonapi>`_ repo, with my pull requests merged.
+I have also published this fork to PyPi, allowing other projects to depend on this.
+If you would like your changes to ``flask-rest-jsonapi`` in my fork, please submit your pull requests here**
+
 Flask-REST-JSONAPI
 ##################
 
