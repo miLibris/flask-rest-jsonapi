@@ -4,7 +4,7 @@ python:
   - '3.5'
   - '3.6'
   - '3.7'
-  - 'pypy3'
+  - '3.8'
 script:
   - pip install .[dev]
   - coverage run --source flask_rest_jsonapi -m pytest -v
