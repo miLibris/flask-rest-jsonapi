@@ -147,7 +147,7 @@ def session(engine):
 
 
 @pytest.fixture()
-def person(session, person_model):
+def person(session, person_model, computer, person_tag_model, person_single_tag_model):
     person_ = person_model(name='test')
     session_ = session
     session_.add(person_)
@@ -158,7 +158,7 @@ def person(session, person_model):
 
 
 @pytest.fixture()
-def person_2(session, person_model):
+def person_2(session, person_model, computer, person_tag_model, person_single_tag_model):
     person_ = person_model(name='test2')
     session_ = session
     session_.add(person_)
