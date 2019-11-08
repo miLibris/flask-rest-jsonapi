@@ -112,8 +112,6 @@ def person_model(base):
         single_tag = relationship("Person_Single_Tag", uselist=False,
                                   cascade="save-update, merge, delete, delete-orphan")
 
-        computers_owned = relationship("Computer")
-
     yield Person
 
 
