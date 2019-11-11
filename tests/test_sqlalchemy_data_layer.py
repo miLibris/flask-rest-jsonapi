@@ -649,6 +649,9 @@ def test_get_list_disable_pagination(client, register_routes):
         assert response.status_code == 200
 
 def test_get_list_class_kwargs(session, person, person_schema, person_model, computer_list):
+    """
+    Test a resource that defines its get_schema_kwargs as a dictionary class variable
+    """
     class PersonDetail(ResourceDetail):
         schema = person_schema
         data_layer = {
@@ -672,6 +675,9 @@ def test_get_list_class_kwargs(session, person, person_schema, person_model, com
     assert 'name' not in ret.json['data']['attributes']
 
 def test_get_list_func_kwargs(session, person, person_schema, person_model, computer_list):
+    """
+    Test a resource that defines its get_schema_kwargs as a function
+    """
     class PersonDetail(ResourceDetail):
         schema = person_schema
         data_layer = {
