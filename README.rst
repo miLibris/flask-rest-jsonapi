@@ -1,7 +1,7 @@
 .. image:: https://travis-ci.org/TMiguelT/Flapison.svg?branch=master
     :target: https://travis-ci.org/TMiguelT/Flapison
 
-**Note: this is a fork of the original** `miLibris/Flapison <https://github.com/miLibris/Flapison>`_ **repo, with my pull requests merged.
+**Note: this is a fork of the original** `miLibris/flask-rest-jsonapi <https://github.com/miLibris/flask-rest-jsonapi>`_ **repo, with my pull requests merged.
 I have also published this fork to PyPi as `flapison`, allowing other projects to depend on this.
 If you would like your changes to** ``Flapison`` **in my fork, please submit your pull requests here**
 
