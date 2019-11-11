@@ -30,7 +30,7 @@ def client(app):
 
 @pytest.fixture(scope="function")
 def base():
-    yield declarative_base()
+    return declarative_base()
 
 
 @pytest.fixture(scope="function")
@@ -99,7 +99,7 @@ def string_json_attribute_person_model(base):
     yield StringJsonAttributePerson
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture()
 def person_model(base):
     class Person(base):
         __tablename__ = 'person'
@@ -115,7 +115,7 @@ def person_model(base):
     yield Person
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture()
 def computer_model(base):
     class Computer(base):
         __tablename__ = 'computer'
@@ -169,7 +169,7 @@ def person_2(session, person_model, computer, person_tag_model, person_single_ta
 
 
 @pytest.fixture()
-def computer(session, computer_model):
+def computer(session, computer_model, person_model):
     computer_ = computer_model(serial='1')
     session_ = session
     session_.add(computer_)
