@@ -10,18 +10,18 @@ from marshmallow import ValidationError
 from marshmallow_jsonapi.exceptions import IncorrectTypeError
 from six import with_metaclass
 
-from flask_rest_jsonapi.data_layers.alchemy import SqlalchemyDataLayer
-from flask_rest_jsonapi.data_layers.base import BaseDataLayer
-from flask_rest_jsonapi.decorators import check_headers, check_method_requirements, jsonapi_exception_formatter
-from flask_rest_jsonapi.exceptions import InvalidType, BadRequest, RelationNotFound, InvalidContentType, \
+from flapison.data_layers.alchemy import SqlalchemyDataLayer
+from flapison.data_layers.base import BaseDataLayer
+from flapison.decorators import check_headers, check_method_requirements, jsonapi_exception_formatter
+from flapison.exceptions import InvalidType, BadRequest, RelationNotFound, InvalidContentType, \
     InvalidAcceptType
-from flask_rest_jsonapi.pagination import add_pagination_links
-from flask_rest_jsonapi.querystring import QueryStringManager as QSManager
-from flask_rest_jsonapi.schema import compute_schema, get_relationships, get_model_field
-from flask_rest_jsonapi.content import render_json, parse_json
-from flask_rest_jsonapi.data_layers.base import BaseDataLayer
-from flask_rest_jsonapi.data_layers.alchemy import SqlalchemyDataLayer
-from flask_rest_jsonapi.utils import JSONEncoder
+from flapison.pagination import add_pagination_links
+from flapison.querystring import QueryStringManager as QSManager
+from flapison.schema import compute_schema, get_relationships, get_model_field
+from flapison.content import render_json, parse_json
+from flapison.data_layers.base import BaseDataLayer
+from flapison.data_layers.alchemy import SqlalchemyDataLayer
+from flapison.utils import JSONEncoder
 from marshmallow_jsonapi.fields import BaseRelationship
 
 

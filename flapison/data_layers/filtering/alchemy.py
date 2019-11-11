@@ -4,8 +4,8 @@
 
 from sqlalchemy import and_, or_, not_
 
-from flask_rest_jsonapi.exceptions import InvalidFilters
-from flask_rest_jsonapi.schema import get_relationships, get_model_field
+from flapison.exceptions import InvalidFilters
+from flapison.schema import get_relationships, get_model_field
 
 
 def create_filters(model, filter_info, resource):

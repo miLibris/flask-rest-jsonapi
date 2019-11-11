@@ -6,7 +6,7 @@ from marshmallow import class_registry
 from marshmallow.base import SchemaABC
 from marshmallow_jsonapi.fields import Relationship, List, Nested
 
-from flask_rest_jsonapi.exceptions import InvalidInclude
+from flapison.exceptions import InvalidInclude
 
 
 def compute_schema(schema_cls, default_kwargs, qs, include):

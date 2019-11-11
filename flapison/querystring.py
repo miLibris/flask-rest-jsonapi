@@ -6,8 +6,8 @@ import json
 
 from flask import current_app
 
-from flask_rest_jsonapi.exceptions import BadRequest, InvalidFilters, InvalidSort, InvalidField, InvalidInclude
-from flask_rest_jsonapi.schema import get_model_field, get_relationships, get_schema_from_type
+from flapison.exceptions import BadRequest, InvalidFilters, InvalidSort, InvalidField, InvalidInclude
+from flapison.schema import get_model_field, get_relationships, get_schema_from_type
 
 
 class QueryStringManager(object):

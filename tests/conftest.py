@@ -11,7 +11,7 @@ from sqlalchemy import create_engine, Column, Integer, DateTime, String, Foreign
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, relationship
 
-from flask_rest_jsonapi import Api, ResourceList, ResourceDetail, ResourceRelationship, JsonApiException
+from flapison import Api, ResourceList, ResourceDetail, ResourceRelationship, JsonApiException
 
 
 @pytest.fixture(scope="function")

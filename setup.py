@@ -3,13 +3,13 @@ from setuptools import setup, find_packages
 __version__ = '0.30.1'
 
 setup(
-    name="Flask-REST-JSONAPI",
+    name="flapison",
     version=__version__,
     description='Flask extension to create REST web api according to JSONAPI 1.0 specification with Flask, Marshmallow \
                  and data provider of your choice (SQLAlchemy, MongoDB, ...)',
     url='https://github.com/miLibris/flask-rest-jsonapi',
-    author='miLibris API Team',
-    author_email='pf@milibris.net',
+    author='Michael Milton',
+    author_email='ttmigueltt@gmail.com',
     license='MIT',
     classifiers=[
         'Framework :: Flask',

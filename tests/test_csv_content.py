@@ -4,7 +4,7 @@ from flask import make_response, Blueprint, Flask
 
 import pytest
 
-from flask_rest_jsonapi import Api
+from flapison import Api
 
 
 @pytest.fixture()

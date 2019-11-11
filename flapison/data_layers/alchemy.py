@@ -11,11 +11,11 @@ from marshmallow import class_registry
 from marshmallow.base import SchemaABC
 
 from flask import current_app
-from flask_rest_jsonapi.data_layers.base import BaseDataLayer
-from flask_rest_jsonapi.exceptions import RelationNotFound, RelatedObjectNotFound, JsonApiException,\
+from flapison.data_layers.base import BaseDataLayer
+from flapison.exceptions import RelationNotFound, RelatedObjectNotFound, JsonApiException,\
     InvalidSort, ObjectNotFound, InvalidInclude, InvalidType
-from flask_rest_jsonapi.data_layers.filtering.alchemy import create_filters
-from flask_rest_jsonapi.schema import get_model_field, get_related_schema, get_relationships, get_nested_fields, get_schema_field
+from flapison.data_layers.filtering.alchemy import create_filters
+from flapison.schema import get_model_field, get_related_schema, get_relationships, get_nested_fields, get_schema_field
 
 
 class SqlalchemyDataLayer(BaseDataLayer):
