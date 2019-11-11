@@ -6,7 +6,7 @@ import pytest
 from sqlalchemy import create_engine, Column, Integer, DateTime, String, ForeignKey
 from sqlalchemy.orm import sessionmaker, relationship
 from sqlalchemy.ext.declarative import declarative_base
-from flask import Blueprint, make_response, json
+from flask import Blueprint, make_response, json, Flask
 from marshmallow_jsonapi.flask import Schema, Relationship
 from marshmallow import Schema as MarshmallowSchema
 from marshmallow_jsonapi import fields
@@ -457,6 +457,7 @@ def register_routes(client, app, api_blueprint, person_list, person_detail, pers
     api.route(string_json_attribute_person_detail, 'string_json_attribute_person_detail',
               '/string_json_attribute_persons/<int:person_id>')
     api.init_app(app)
+    return api
 
 
 @pytest.fixture(scope="module")
@@ -647,6 +648,52 @@ def test_get_list_disable_pagination(client, register_routes):
         response = client.get('/persons' + '?' + querystring, content_type='application/vnd.api+json')
         assert response.status_code == 200
 
+def test_get_list_class_kwargs(session, person, person_schema, person_model, computer_list):
+    class PersonDetail(ResourceDetail):
+        schema = person_schema
+        data_layer = {
+            'model': person_model,
+            'session': session,
+            'url_field': 'person_id'
+        }
+
+        get_schema_kwargs = dict(
+            exclude=['name']
+        )
+
+    app = Flask('test')
+    api = Api(app=app)
+    api.route(PersonDetail, 'api.person_detail', '/persons/<int:person_id>')
+    api.route(computer_list, 'api.computer_list', '/computers', '/persons/<int:person_id>/computers')
+    api.init_app(app)
+
+    ret = app.test_client().get('/persons/{}'.format(person.person_id))
+
+    assert 'name' not in ret.json['data']['attributes']
+
+def test_get_list_func_kwargs(session, person, person_schema, person_model, computer_list):
+    class PersonDetail(ResourceDetail):
+        schema = person_schema
+        data_layer = {
+            'model': person_model,
+            'session': session,
+            'url_field': 'person_id'
+        }
+
+        def get_schema_kwargs(self, args, kwargs):
+            return dict(
+                exclude=['name']
+            )
+
+    app = Flask('test')
+    api = Api(app=app)
+    api.route(PersonDetail, 'api.person_detail', '/persons/<int:person_id>')
+    api.route(computer_list, 'api.computer_list', '/computers', '/persons/<int:person_id>/computers')
+    api.init_app(app)
+
+    ret = app.test_client().get('/persons/{}'.format(person.person_id))
+
+    assert 'name' not in ret.json['data']['attributes']
 
 def test_head_list(client, register_routes):
     with client:
