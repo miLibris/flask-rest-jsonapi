@@ -87,6 +87,31 @@ class Resource(MethodView):
     def parse_request(self):
         return self.request_parsers[request.content_type](request)
 
+    def _access_kwargs(self, name, args, kwargs):
+        """
+        Gets the kwargs dictionary with the provided name. This can be implemented as
+        a dictionary *or* a function, so we have to handle both possibilities
+        """
+        # Access the field
+        val = getattr(self, name, dict())
+
+        if callable(val):
+            # If it's a function, call it and validate its result
+            schema_kwargs = val(args, kwargs)
+            if not isinstance(schema_kwargs, dict):
+                raise TypeError(
+                    'The return value of the "{}" function must be a dictionary of kwargs'
+                )
+        else:
+            # If it's a dictionary, use it directly
+            schema_kwargs = val
+            if not isinstance(schema_kwargs, dict):
+                raise TypeError(
+                    'The value of the "{}" class variable must be a dictionary of kwargs'
+                )
+
+        return schema_kwargs
+
     @jsonapi_exception_formatter
     def dispatch_request(self, *args, **kwargs):
         """Logic of how to handle a request"""
@@ -135,7 +160,9 @@ class ResourceList(with_metaclass(ResourceMeta, Resource)):
         parent_filter = self._get_parent_filter(request.url, kwargs)
         objects_count, objects = self.get_collection(qs, kwargs, filters=parent_filter)
 
-        schema_kwargs = getattr(self, 'get_schema_kwargs', dict())
+        # get_schema_kwargs can be a class variable or a function
+        schema_kwargs = self._access_kwargs('get_schema_kwargs', args, kwargs)
+        schema_kwargs.update()
         schema_kwargs.update({'many': True})
 
         self.before_marshmallow(args, kwargs)
@@ -165,8 +192,9 @@ class ResourceList(with_metaclass(ResourceMeta, Resource)):
         qs = QSManager(request.args, self.schema)
         json_data = self.parse_request()
 
+        schema_kwargs = self._access_kwargs('post_schema_kwargs', args, kwargs)
         schema = compute_schema(self.schema,
-                                getattr(self, 'post_schema_kwargs', dict()),
+                                schema_kwargs,
                                 qs,
                                 qs.include)
 
@@ -257,8 +285,9 @@ class ResourceDetail(with_metaclass(ResourceMeta, Resource)):
 
         self.before_marshmallow(args, kwargs)
 
+        schema_kwargs = self._access_kwargs('get_schema_kwargs', args, kwargs)
         schema = compute_schema(self.schema,
-                                getattr(self, 'get_schema_kwargs', dict()),
+                                schema_kwargs,
                                 qs,
                                 qs.include)
 
@@ -273,7 +302,7 @@ class ResourceDetail(with_metaclass(ResourceMeta, Resource)):
         """Update an object"""
         qs = QSManager(request.args, self.schema)
         json_data = self.parse_request()
-        schema_kwargs = getattr(self, 'patch_schema_kwargs', dict())
+        schema_kwargs = self._access_kwargs('patch_schema_kwargs', args, kwargs)
         schema_kwargs.update({'partial': True})
 
         self.before_marshmallow(args, kwargs)

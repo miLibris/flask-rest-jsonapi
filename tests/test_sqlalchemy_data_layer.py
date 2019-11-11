@@ -6,14 +6,16 @@ from io import StringIO
 import pytest
 from flask import Blueprint, json
 from flask import make_response
+from sqlalchemy import create_engine, Column, Integer, DateTime, String, ForeignKey
+from sqlalchemy.orm import sessionmaker, relationship
+from sqlalchemy.ext.declarative import declarative_base
+from flask import Blueprint, make_response, json, Flask
+from marshmallow_jsonapi.flask import Schema, Relationship
 from marshmallow import Schema as MarshmallowSchema
 from marshmallow import ValidationError
 from marshmallow_jsonapi import fields
 from marshmallow_jsonapi.flask import Schema, Relationship
 from six.moves.urllib.parse import urlencode, parse_qs
-from sqlalchemy import create_engine, Column, Integer, DateTime, String, ForeignKey
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker, relationship
 
 import flapison.decorators
 import flapison.resource
@@ -199,13 +201,62 @@ def test_get_list_with_simple_filter(client, register_routes, person, person_2):
         assert response.status_code == 200, response.json['errors']
 
 
-
 def test_get_list_disable_pagination(client, register_routes):
     with client:
         querystring = urlencode({'page[size]': 0})
         response = client.get('/persons' + '?' + querystring, content_type='application/vnd.api+json')
         assert response.status_code == 200, response.json['errors']
 
+def test_get_list_class_kwargs(app, api, client, session, person, person_schema, person_model, computer_list):
+    """
+    Test a resource that defines its get_schema_kwargs as a dictionary class variable
+    """
+    class PersonDetail(ResourceDetail):
+        schema = person_schema
+        data_layer = {
+            'model': person_model,
+            'session': session,
+            'url_field': 'person_id'
+        }
+
+        get_schema_kwargs = dict(
+            exclude=['name']
+        )
+
+    api.route(PersonDetail, 'person_detail', '/persons/<int:person_id>')
+    api.route(computer_list, 'computer_list', '/computers', '/persons/<int:person_id>/computers')
+    api.init_app(app)
+
+    ret = client.get('/persons/{}'.format(person.person_id), content_type='application/vnd.api+json')
+
+    assert ret.status_code == 200, ret.json
+    assert 'name' not in ret.json['data']['attributes']
+
+def test_get_list_func_kwargs(app, api, client, session, person, person_schema, person_model, computer_list):
+    """
+    Test a resource that defines its get_schema_kwargs as a function
+    """
+    class PersonDetail(ResourceDetail):
+        schema = person_schema
+        data_layer = {
+            'model': person_model,
+            'session': session,
+            'url_field': 'person_id'
+        }
+
+        def get_schema_kwargs(self, args, kwargs):
+            return dict(
+                exclude=['name']
+            )
+
+    api.route(PersonDetail, 'person_detail', '/persons/<int:person_id>')
+    api.route(computer_list, 'computer_list', '/computers', '/persons/<int:person_id>/computers')
+    api.init_app(app)
+
+    ret = client.get('/persons/{}'.format(person.person_id), content_type='application/vnd.api+json')
+
+    assert ret.status_code == 200, ret.json
+    assert 'name' not in ret.json['data']['attributes']
 
 def test_head_list(client, register_routes):
     with client:
