@@ -1,13 +1,13 @@
 from setuptools import setup, find_packages
 
-__version__ = '0.30.1'
+__version__ = '0.30.2'
 
 setup(
     name="flapison",
     version=__version__,
     description='Flask extension to create REST web api according to JSONAPI 1.0 specification with Flask, Marshmallow \
                  and data provider of your choice (SQLAlchemy, MongoDB, ...)',
-    url='https://github.com/miLibris/flask-rest-jsonapi',
+    url='https://github.com/TMiguelT/flapison',
     author='Michael Milton',
     author_email='ttmigueltt@gmail.com',
     license='MIT',
