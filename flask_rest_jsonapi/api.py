@@ -69,7 +69,11 @@ class Api(object):
         resource.view = view
         url_rule_options = kwargs.get('url_rule_options') or dict()
 
-        view_func = resource.as_view(view)
+        # Allow the customization of the resource class instance
+        resource_args = kwargs.get('resource_args', [])
+        resource_kwargs = kwargs.get('resource_kwargs', {})
+
+        view_func = resource.as_view(view, *resource_args, **resource_kwargs)
 
         if 'blueprint' in kwargs:
             resource.view = '.'.join([kwargs['blueprint'].name, resource.view])
