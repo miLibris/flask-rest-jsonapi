@@ -991,7 +991,7 @@ class TestResourceArgs:
             This fake resource always renders a constructor parameter
             """
             def __init__(self, *args, **kwargs):
-                super().__init__()
+                super(TestResource, self).__init__()
                 self.constant = args[0]
 
             def get(self):
@@ -1009,7 +1009,7 @@ class TestResourceArgs:
             This fake resource always renders a constructor parameter
             """
             def __init__(self, *args, **kwargs):
-                super().__init__()
+                super(TestResource, self).__init__()
                 self.constant = kwargs.get('constant')
 
             def get(self):
