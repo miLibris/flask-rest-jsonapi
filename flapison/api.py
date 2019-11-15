@@ -37,7 +37,6 @@ class Api(object):
         if app is not None:
             self.init_app(app, blueprint)
 
-
     def init_app(self, app=None, blueprint=None, additional_blueprints=None):
         """Update flask application with our api
 
@@ -74,6 +73,9 @@ class Api(object):
         """
         url_rule_options = kwargs.get('url_rule_options') or dict()
 
+        # Allow the customization of the resource class instance
+        resource_kwargs = kwargs.get('resource_kwargs', {})
+
         # Find the parent object for this route, and also the correct endpoint name
         if 'blueprint' in kwargs:
             view_name = '.'.join([kwargs['blueprint'].name, view])
@@ -92,11 +94,18 @@ class Api(object):
         # is called again for this resource
         resource.view = view_name
 
+        # Create a resource instance with these arguments
+        combined_kwargs = {
+            'endpoint': view_name,
+            'request_parsers': self.request_parsers,
+            'response_renderers': self.response_renderers
+        }
+        # Update the default arguments with user provided ones
+        combined_kwargs.update(resource_kwargs)
+        # Now actually create the instance
         view_func = resource.as_view(
             view,
-            endpoint=view_name,
-            request_parsers=self.request_parsers,
-            response_renderers=self.response_renderers
+            **combined_kwargs
         )
 
         if blueprint is not None:

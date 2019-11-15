@@ -54,7 +54,7 @@ class ResourceMeta(MethodViewType):
 class Resource(MethodView):
     """Base resource class"""
 
-    def __new__(cls, **kwargs):
+    def __new__(cls, *args, **kwargs):
         """Constructor of a resource instance"""
         if hasattr(cls, '_data_layer'):
             cls._data_layer.resource = cls

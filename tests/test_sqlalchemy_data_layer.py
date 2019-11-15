@@ -599,6 +599,30 @@ def test_get_list_response(client, register_routes):
         assert response.status_code == 200, response.json['errors']
 
 
+def test_resource_kwargs(app):
+    class TestResource(ResourceDetail):
+        """
+        This fake resource always renders a constructor parameter
+        """
+        def __init__(self, *args, **kwargs):
+            constant = kwargs.pop('constant')
+            super(TestResource, self).__init__(**kwargs)
+            self.constant = constant
+
+        def get(self):
+            return self.constant
+    api = Api(app=app)
+    api.route(TestResource, 'resource_kwargs', '/resource_kwargs', resource_kwargs={
+        'constant': 'hello!',
+    })
+    api.init_app()
+    with app.test_client() as client:
+        rv = client.get('/resource_kwargs', headers={
+            'Content-Type': 'application/vnd.api+json'
+        })
+        assert rv.json == 'hello!'
+
+
 # test various Accept headers
 def test_single_accept_header(client, register_routes):
     with client:
