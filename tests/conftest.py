@@ -28,12 +28,12 @@ def client(app):
     return app.test_client()
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture(scope="session")
 def base():
     return declarative_base()
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture(scope="session")
 def person_tag_model(base):
     class Person_Tag(base):
         __tablename__ = 'person_tag'
@@ -45,7 +45,7 @@ def person_tag_model(base):
     yield Person_Tag
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture(scope="session")
 def person_single_tag_model(base):
     class Person_Single_Tag(base):
         __tablename__ = 'person_single_tag'
@@ -57,7 +57,7 @@ def person_single_tag_model(base):
     yield Person_Single_Tag
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture(scope="session")
 def string_json_attribute_person_model(base):
     """
     This approach to faking JSON support for testing with sqlite is borrowed from:
@@ -99,7 +99,7 @@ def string_json_attribute_person_model(base):
     yield StringJsonAttributePerson
 
 
-@pytest.fixture()
+@pytest.fixture(scope='session')
 def person_model(base):
     class Person(base):
         __tablename__ = 'person'
@@ -115,7 +115,7 @@ def person_model(base):
     yield Person
 
 
-@pytest.fixture()
+@pytest.fixture(scope='session')
 def computer_model(base):
     class Computer(base):
         __tablename__ = 'computer'
