@@ -638,7 +638,7 @@ def test_multiple_accept_header(client, register_routes):
         assert response.status_code == 200, response.json['errors']
 
 
-@pytest.mark.skip('This is accepted using the workzeug parser')
+@pytest.mark.skip('This is accepted using the werkzeug parser')
 def test_wrong_accept_header(client, register_routes):
     with client:
         response = client.get('/persons', content_type='application/vnd.api+json',
@@ -647,6 +647,7 @@ def test_wrong_accept_header(client, register_routes):
 
 
 # test Content-Type error
+@pytest.mark.skip('This is accepted using the werkzeug parser')
 def test_wrong_content_type(client, register_routes):
     with client:
         response = client.post('/persons', headers={'Content-Type': 'application/vnd.api+json;q=0.8'})

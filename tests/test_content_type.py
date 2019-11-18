@@ -1,6 +1,11 @@
+"""
+Tests relating to content types, which are independent from the data layer
+"""
 from csv import DictWriter, DictReader
 from io import StringIO
-from flask import make_response, Blueprint, Flask
+from flask import make_response, Blueprint, Flask, request
+from werkzeug.test import EnvironBuilder
+import json
 
 import pytest
 
@@ -167,6 +172,7 @@ def test_class_content_types(app, client):
     """
     Test that we can override the content negotiation on a class level
     """
+
     class TestResource(ResourceDetail):
         response_renderers = {
             'text/fake_content': lambda x: make_response(str(x), 200, {
@@ -195,3 +201,44 @@ def test_class_content_types(app, client):
     assert rv.status_code == 200
     assert rv.data.decode() == "test"
     assert rv.mimetype == 'text/fake_content'
+
+
+# Test using an encoding argument and a boundary argument
+@pytest.mark.parametrize(['content_type', 'data'], [
+    ['text/html; charset=UTF-8', 'hello'],
+    ['multipart/form-data; boundary=boundary', {
+        'a': '1',
+        'b': '2'
+    }]
+])
+def test_content_arguments(api, client, app, content_type, data):
+    """
+    Test content types with arguments, such as encoding or content boundaries
+    """
+
+    class TestResource(ResourceDetail):
+        request_parsers = {
+            'text/html': str,
+            'multipart/form-data': str,
+        }
+
+        response_renderers = {
+            'application/json': lambda x: make_response(json.dumps(x), 200, {
+                'Content-Type': 'application/json'
+            })
+        }
+
+        def post(self):
+            return request.data.decode() or dict(request.form)
+
+    api.route(TestResource, 'test', '/test')
+    api.init_app(app)
+
+    rv = client.post('/test', data=data, headers={
+        'Content-Type': content_type,
+        'Accept': 'application/json'
+    })
+
+    # Check that each request worked, and returned the correctly-parsed data
+    assert rv.status_code == 200
+    assert rv.json == data

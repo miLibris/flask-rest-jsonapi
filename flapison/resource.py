@@ -93,7 +93,7 @@ class Resource(MethodView):
             self.view = endpoint
 
     def parse_request(self):
-        return self.request_parsers[request.content_type](request)
+        return self.request_parsers[request.mimetype](request)
 
     def _access_kwargs(self, name, args, kwargs):
         """
@@ -129,7 +129,7 @@ class Resource(MethodView):
         assert method is not None, 'Unimplemented method {}'.format(request.method)
 
         # Before we defer to the method function, parse the incoming request
-        if request.content_type not in self.request_parsers:
+        if request.mimetype not in self.request_parsers:
             raise InvalidContentType(
                 'This endpoint only supports the following request content types: {}'.format(', '.join(
                     self.request_parsers.keys())
