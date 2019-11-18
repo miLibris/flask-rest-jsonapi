@@ -4,7 +4,7 @@ from flask import make_response, Blueprint, Flask
 
 import pytest
 
-from flapison import Api
+from flapison import Api, ResourceDetail
 
 
 @pytest.fixture()
@@ -19,23 +19,36 @@ def client(app):
 
 
 @pytest.fixture()
-def csv_api(app, person_list, person_detail, person_computers, computer_list, computer_detail,
-            computer_owner):
+def register_routes(person_list, person_detail, person_computers, computer_list,
+                    computer_detail, computer_owner):
+    def register(api):
+        api.route(person_list, 'person_list', '/persons')
+        api.route(person_detail, 'person_detail', '/persons/<int:person_id>')
+        api.route(person_computers, 'person_computers',
+                  '/persons/<int:person_id>/relationships/computers')
+        api.route(person_computers, 'person_computers_owned',
+                  '/persons/<int:person_id>/relationships/computers-owned')
+        api.route(person_computers, 'person_computers_error',
+                  '/persons/<int:person_id>/relationships/computer')
+        api.route(computer_list, 'computer_list', '/computers',
+                  '/persons/<int:person_id>/computers')
+        api.route(computer_list, 'computer_detail', '/computers/<int:id>')
+        api.route(computer_owner, 'computer_owner',
+                  '/computers/<int:id>/relationships/owner')
+        api.init_app(app)
+
+    return register
+
+
+@pytest.fixture()
+def csv_api(app, api, register_routes):
     bp = Blueprint('api', __name__)
     api = Api(blueprint=bp, response_renderers={
         'text/csv': render_csv
     }, request_parsers={
         'text/csv': parse_csv
     })
-    api.route(person_list, 'person_list', '/persons')
-    api.route(person_detail, 'person_detail', '/persons/<int:person_id>')
-    api.route(person_computers, 'person_computers', '/persons/<int:person_id>/relationships/computers')
-    api.route(person_computers, 'person_computers_owned', '/persons/<int:person_id>/relationships/computers-owned')
-    api.route(person_computers, 'person_computers_error', '/persons/<int:person_id>/relationships/computer')
-    api.route(computer_list, 'computer_list', '/computers', '/persons/<int:person_id>/computers')
-    api.route(computer_list, 'computer_detail', '/computers/<int:id>')
-    api.route(computer_owner, 'computer_owner', '/computers/<int:id>/relationships/owner')
-    api.init_app(app)
+    register_routes(api)
 
 
 def flatten_json(y):
@@ -148,3 +161,37 @@ def test_csv_request(csv_api, client, person_schema):
 
     # The returned data had the same name we posted
     assert response.json['data']['attributes']['name'] == 'one'
+
+
+def test_class_content_types(app, client):
+    """
+    Test that we can override the content negotiation on a class level
+    """
+    class TestResource(ResourceDetail):
+        response_renderers = {
+            'text/fake_content': lambda x: make_response(str(x), 200, {
+                'Content-Type': 'text/fake_content'
+            })
+        }
+        request_parsers = {
+            'text/fake_content': str
+        }
+
+        def get(self):
+            return "test"
+
+    bp = Blueprint('api', __name__)
+    api = Api(blueprint=bp)
+    api.route(TestResource, 'test', '/test')
+    api.init_app(app)
+
+    # If the content negotiation has successfully been changed, a request with a strange
+    # content type should work, and return the same type
+    rv = client.get('/test', headers={
+        'Content-Type': 'text/fake_content',
+        'Accept': 'text/fake_content'
+    })
+
+    assert rv.status_code == 200
+    assert rv.data.decode() == "test"
+    assert rv.mimetype == 'text/fake_content'
