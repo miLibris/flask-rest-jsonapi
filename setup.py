@@ -14,9 +14,9 @@ setup(
     classifiers=[
         'Framework :: Flask',
         'Programming Language :: Python :: 3',
-        'Programming Language :: Python :: 3.4',
-        'Programming Language :: Python :: 3.5',
         'Programming Language :: Python :: 3.6',
+        'Programming Language :: Python :: 3.7',
+        'Programming Language :: Python :: 3.8'
         'License :: OSI Approved :: MIT License',
     ],
     keywords='web api rest jsonapi flask sqlalchemy marshmallow',
@@ -27,7 +27,7 @@ setup(
         'six',
         'Flask>=0.11',
         'marshmallow>=3.1.0',
-        'marshmallow_jsonapi>=0.11.0',
+        'marshmallow_jsonapi>=0.22.0',
         'sqlalchemy'
     ],
     setup_requires=['pytest-runner'],
