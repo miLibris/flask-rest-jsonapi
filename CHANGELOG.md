@@ -1,4 +1,7 @@
 # Changelog
+## 0.30.4
+* Allow providing content parsers and renderers as class variables (https://github.com/TMiguelT/flapison/pull/4)
+
 ## 0.30.3
 * Allow providing the `*_schema_kwargs` family as a function (https://github.com/miLibris/flask-rest-jsonapi/pull/179)
 
