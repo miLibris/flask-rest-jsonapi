@@ -20,7 +20,7 @@ def client(app):
 
 @pytest.fixture()
 def register_routes(person_list, person_detail, person_computers, computer_list,
-                    computer_detail, computer_owner):
+                    computer_detail, computer_owner, app):
     def register(api):
         api.route(person_list, 'person_list', '/persons')
         api.route(person_detail, 'person_detail', '/persons/<int:person_id>')
