@@ -62,21 +62,29 @@ class Resource(MethodView):
         return super(Resource, cls).__new__(cls)
 
     def __init__(self, endpoint=None, request_parsers=None, response_renderers=None):
-        # Start with default parsers, but accept user provided ones
-        self.request_parsers = {
+        # Start with default parsers, then combine them with class variables, and also
+        # constructor arguments
+        combined_parsers = {
             'application/vnd.api+json': parse_json,
             'application/json': parse_json
         }
+        if hasattr(self, 'request_parsers'):
+            combined_parsers.update(self.request_parsers)
         if request_parsers is not None:
-            self.request_parsers.update(request_parsers)
+            combined_parsers.update(request_parsers)
+        self.request_parsers = combined_parsers
 
-        # Start with default renderers, but accept user provided ones
-        self.response_renderers = {
+        # Start with default renderers, then combine them with class variables, and also
+        # constructor arguments
+        combined_renderers = {
             'application/vnd.api+json': render_json,
             'application/json': render_json
         }
+        if hasattr(self, 'response_renderers'):
+            combined_renderers.update(self.response_renderers)
         if response_renderers is not None:
-            self.response_renderers.update(response_renderers)
+            combined_renderers.update(response_renderers)
+        self.response_renderers = combined_renderers
 
         # By default we assign each Resource class with a view/endpoint. However if the
         # same resource is used for multiple routes, the endpoint will be overwritten.
