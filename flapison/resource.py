@@ -123,13 +123,14 @@ class Resource(MethodView):
     @jsonapi_exception_formatter
     def dispatch_request(self, *args, **kwargs):
         """Logic of how to handle a request"""
-        method = getattr(self, request.method.lower(), None)
+        method_name = request.method.lower()
+        method = getattr(self, method_name, None)
         if method is None and request.method == 'HEAD':
             method = getattr(self, 'get', None)
         assert method is not None, 'Unimplemented method {}'.format(request.method)
 
         # Before we defer to the method function, parse the incoming request
-        if request.mimetype not in self.request_parsers:
+        if method_name in ('post', 'patch', 'put') and request.mimetype not in self.request_parsers:
             raise InvalidContentType(
                 'This endpoint only supports the following request content types: {}'.format(', '.join(
                     self.request_parsers.keys())

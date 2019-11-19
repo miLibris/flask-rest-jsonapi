@@ -13,7 +13,6 @@ from sqlalchemy.orm import sessionmaker, relationship
 
 from flapison import Api, ResourceList, ResourceDetail, ResourceRelationship, JsonApiException
 
-
 @pytest.fixture(scope="function")
 def app():
     app = Flask(__name__)
@@ -468,28 +467,38 @@ def api_blueprint(client):
     bp = Blueprint('api', __name__)
     yield bp
 
+@pytest.fixture()
+def register_routes(person_list, person_detail, person_computers,
+                    person_list_raise_jsonapiexception,
+                    person_list_raise_exception, person_list_response,
+                    person_list_without_schema, computer_list,
+                    computer_detail, computer_owner, string_json_attribute_person_list,
+                    string_json_attribute_person_detail,
+                    app, api, person):
+    def register(api):
+        api.route(person_list, 'person_list', '/persons')
+        api.route(person_detail, 'person_detail', '/persons/<int:person_id>')
+        api.route(person_computers, 'person_computers', '/persons/<int:person_id>/relationships/computers')
+        api.route(person_computers, 'person_computers_owned', '/persons/<int:person_id>/relationships/computers-owned')
+        api.route(person_computers, 'person_computers_error', '/persons/<int:person_id>/relationships/computer')
+        api.route(person_list_raise_jsonapiexception, 'person_list_jsonapiexception', '/persons_jsonapiexception')
+        api.route(person_list_raise_exception, 'person_list_exception', '/persons_exception')
+        api.route(person_list_response, 'person_list_response', '/persons_response')
+        api.route(person_list_without_schema, 'person_list_without_schema', '/persons_without_schema')
+        api.route(computer_list, 'computer_list', '/computers', '/persons/<int:person_id>/computers')
+        api.route(computer_list, 'computer_detail', '/computers/<int:id>')
+        api.route(computer_owner, 'computer_owner', '/computers/<int:id>/relationships/owner')
+        api.route(string_json_attribute_person_list, 'string_json_attribute_person_list', '/string_json_attribute_persons')
+        api.route(string_json_attribute_person_detail, 'string_json_attribute_person_detail',
+                  '/string_json_attribute_persons/<int:person_id>')
+        api.init_app(app)
+
+    return register
 
 @pytest.fixture(scope="function")
-def register_routes(client, api, app, api_blueprint, person_list, person_detail, person_computers,
-                    person_list_raise_jsonapiexception, person_list_raise_exception, person_list_response,
-                    person_list_without_schema, computer_list, computer_detail, computer_owner,
-                    string_json_attribute_person_detail, string_json_attribute_person_list):
-    api.route(person_list, 'person_list', '/persons')
-    api.route(person_detail, 'person_detail', '/persons/<int:person_id>')
-    api.route(person_computers, 'person_computers', '/persons/<int:person_id>/relationships/computers')
-    api.route(person_computers, 'person_computers_owned', '/persons/<int:person_id>/relationships/computers-owned')
-    api.route(person_computers, 'person_computers_error', '/persons/<int:person_id>/relationships/computer')
-    api.route(person_list_raise_jsonapiexception, 'person_list_jsonapiexception', '/persons_jsonapiexception')
-    api.route(person_list_raise_exception, 'person_list_exception', '/persons_exception')
-    api.route(person_list_response, 'person_list_response', '/persons_response')
-    api.route(person_list_without_schema, 'person_list_without_schema', '/persons_without_schema')
-    api.route(computer_list, 'computer_list', '/computers', '/persons/<int:person_id>/computers')
-    api.route(computer_list, 'computer_detail', '/computers/<int:id>')
-    api.route(computer_owner, 'computer_owner', '/computers/<int:id>/relationships/owner')
-    api.route(string_json_attribute_person_list, 'string_json_attribute_person_list', '/string_json_attribute_persons')
-    api.route(string_json_attribute_person_detail, 'string_json_attribute_person_detail',
-              '/string_json_attribute_persons/<int:person_id>')
-    api.init_app(app)
+def registered_routes(api, register_routes):
+    register_routes(api)
+    return api
 
 
 @pytest.fixture(scope="function")

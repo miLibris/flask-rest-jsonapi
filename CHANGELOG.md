@@ -1,5 +1,8 @@
 # Changelog
 ## 0.30.6
+* Be more relaxed about the Content-Type header. We ignore its value unless it's a POST or PATCH request, since we don't actually use the request body for GET and DELETE
+
+## 0.30.6
 * Be more relaxed about the Accept header. In general, allow no Accept header, or `*/*`. Assume these are `application/vnd.api+json`
 
 ## 0.30.5

@@ -12,38 +12,6 @@ import pytest
 from flapison import Api, ResourceDetail
 
 
-@pytest.fixture()
-def app():
-    app = Flask(__name__)
-    return app
-
-
-@pytest.yield_fixture()
-def client(app):
-    return app.test_client()
-
-
-@pytest.fixture()
-def register_routes(person_list, person_detail, person_computers, computer_list,
-                    computer_detail, computer_owner, app):
-    def register(api):
-        api.route(person_list, 'person_list', '/persons')
-        api.route(person_detail, 'person_detail', '/persons/<int:person_id>')
-        api.route(person_computers, 'person_computers',
-                  '/persons/<int:person_id>/relationships/computers')
-        api.route(person_computers, 'person_computers_owned',
-                  '/persons/<int:person_id>/relationships/computers-owned')
-        api.route(person_computers, 'person_computers_error',
-                  '/persons/<int:person_id>/relationships/computer')
-        api.route(computer_list, 'computer_list', '/computers',
-                  '/persons/<int:person_id>/computers')
-        api.route(computer_list, 'computer_detail', '/computers/<int:id>')
-        api.route(computer_owner, 'computer_owner',
-                  '/computers/<int:id>/relationships/owner')
-        api.init_app(app)
-
-    return register
-
 
 @pytest.fixture()
 def csv_api(app, api, register_routes):
@@ -242,3 +210,45 @@ def test_content_arguments(api, client, app, content_type, data):
     # Check that each request worked, and returned the correctly-parsed data
     assert rv.status_code == 200
     assert rv.json == data
+
+def test_accept_star(person, person_2, client, registered_routes):
+    """
+    Check that an Accept: */* header works
+    """
+    response = client.get('/persons', headers={
+        'Content-Type': 'application/vnd.api+json',
+        'Accept': '*/*'
+    })
+    assert response.status_code == 200, response.json
+    assert len(response.json['data']) == 2
+
+
+def test_accept_no_accept(person, person_2, client, registered_routes):
+    """
+    Check that a request without an Accept header works
+    """
+    response = client.get('/persons', headers={
+        'Content-Type': 'application/vnd.api+json',
+    })
+
+    assert response.status_code == 200, response.json
+    assert len(response.json['data']) == 2
+
+
+def test_no_content_get(person, person_2, client, registered_routes):
+    """
+    Check that we can still make GET requests without a Content-Type header
+    """
+    response = client.get('/persons')
+
+    assert response.status_code == 200, response.json
+    assert len(response.json['data']) == 2
+
+
+def test_no_content_post(person, person_2, client, registered_routes):
+    """
+    Check that we can't make POST requests without a Content-Type header
+    """
+    response = client.post('/persons')
+
+    assert response.status_code == 415
