@@ -137,18 +137,18 @@ class Resource(MethodView):
             )
 
         # Choose a renderer based on the Accept header
-        if len(request.accept_mimetypes) < 1:
-            # If the request doesn't specify a mimetype, assume JSON API
+        if request.accept_mimetypes.best in self.response_renderers:
+            accept_type = request.accept_mimetypes.best
+        elif request.accept_mimetypes.accept_json or len(request.accept_mimetypes) < 1:
             accept_type = 'application/vnd.api+json'
-        elif request.accept_mimetypes.best not in self.response_renderers:
+        else:
             # Check if we support the response type
             raise InvalidAcceptType(
                 'This endpoint only provides the following content types: {}'.format(', '.join(
                     self.response_renderers.keys())
                 )
             )
-        else:
-            accept_type = request.accept_mimetypes.best
+
         renderer = self.response_renderers[accept_type]
 
         response = method(*args, **kwargs)

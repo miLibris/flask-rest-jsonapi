@@ -1,4 +1,7 @@
 # Changelog
+## 0.30.6
+* Be more relaxed about the Accept header. In general, allow no Accept header, or `*/*`. Assume these are `application/vnd.api+json`
+
 ## 0.30.5
 * Fix issues involving Content-Type headers with arguments, e.g. 'text/html; charset=UTF-8'
 * Stop supporting Python 3.5 (unfortunately), due to [marshmallow-jsonapi](https://github.com/marshmallow-code/marshmallow-jsonapi) dropping support

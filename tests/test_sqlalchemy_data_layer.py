@@ -1504,3 +1504,27 @@ def test_relationship_containing_hyphens(api, app, client, computer_list, person
     response = client.get('/persons/{}/relationships/computers-owned'.format(person.person_id),
                           content_type='application/vnd.api+json')
     assert response.status_code == 200, response.json['errors']
+
+
+def test_accept_star(person, person_2, client, register_routes):
+    """
+    Check that an Accept: */* header works
+    """
+    response = client.get('/persons', headers={
+        'Content-Type': 'application/vnd.api+json',
+        'Accept': '*/*'
+    })
+    assert response.status_code == 200, response.json
+    assert len(response.json['data']) == 2
+
+
+def test_accept_no_accept(person, person_2, client, register_routes):
+    """
+    Check that a request without an Accept header works
+    """
+    response = client.get('/persons', headers={
+        'Content-Type': 'application/vnd.api+json',
+    })
+
+    assert response.status_code == 200, response.json
+    assert len(response.json['data']) == 2
