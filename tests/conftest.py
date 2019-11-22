@@ -317,7 +317,7 @@ def person_list(session, person_model, dummy_decorator, person_schema, before_cr
         schema = person_schema
         data_layer = {'model': person_model,
                       'session': session,
-                      'mzthods': {'before_create_object': before_create_object}}
+                      'methods': {'before_create_object': before_create_object}}
         get_decorators = [dummy_decorator]
         post_decorators = [dummy_decorator]
         get_schema_kwargs = dict()
@@ -400,7 +400,7 @@ def person_list_without_schema(session, person_model):
 
 
 @pytest.fixture(scope="function")
-def query():
+def query(computer_model, person_model):
     def query_(self, view_kwargs):
         if view_kwargs.get('person_id') is not None:
             return self.session.query(computer_model).join(person_model).filter_by(person_id=view_kwargs['person_id'])

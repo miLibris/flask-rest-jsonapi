@@ -200,6 +200,25 @@ def test_get_list_with_simple_filter(client, registered_routes, person, person_2
         response = client.get('/persons' + '?' + querystring, content_type='application/vnd.api+json')
         assert response.status_code == 200, response.json['errors']
 
+def test_get_list_relationship_filter(client, registered_routes, person_computers,
+    computer_schema, person, person_2, computer, session, computer_model):
+    """
+    Tests the ability to filter over a relationship using IDs, for example
+        `GET /comments?filter[post]=1`
+        Refer to the spec: https://jsonapi.org/recommendations/#filtering
+    """
+    # We have two people in the database, one of which owns a computer
+    person.computers.append(computer)
+    session.commit()
+
+    querystring = urlencode({
+        'filter[owner]': person.person_id
+    })
+    response = client.get('/computers?' + querystring, content_type='application/vnd.api+json')
+
+    # Check that the request worked, and returned the one computer we wanted
+    assert response.status_code == 200, response.json['errors']
+    assert len(response.json['data']) == 1
 
 def test_get_list_disable_pagination(client, registered_routes):
     with client:
@@ -1504,4 +1523,5 @@ def test_relationship_containing_hyphens(api, app, client, computer_list, person
     response = client.get('/persons/{}/relationships/computers-owned'.format(person.person_id),
                           content_type='application/vnd.api+json')
     assert response.status_code == 200, response.json['errors']
+
 
