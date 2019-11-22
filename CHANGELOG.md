@@ -1,5 +1,8 @@
 # Changelog
-## 0.30.6
+## 0.30.8
+* Allow relationships to be compared to scalars (https://github.com/TMiguelT/flapison/pull/8)
+
+## 0.30.7
 * Be more relaxed about the Content-Type header. We ignore its value unless it's a POST or PATCH request, since we don't actually use the request body for GET and DELETE
 
 ## 0.30.6
