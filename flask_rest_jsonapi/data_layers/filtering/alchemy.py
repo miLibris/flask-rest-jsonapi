@@ -3,6 +3,7 @@
 """Helper to create sqlalchemy filters according to filter querystring parameter"""
 
 from sqlalchemy import and_, or_, not_
+from sqlalchemy.orm import RelationshipProperty
 
 from flask_rest_jsonapi.exceptions import InvalidFilters
 from flask_rest_jsonapi.schema import get_relationships, get_model_field
@@ -51,6 +52,9 @@ class Node(object):
 
             if isinstance(value, dict):
                 return getattr(self.column, self.operator)(**value)
+            elif isinstance(self.column.prop, RelationshipProperty) and isinstance(value, (int, str)):
+                relationship_key = next(iter(self.column.prop.local_columns))
+                return getattr(relationship_key, self.operator)(value)
             else:
                 return getattr(self.column, self.operator)(value)
 

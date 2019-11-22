@@ -373,7 +373,7 @@ def person_list_without_schema(session, person_model):
 
 
 @pytest.fixture(scope="module")
-def query():
+def query(computer_model, person_model):
     def query_(self, view_kwargs):
         if view_kwargs.get('person_id') is not None:
             return self.session.query(computer_model).join(person_model).filter_by(person_id=view_kwargs['person_id'])
@@ -640,6 +640,42 @@ def test_get_list_with_simple_filter(client, register_routes, person, person_2):
                                  })
         response = client.get('/persons' + '?' + querystring, content_type='application/vnd.api+json')
         assert response.status_code == 200
+
+def test_get_list_relationship_filter(client, register_routes, person_computers,
+    computer_schema, person, person_2, computer, session):
+    """
+    Tests the ability to filter over a relationship using IDs, for example
+        `GET /comments?filter[post]=1`
+        Refer to the spec: https://jsonapi.org/recommendations/#filtering
+    """
+    # We have two people in the database, one of which owns a computer
+    person.computers.append(computer)
+    session.commit()
+
+    querystring = urlencode({
+        'filter[owner]': person.person_id
+    })
+    response = client.get('/computers?' + querystring, content_type='application/vnd.api+json')
+
+    # Check that the request worked, and returned the one computer we wanted
+    assert response.status_code == 200
+    assert len(response.json['data']) == 1
+
+def test_get_list_filter_many(client, register_routes, person_computers,
+                                      computer_schema, person, person_2, session, computer_model):
+    """
+    Tests the ability to filter using a list of IDs
+        `GET /comments?filter[id]=1,2`
+        Refer to the spec: https://jsonapi.org/recommendations/#filtering
+    """
+    querystring = urlencode({
+        'filter[id]': '{},{}'.format(person.person_id, person_2.person_id)
+    })
+    response = client.get('/persons?' + querystring, content_type='application/vnd.api+json')
+
+    # Check that the request worked, and returned both the users we specified
+    assert response.status_code == 200, response.json['errors']
+    assert len(response.json['data']) == 2
 
 def test_get_list_disable_pagination(client, register_routes):
     with client:
@@ -1804,3 +1840,4 @@ def test_api_resources(app, person_list):
 def test_relationship_containing_hyphens(client, register_routes, person_computers, computer_schema, person):
     response = client.get('/persons/{}/relationships/computers-owned'.format(person.person_id), content_type='application/vnd.api+json')
     assert response.status_code == 200
+
