@@ -61,8 +61,18 @@ class QueryStringManager(object):
         return results
 
     def _simple_filters(self, dict_):
-        return [{"name": key, "op": "eq", "val": value}
-                for (key, value) in dict_.items()]
+        ret = []
+
+        # Since the value of the filter can be a list, we have to choose the right
+        # operator dynamically
+        for key, value in dict_.items():
+            if isinstance(value, list):
+                op = 'in_'
+            else:
+                op = 'eq'
+
+            ret.append({"name": key, "op": op, "val": value})
+        return ret
 
     @property
     def querystring(self):
