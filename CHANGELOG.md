@@ -1,4 +1,7 @@
 # Changelog
+## 0.30.9
+* Allow simple filters to have list values, e.g. `filter[id]=1,2,3`
+
 ## 0.30.8
 * Allow relationships to be compared to scalars (https://github.com/TMiguelT/flapison/pull/8)
 

@@ -1,6 +1,6 @@
 from setuptools import setup, find_packages
 
-__version__ = '0.30.8'
+__version__ = '0.30.9'
 
 setup(
     name="flapison",
