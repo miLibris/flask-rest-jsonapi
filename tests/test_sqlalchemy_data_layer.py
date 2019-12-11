@@ -1649,3 +1649,31 @@ def test_relationship_containing_hyphens(api, app, client, computer_list, person
         '/persons/{}/relationships/computers-owned'.format(person.person_id),
         content_type='application/vnd.api+json')
     assert response.status_code == 200, response.json['errors']
+
+
+def test_post_list_nested_field(app, api, client, session, post_schema, post_model):
+
+    class PostList(ResourceList):
+        schema = post_schema
+        data_layer = {
+            'model': post_model,
+            'session': session,
+        }
+
+    payload = {
+        'data': {
+            'type': 'post',
+            'attributes': {
+                'title': 'test',
+                'tags': ['foo', 'bar']
+            },
+        }
+    }
+    api.route(PostList, 'post_list', '/posts')
+    api.init_app(app)
+
+    response = client.post('/posts', data=json.dumps(payload),
+                           content_type='application/vnd.api+json')
+    assert response.status_code == 201, response.json['errors']
+    assert json.loads(
+        response.get_data())['data']['attributes']['tags'][0] == 'foo'
