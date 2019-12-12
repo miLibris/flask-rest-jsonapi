@@ -168,14 +168,16 @@ def post_model(base):
 
 
 @pytest.fixture(scope="function")
-def engine(person_tag_model, person_single_tag_model, person_model, computer_model, string_json_attribute_person_model, post_model):
+def engine(
+        person_tag_model, person_single_tag_model, person_model,
+        computer_model, string_json_attribute_person_model, post_model):
     engine = create_engine("sqlite:///:memory:")
     person_tag_model.metadata.create_all(engine)
     person_single_tag_model.metadata.create_all(engine)
     person_model.metadata.create_all(engine)
     computer_model.metadata.create_all(engine)
     string_json_attribute_person_model.metadata.create_all(engine)
-    post_model.metadata.create_all
+    post_model.metadata.create_all(engine)
     return engine
 
 
