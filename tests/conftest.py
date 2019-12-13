@@ -94,6 +94,7 @@ def string_json_attribute_person_model(base):
         # This model uses a String type for "json_tags" to avoid dependency on a nonstandard SQL type in testing, \
         # while still demonstrating support
         address = Column(MagicJSON)
+        tags = Column(MagicJSON)
 
     yield StringJsonAttributePerson
 
@@ -128,56 +129,16 @@ def computer_model(base):
     yield Computer
 
 
-@pytest.fixture(scope="session")
-def post_model(base):
-    """
-    This approach to faking JSON support for testing with sqlite is borrowed from:
-    https://avacariu.me/articles/2016/compiling-json-as-text-for-sqlite-with-sqlalchemy
-    """
-    import sqlalchemy.types as types
-    import json
-
-    class StringyJSON(types.TypeDecorator):
-        """Stores and retrieves JSON as TEXT."""
-
-        impl = types.TEXT
-
-        def process_bind_param(self, value, dialect):
-            if value is not None:
-                value = json.dumps(value)
-            return value
-
-        def process_result_value(self, value, dialect):
-            if value is not None:
-                value = json.loads(value)
-            return value
-
-    # TypeEngine.with_variant says "use StringyJSON instead when
-    # connecting to 'sqlite'"
-    MagicJSON = types.JSON().with_variant(StringyJSON, 'sqlite')
-
-    class Post(base):
-
-        __tablename__ = 'post'
-
-        id = Column(Integer, primary_key=True)
-        title = Column(String, nullable=False)
-        tags = Column(MagicJSON)
-
-    yield Post
-
-
 @pytest.fixture(scope="function")
 def engine(
         person_tag_model, person_single_tag_model, person_model,
-        computer_model, string_json_attribute_person_model, post_model):
+        computer_model, string_json_attribute_person_model):
     engine = create_engine("sqlite:///:memory:")
     person_tag_model.metadata.create_all(engine)
     person_single_tag_model.metadata.create_all(engine)
     person_model.metadata.create_all(engine)
     computer_model.metadata.create_all(engine)
     string_json_attribute_person_model.metadata.create_all(engine)
-    post_model.metadata.create_all(engine)
     return engine
 
 
@@ -280,6 +241,7 @@ def string_json_attribute_person_schema(address_schema):
         name = fields.Str(required=True)
         birth_date = fields.DateTime()
         address = fields.Nested(address_schema, many=False)
+        tags = fields.List(fields.Dict())
 
     yield StringJsonAttributePersonSchema
 
@@ -327,19 +289,6 @@ def computer_schema():
                              type_='person')
 
     yield ComputerSchema
-
-
-@pytest.fixture(scope="function")
-def post_schema():
-    class PostSchema(Schema):
-        class Meta:
-            type_ = 'post'
-
-        id = fields.Integer(as_string=True, dump_only=True)
-        title = fields.Str()
-        tags = fields.List(fields.Str())
-
-    yield PostSchema
 
 
 @pytest.fixture(scope="function")

@@ -406,6 +406,36 @@ def test_post_list_nested(client, registered_routes, computer):
                    'key'] == 'k1'
 
 
+def test_post_list_nested_field(client, registered_routes):
+    """
+    Test a schema contains a nested field is correctly serialized and deserialized
+    """
+    payload = {
+        'data': {
+            'type': 'string_json_attribute_person',
+            'attributes': {
+                'name': 'test',
+                'tags': [
+                    {'key': 'new_key', 'value': 'new_value'}
+                ],
+            },
+        }
+    }
+    with client:
+        response = client.post(
+            '/string_json_attribute_persons',
+            data=json.dumps(payload),
+            content_type='application/vnd.api+json'
+        )
+        assert response.status_code == 201, response.json['errors']
+        assert json.loads(
+            response.get_data()
+        )['data']['attributes']['tags'][0]['key'] == 'new_key'
+        assert json.loads(
+            response.get_data()
+        )['data']['attributes']['tags'][0]['value'] == 'new_value'
+
+
 def test_post_list_single(client, registered_routes, person):
     payload = {
         'data': {
@@ -1649,31 +1679,3 @@ def test_relationship_containing_hyphens(api, app, client, computer_list, person
         '/persons/{}/relationships/computers-owned'.format(person.person_id),
         content_type='application/vnd.api+json')
     assert response.status_code == 200, response.json['errors']
-
-
-def test_post_list_nested_field(app, api, client, session, post_schema, post_model):
-
-    class PostList(ResourceList):
-        schema = post_schema
-        data_layer = {
-            'model': post_model,
-            'session': session,
-        }
-
-    payload = {
-        'data': {
-            'type': 'post',
-            'attributes': {
-                'title': 'test',
-                'tags': ['foo', 'bar']
-            },
-        }
-    }
-    api.route(PostList, 'post_list', '/posts')
-    api.init_app(app)
-
-    response = client.post('/posts', data=json.dumps(payload),
-                           content_type='application/vnd.api+json')
-    assert response.status_code == 201, response.json['errors']
-    assert json.loads(
-        response.get_data())['data']['attributes']['tags'][0] == 'foo'
