@@ -1,4 +1,7 @@
 # Changelog
+## 0.30.10
+* Fix for nested fields under Marshmallow 3, thanks to @pacoyang (https://github.com/TMiguelT/flapison/pull/11)
+
 ## 0.30.9
 * Allow simple filters to have list values, e.g. `filter[id]=1,2,3`
 
