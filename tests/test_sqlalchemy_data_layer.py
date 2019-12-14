@@ -20,44 +20,52 @@ from six.moves.urllib.parse import urlencode, parse_qs
 import flapison.decorators
 import flapison.resource
 import flapison.schema
-from flapison import Api, ResourceList, ResourceDetail, ResourceRelationship, \
-    JsonApiException
+from flapison import (
+    Api,
+    ResourceList,
+    ResourceDetail,
+    ResourceRelationship,
+    JsonApiException,
+)
 from flapison.data_layers.alchemy import SqlalchemyDataLayer
 from flapison.data_layers.base import BaseDataLayer
 from flapison.data_layers.filtering.alchemy import Node
-from flapison.exceptions import RelationNotFound, InvalidSort, InvalidFilters, \
-    InvalidInclude, BadRequest
+from flapison.exceptions import (
+    RelationNotFound,
+    InvalidSort,
+    InvalidFilters,
+    InvalidInclude,
+    BadRequest,
+)
 from flapison.pagination import add_pagination_links
 from flapison.querystring import QueryStringManager as QSManager
 
 
 def test_add_pagination_links(app):
     with app.app_context():
-        qs = {'page[number]': '2', 'page[size]': '10'}
+        qs = {"page[number]": "2", "page[size]": "10"}
         qsm = QSManager(qs, None)
         pagination_dict = dict()
         add_pagination_links(pagination_dict, 43, qsm, str())
-        last_page_dict = parse_qs(pagination_dict['links']['last'][1:])
-        assert len(last_page_dict['page[number]']) == 1
-        assert last_page_dict['page[number]'][0] == '5'
+        last_page_dict = parse_qs(pagination_dict["links"]["last"][1:])
+        assert len(last_page_dict["page[number]"]) == 1
+        assert last_page_dict["page[number]"][0] == "5"
 
 
 def test_Node(person_model, person_schema, monkeypatch):
     from copy import deepcopy
+
     filt = {
-        'val': '0000',
-        'field': True,
-        'not': dict(),
-        'name': 'name',
-        'op': 'eq',
-        'strip': lambda: 's'
+        "val": "0000",
+        "field": True,
+        "not": dict(),
+        "name": "name",
+        "op": "eq",
+        "strip": lambda: "s",
     }
-    filt['not'] = deepcopy(filt)
-    del filt['not']['not']
-    n = Node(person_model,
-             filt,
-             None,
-             person_schema)
+    filt["not"] = deepcopy(filt)
+    del filt["not"]["not"]
+    n = Node(person_model, filt, None, person_schema)
     with pytest.raises(TypeError):
         # print(n.val is None and n.field is None)
         # # n.column
@@ -67,7 +75,7 @@ def test_Node(person_model, person_schema, monkeypatch):
         n.column
     with pytest.raises(InvalidFilters):
         n.model = person_model
-        n.filter_['op'] = ''
+        n.filter_["op"] = ""
         n.operator
     with pytest.raises(InvalidFilters):
         n.related_model
@@ -76,41 +84,43 @@ def test_Node(person_model, person_schema, monkeypatch):
 
 
 def test_check_method_requirements(monkeypatch):
-    self = type('self', (object,), dict())
-    request = type('request', (object,), dict(method='GET'))
-    monkeypatch.setattr(flapison.decorators, 'request', request)
+    self = type("self", (object,), dict())
+    request = type("request", (object,), dict(method="GET"))
+    monkeypatch.setattr(flapison.decorators, "request", request)
     with pytest.raises(Exception):
         flapison.decorators.check_method_requirements(lambda: 1)(self())
 
 
 def test_json_api_exception():
-    JsonApiException(None, None, title='test', status='test')
+    JsonApiException(None, None, title="test", status="test")
 
 
 def test_query_string_manager(person_schema):
-    query_string = {'page[slumber]': '3'}
+    query_string = {"page[slumber]": "3"}
     qsm = QSManager(query_string, person_schema)
     with pytest.raises(BadRequest):
         qsm.pagination
-    qsm.qs['sort'] = 'computers'
+    qsm.qs["sort"] = "computers"
     with pytest.raises(InvalidSort):
         qsm.sorting
 
 
 @pytest.mark.skip(
-    'Monkey patching the request class stops the header parsing and breaks content negotiation')
+    "Monkey patching the request class stops the header parsing and breaks content negotiation"
+)
 def test_resource(app, person_model, person_schema, session, monkeypatch):
     def schema_load_mock(*args):
         raise ValidationError(dict(errors=[dict(status=None, title=None)]))
 
     with app.app_context():
-        query_string = {'page[slumber]': '3'}
-        app = type('app', (object,), dict(config=dict(DEBUG=True)))
-        headers = {'Content-Type': 'application/vnd.api+json'}
-        request = type('request', (object,), dict(method='POST',
-                                                  headers=headers,
-                                                  get_json=dict,
-                                                  args=query_string))
+        query_string = {"page[slumber]": "3"}
+        app = type("app", (object,), dict(config=dict(DEBUG=True)))
+        headers = {"Content-Type": "application/vnd.api+json"}
+        request = type(
+            "request",
+            (object,),
+            dict(method="POST", headers=headers, get_json=dict, args=query_string),
+        )
         dl = SqlalchemyDataLayer(dict(session=session, model=person_model))
         rl = ResourceList()
         rd = ResourceDetail()
@@ -118,12 +128,11 @@ def test_resource(app, person_model, person_schema, session, monkeypatch):
         rl.schema = person_schema
         rd._data_layer = dl
         rd.schema = person_schema
-        monkeypatch.setattr(flapison.resource, 'request', request)
-        monkeypatch.setattr(flapison.decorators, 'current_app', app)
-        monkeypatch.setattr(flapison.decorators, 'request', request)
-        monkeypatch.setattr(rl.schema, 'load', schema_load_mock)
-        r = super(flapison.resource.Resource, ResourceList) \
-            .__new__(ResourceList)
+        monkeypatch.setattr(flapison.resource, "request", request)
+        monkeypatch.setattr(flapison.decorators, "current_app", app)
+        monkeypatch.setattr(flapison.decorators, "request", request)
+        monkeypatch.setattr(rl.schema, "load", schema_load_mock)
+        r = super(flapison.resource.Resource, ResourceList).__new__(ResourceList)
         with pytest.raises(Exception):
             r.dispatch_request()
         rl.post()
@@ -131,86 +140,104 @@ def test_resource(app, person_model, person_schema, session, monkeypatch):
 
 
 def test_compute_schema(person_schema):
-    query_string = {'page[number]': '3', 'fields[person]': list()}
+    query_string = {"page[number]": "3", "fields[person]": list()}
     qsm = QSManager(query_string, person_schema)
     with pytest.raises(InvalidInclude):
-        flapison.schema.compute_schema(person_schema, dict(), qsm, ['id'])
+        flapison.schema.compute_schema(person_schema, dict(), qsm, ["id"])
     flapison.schema.compute_schema(person_schema, dict(only=list()), qsm, list())
 
 
 def test_compute_schema_propagate_context(person_schema, computer_schema):
     query_string = {}
     qsm = QSManager(query_string, person_schema)
-    schema = flapison.schema.compute_schema(person_schema, dict(), qsm, ['computers'])
-    assert schema.declared_fields['computers'].__dict__['_Relationship__schema'].__dict__[
-               'context'] == dict()
-    schema = flapison.schema.compute_schema(person_schema, dict(context=dict(foo='bar')),
-                                            qsm, ['computers'])
-    assert schema.declared_fields['computers'].__dict__['_Relationship__schema'].__dict__[
-               'context'] == dict(foo='bar')
+    schema = flapison.schema.compute_schema(person_schema, dict(), qsm, ["computers"])
+    assert (
+        schema.declared_fields["computers"]
+        .__dict__["_Relationship__schema"]
+        .__dict__["context"]
+        == dict()
+    )
+    schema = flapison.schema.compute_schema(
+        person_schema, dict(context=dict(foo="bar")), qsm, ["computers"]
+    )
+    assert schema.declared_fields["computers"].__dict__[
+        "_Relationship__schema"
+    ].__dict__["context"] == dict(foo="bar")
 
 
 # test good cases
 def test_get_list(client, registered_routes, person, person_2):
     with client:
-        querystring = urlencode({
-            'page[number]': 1,
-            'page[size]': 1,
-            'fields[person]': 'name,birth_date',
-            'sort': '-name',
-            'include': 'computers.owner',
-            'filter': json.dumps(
-                [
-                    {
-                        'and': [
-                            {
-                                'name': 'computers',
-                                'op': 'any',
-                                'val': {
-                                    'name': 'serial',
-                                    'op': 'eq',
-                                    'val': '0000'
-                                }
-                            },
-                            {
-                                'or': [
-                                    {
-                                        'name': 'name',
-                                        'op': 'like',
-                                        'val': '%test%'
+        querystring = urlencode(
+            {
+                "page[number]": 1,
+                "page[size]": 1,
+                "fields[person]": "name,birth_date",
+                "sort": "-name",
+                "include": "computers.owner",
+                "filter": json.dumps(
+                    [
+                        {
+                            "and": [
+                                {
+                                    "name": "computers",
+                                    "op": "any",
+                                    "val": {
+                                        "name": "serial",
+                                        "op": "eq",
+                                        "val": "0000",
                                     },
-                                    {
-                                        'name': 'name',
-                                        'op': 'like',
-                                        'val': '%test2%'
-                                    }
-                                ]
-                            }
-                        ]
-                    }
-                ])
-        })
-        response = client.get('/persons' + '?' + querystring,
-                              content_type='application/vnd.api+json')
-        assert response.status_code == 200, response.json['errors']
+                                },
+                                {
+                                    "or": [
+                                        {"name": "name", "op": "like", "val": "%test%"},
+                                        {
+                                            "name": "name",
+                                            "op": "like",
+                                            "val": "%test2%",
+                                        },
+                                    ]
+                                },
+                            ]
+                        }
+                    ]
+                ),
+            }
+        )
+        response = client.get(
+            "/persons" + "?" + querystring, content_type="application/vnd.api+json"
+        )
+        assert response.status_code == 200, response.json["errors"]
 
 
 def test_get_list_with_simple_filter(client, registered_routes, person, person_2):
     with client:
-        querystring = urlencode({'page[number]': 1,
-                                 'page[size]': 1,
-                                 'fields[person]': 'name,birth_date',
-                                 'sort': '-name',
-                                 'filter[name]': 'test'
-                                 })
-        response = client.get('/persons' + '?' + querystring,
-                              content_type='application/vnd.api+json')
-        assert response.status_code == 200, response.json['errors']
+        querystring = urlencode(
+            {
+                "page[number]": 1,
+                "page[size]": 1,
+                "fields[person]": "name,birth_date",
+                "sort": "-name",
+                "filter[name]": "test",
+            }
+        )
+        response = client.get(
+            "/persons" + "?" + querystring, content_type="application/vnd.api+json"
+        )
+        assert response.status_code == 200, response.json["errors"]
 
 
-def test_get_list_relationship_filter(client, registered_routes, person_computers,
-                                      computer_schema, person, person_2, computer,
-                                      session, computer_model):
+def test_get_list_relationship_filter(
+    client,
+    registered_routes,
+    person_computers,
+    computer_schema,
+    person,
+    person_2,
+    computer,
+    session,
+    computer_model,
+):
     """
     Tests the ability to filter over a relationship using IDs, for example
         `GET /comments?filter[post]=1`
@@ -220,45 +247,55 @@ def test_get_list_relationship_filter(client, registered_routes, person_computer
     person.computers.append(computer)
     session.commit()
 
-    querystring = urlencode({
-        'filter[owner]': person.person_id
-    })
-    response = client.get('/computers?' + querystring,
-                          content_type='application/vnd.api+json')
+    querystring = urlencode({"filter[owner]": person.person_id})
+    response = client.get(
+        "/computers?" + querystring, content_type="application/vnd.api+json"
+    )
 
     # Check that the request worked, and returned the one computer we wanted
-    assert response.status_code == 200, response.json['errors']
-    assert len(response.json['data']) == 1
+    assert response.status_code == 200, response.json["errors"]
+    assert len(response.json["data"]) == 1
 
 
-def test_get_list_filter_many(client, registered_routes, person_computers,
-                              computer_schema, person, person_2, session, computer_model):
+def test_get_list_filter_many(
+    client,
+    registered_routes,
+    person_computers,
+    computer_schema,
+    person,
+    person_2,
+    session,
+    computer_model,
+):
     """
     Tests the ability to filter using a list of IDs
         `GET /comments?filter[id]=1,2`
         Refer to the spec: https://jsonapi.org/recommendations/#filtering
     """
-    querystring = urlencode({
-        'filter[id]': '{},{}'.format(person.person_id, person_2.person_id)
-    })
-    response = client.get('/persons?' + querystring,
-                          content_type='application/vnd.api+json')
+    querystring = urlencode(
+        {"filter[id]": "{},{}".format(person.person_id, person_2.person_id)}
+    )
+    response = client.get(
+        "/persons?" + querystring, content_type="application/vnd.api+json"
+    )
 
     # Check that the request worked, and returned both the users we specified
-    assert response.status_code == 200, response.json['errors']
-    assert len(response.json['data']) == 2
+    assert response.status_code == 200, response.json["errors"]
+    assert len(response.json["data"]) == 2
 
 
 def test_get_list_disable_pagination(client, registered_routes):
     with client:
-        querystring = urlencode({'page[size]': 0})
-        response = client.get('/persons' + '?' + querystring,
-                              content_type='application/vnd.api+json')
-        assert response.status_code == 200, response.json['errors']
+        querystring = urlencode({"page[size]": 0})
+        response = client.get(
+            "/persons" + "?" + querystring, content_type="application/vnd.api+json"
+        )
+        assert response.status_code == 200, response.json["errors"]
 
 
-def test_get_list_class_kwargs(app, api, client, session, person, person_schema,
-                               person_model, computer_list):
+def test_get_list_class_kwargs(
+    app, api, client, session, person, person_schema, person_model, computer_list
+):
     """
     Test a resource that defines its get_schema_kwargs as a dictionary class variable
     """
@@ -266,29 +303,33 @@ def test_get_list_class_kwargs(app, api, client, session, person, person_schema,
     class PersonDetail(ResourceDetail):
         schema = person_schema
         data_layer = {
-            'model': person_model,
-            'session': session,
-            'url_field': 'person_id'
+            "model": person_model,
+            "session": session,
+            "url_field": "person_id",
         }
 
-        get_schema_kwargs = dict(
-            exclude=['name']
-        )
+        get_schema_kwargs = dict(exclude=["name"])
 
-    api.route(PersonDetail, 'person_detail', '/persons/<int:person_id>')
-    api.route(computer_list, 'computer_list', '/computers',
-              '/persons/<int:person_id>/computers')
+    api.route(PersonDetail, "person_detail", "/persons/<int:person_id>")
+    api.route(
+        computer_list,
+        "computer_list",
+        "/computers",
+        "/persons/<int:person_id>/computers",
+    )
     api.init_app(app)
 
-    ret = client.get('/persons/{}'.format(person.person_id),
-                     content_type='application/vnd.api+json')
+    ret = client.get(
+        "/persons/{}".format(person.person_id), content_type="application/vnd.api+json"
+    )
 
     assert ret.status_code == 200, ret.json
-    assert 'name' not in ret.json['data']['attributes']
+    assert "name" not in ret.json["data"]["attributes"]
 
 
-def test_get_list_func_kwargs(app, api, client, session, person, person_schema,
-                              person_model, computer_list):
+def test_get_list_func_kwargs(
+    app, api, client, session, person, person_schema, person_model, computer_list
+):
     """
     Test a resource that defines its get_schema_kwargs as a function
     """
@@ -296,114 +337,111 @@ def test_get_list_func_kwargs(app, api, client, session, person, person_schema,
     class PersonDetail(ResourceDetail):
         schema = person_schema
         data_layer = {
-            'model': person_model,
-            'session': session,
-            'url_field': 'person_id'
+            "model": person_model,
+            "session": session,
+            "url_field": "person_id",
         }
 
         def get_schema_kwargs(self, args, kwargs):
-            return dict(
-                exclude=['name']
-            )
+            return dict(exclude=["name"])
 
-    api.route(PersonDetail, 'person_detail', '/persons/<int:person_id>')
-    api.route(computer_list, 'computer_list', '/computers',
-              '/persons/<int:person_id>/computers')
+    api.route(PersonDetail, "person_detail", "/persons/<int:person_id>")
+    api.route(
+        computer_list,
+        "computer_list",
+        "/computers",
+        "/persons/<int:person_id>/computers",
+    )
     api.init_app(app)
 
-    ret = client.get('/persons/{}'.format(person.person_id),
-                     content_type='application/vnd.api+json')
+    ret = client.get(
+        "/persons/{}".format(person.person_id), content_type="application/vnd.api+json"
+    )
 
     assert ret.status_code == 200, ret.json
-    assert 'name' not in ret.json['data']['attributes']
+    assert "name" not in ret.json["data"]["attributes"]
 
 
 def test_head_list(client, registered_routes):
     with client:
-        response = client.head('/persons', content_type='application/vnd.api+json')
-        assert response.status_code == 200, response.json['errors']
+        response = client.head("/persons", content_type="application/vnd.api+json")
+        assert response.status_code == 200, response.json["errors"]
 
 
 def test_post_list(client, registered_routes, computer):
     payload = {
-        'data': {
-            'type': 'person',
-            'attributes': {
-                'name': 'test'
+        "data": {
+            "type": "person",
+            "attributes": {"name": "test"},
+            "relationships": {
+                "computers": {"data": [{"type": "computer", "id": str(computer.id)}]}
             },
-            'relationships': {
-                'computers': {
-                    'data': [
-                        {
-                            'type': 'computer',
-                            'id': str(computer.id)
-                        }
-                    ]
-                }
-            }
         }
     }
 
     with client:
-        response = client.post('/persons', data=json.dumps(payload),
-                               content_type='application/vnd.api+json')
-        assert response.status_code == 201, response.json['errors']
+        response = client.post(
+            "/persons",
+            data=json.dumps(payload),
+            content_type="application/vnd.api+json",
+        )
+        assert response.status_code == 201, response.json["errors"]
 
 
 def test_post_list_nested_no_join(client, registered_routes, computer):
     payload = {
-        'data': {
-            'type': 'string_json_attribute_person',
-            'attributes': {
-                'name': 'test_name',
-                'address': {
-                    'street': 'test_street',
-                    'city': 'test_city',
-                    'state': 'NC',
-                    'zip': '00000'
-                }
-            }
+        "data": {
+            "type": "string_json_attribute_person",
+            "attributes": {
+                "name": "test_name",
+                "address": {
+                    "street": "test_street",
+                    "city": "test_city",
+                    "state": "NC",
+                    "zip": "00000",
+                },
+            },
         }
     }
     with client:
-        response = client.post('/string_json_attribute_persons', data=json.dumps(payload),
-                               content_type='application/vnd.api+json')
+        response = client.post(
+            "/string_json_attribute_persons",
+            data=json.dumps(payload),
+            content_type="application/vnd.api+json",
+        )
         print(response.get_data())
-        assert response.status_code == 201, response.json['errors']
-        assert json.loads(response.get_data())['data']['attributes']['address'][
-                   'street'] == 'test_street'
+        assert response.status_code == 201, response.json["errors"]
+        assert (
+            json.loads(response.get_data())["data"]["attributes"]["address"]["street"]
+            == "test_street"
+        )
 
 
 def test_post_list_nested(client, registered_routes, computer):
     payload = {
-        'data': {
-            'type': 'person',
-            'attributes': {
-                'name': 'test',
-                'tags': [
-                    {'key': 'k1', 'value': 'v1'},
-                    {'key': 'k2', 'value': 'v2'}
-                ]
+        "data": {
+            "type": "person",
+            "attributes": {
+                "name": "test",
+                "tags": [{"key": "k1", "value": "v1"}, {"key": "k2", "value": "v2"}],
             },
-            'relationships': {
-                'computers': {
-                    'data': [
-                        {
-                            'type': 'computer',
-                            'id': str(computer.id)
-                        }
-                    ]
-                }
-            }
+            "relationships": {
+                "computers": {"data": [{"type": "computer", "id": str(computer.id)}]}
+            },
         }
     }
 
     with client:
-        response = client.post('/persons', data=json.dumps(payload),
-                               content_type='application/vnd.api+json')
-        assert response.status_code == 201, response.json['errors']
-        assert json.loads(response.get_data())['data']['attributes']['tags'][0][
-                   'key'] == 'k1'
+        response = client.post(
+            "/persons",
+            data=json.dumps(payload),
+            content_type="application/vnd.api+json",
+        )
+        assert response.status_code == 201, response.json["errors"]
+        assert (
+            json.loads(response.get_data())["data"]["attributes"]["tags"][0]["key"]
+            == "k1"
+        )
 
 
 def test_post_list_nested_field(client, registered_routes):
@@ -411,131 +449,116 @@ def test_post_list_nested_field(client, registered_routes):
     Test a schema contains a nested field is correctly serialized and deserialized
     """
     payload = {
-        'data': {
-            'type': 'string_json_attribute_person',
-            'attributes': {
-                'name': 'test',
-                'tags': [
-                    {'key': 'new_key', 'value': 'new_value'}
-                ],
+        "data": {
+            "type": "string_json_attribute_person",
+            "attributes": {
+                "name": "test",
+                "tags": [{"key": "new_key", "value": "new_value"}],
             },
         }
     }
     with client:
         response = client.post(
-            '/string_json_attribute_persons',
+            "/string_json_attribute_persons",
             data=json.dumps(payload),
-            content_type='application/vnd.api+json'
+            content_type="application/vnd.api+json",
         )
-        assert response.status_code == 201, response.json['errors']
-        assert json.loads(
-            response.get_data()
-        )['data']['attributes']['tags'][0]['key'] == 'new_key'
-        assert json.loads(
-            response.get_data()
-        )['data']['attributes']['tags'][0]['value'] == 'new_value'
+        assert response.status_code == 201, response.json["errors"]
+        assert (
+            json.loads(response.get_data())["data"]["attributes"]["tags"][0]["key"]
+            == "new_key"
+        )
+        assert (
+            json.loads(response.get_data())["data"]["attributes"]["tags"][0]["value"]
+            == "new_value"
+        )
 
 
 def test_post_list_single(client, registered_routes, person):
     payload = {
-        'data': {
-            'type': 'computer',
-            'attributes': {
-                'serial': '1'
+        "data": {
+            "type": "computer",
+            "attributes": {"serial": "1"},
+            "relationships": {
+                "owner": {"data": {"type": "person", "id": str(person.person_id)}}
             },
-            'relationships': {
-                'owner': {
-                    'data': {
-                        'type': 'person',
-                        'id': str(person.person_id)
-                    }
-                }
-            }
         }
     }
 
     with client:
-        response = client.post('/computers', data=json.dumps(payload),
-                               content_type='application/vnd.api+json')
-        assert response.status_code == 201, response.json['errors']
+        response = client.post(
+            "/computers",
+            data=json.dumps(payload),
+            content_type="application/vnd.api+json",
+        )
+        assert response.status_code == 201, response.json["errors"]
 
 
 def test_get_detail(client, registered_routes, person):
     with client:
-        response = client.get('/persons/' + str(person.person_id),
-                              content_type='application/vnd.api+json')
-        assert response.status_code == 200, response.json['errors']
+        response = client.get(
+            "/persons/" + str(person.person_id), content_type="application/vnd.api+json"
+        )
+        assert response.status_code == 200, response.json["errors"]
 
 
 def test_patch_detail(client, registered_routes, computer, person):
     payload = {
-        'data': {
-            'id': str(person.person_id),
-            'type': 'person',
-            'attributes': {
-                'name': 'test2'
+        "data": {
+            "id": str(person.person_id),
+            "type": "person",
+            "attributes": {"name": "test2"},
+            "relationships": {
+                "computers": {"data": [{"type": "computer", "id": str(computer.id)}]}
             },
-            'relationships': {
-                'computers': {
-                    'data': [
-                        {
-                            'type': 'computer',
-                            'id': str(computer.id)
-                        }
-                    ]
-                }
-            }
         }
     }
 
     with client:
-        response = client.patch('/persons/' + str(person.person_id),
-                                data=json.dumps(payload),
-                                content_type='application/vnd.api+json')
-        assert response.status_code == 200, response.json['errors']
+        response = client.patch(
+            "/persons/" + str(person.person_id),
+            data=json.dumps(payload),
+            content_type="application/vnd.api+json",
+        )
+        assert response.status_code == 200, response.json["errors"]
 
 
 def test_patch_detail_nested(client, registered_routes, computer, person):
     payload = {
-        'data': {
-            'id': str(person.person_id),
-            'type': 'person',
-            'attributes': {
-                'name': 'test2',
-                'tags': [
-                    {'key': 'new_key', 'value': 'new_value'}
-                ],
-                'single_tag': {'key': 'new_single_key', 'value': 'new_single_value'}
+        "data": {
+            "id": str(person.person_id),
+            "type": "person",
+            "attributes": {
+                "name": "test2",
+                "tags": [{"key": "new_key", "value": "new_value"}],
+                "single_tag": {"key": "new_single_key", "value": "new_single_value"},
             },
-            'relationships': {
-                'computers': {
-                    'data': [
-                        {
-                            'type': 'computer',
-                            'id': str(computer.id)
-                        }
-                    ]
-                }
-            }
+            "relationships": {
+                "computers": {"data": [{"type": "computer", "id": str(computer.id)}]}
+            },
         }
     }
 
     with client:
-        response = client.patch('/persons/' + str(person.person_id),
-                                data=json.dumps(payload),
-                                content_type='application/vnd.api+json')
-        assert response.status_code == 200, response.json['errors']
+        response = client.patch(
+            "/persons/" + str(person.person_id),
+            data=json.dumps(payload),
+            content_type="application/vnd.api+json",
+        )
+        assert response.status_code == 200, response.json["errors"]
         response_dict = json.loads(response.get_data())
-        assert response_dict['data']['attributes']['tags'][0]['key'] == 'new_key'
-        assert response_dict['data']['attributes']['single_tag'][
-                   'key'] == 'new_single_key'
+        assert response_dict["data"]["attributes"]["tags"][0]["key"] == "new_key"
+        assert (
+            response_dict["data"]["attributes"]["single_tag"]["key"] == "new_single_key"
+        )
 
 
 def test_delete_detail(client, registered_routes, person):
     with client:
-        response = client.delete('/persons/' + str(person.person_id),
-                                 content_type='application/vnd.api+json')
-        assert response.status_code == 200, response.json['errors']
+        response = client.delete(
+            "/persons/" + str(person.person_id), content_type="application/vnd.api+json"
+        )
+        assert response.status_code == 200, response.json["errors"]
 
 
 def test_get_relationship(session, client, registered_routes, computer, person):
@@ -544,18 +567,24 @@ def test_get_relationship(session, client, registered_routes, computer, person):
     session_.commit()
 
     with client:
-        response = client.get('/persons/' + str(
-            person.person_id) + '/relationships/computers?include=computers',
-                              content_type='application/vnd.api+json')
-        assert response.status_code == 200, response.json['errors']
+        response = client.get(
+            "/persons/"
+            + str(person.person_id)
+            + "/relationships/computers?include=computers",
+            content_type="application/vnd.api+json",
+        )
+        assert response.status_code == 200, response.json["errors"]
 
 
 def test_get_relationship_empty(client, registered_routes, person):
     with client:
-        response = client.get('/persons/' + str(
-            person.person_id) + '/relationships/computers?include=computers',
-                              content_type='application/vnd.api+json')
-        assert response.status_code == 200, response.json['errors']
+        response = client.get(
+            "/persons/"
+            + str(person.person_id)
+            + "/relationships/computers?include=computers",
+            content_type="application/vnd.api+json",
+        )
+        assert response.status_code == 200, response.json["errors"]
 
 
 def test_get_relationship_single(session, client, registered_routes, computer, person):
@@ -564,95 +593,88 @@ def test_get_relationship_single(session, client, registered_routes, computer, p
     session_.commit()
 
     with client:
-        response = client.get('/computers/' + str(computer.id) + '/relationships/owner',
-                              content_type='application/vnd.api+json')
-        assert response.status_code == 200, response.json['errors']
+        response = client.get(
+            "/computers/" + str(computer.id) + "/relationships/owner",
+            content_type="application/vnd.api+json",
+        )
+        assert response.status_code == 200, response.json["errors"]
 
 
 def test_get_relationship_single_empty(session, client, registered_routes, computer):
     with client:
-        response = client.get('/computers/' + str(computer.id) + '/relationships/owner',
-                              content_type='application/vnd.api+json')
+        response = client.get(
+            "/computers/" + str(computer.id) + "/relationships/owner",
+            content_type="application/vnd.api+json",
+        )
         response_json = json.loads(response.get_data())
-        assert None is response_json['data']
-        assert response.status_code == 200, response.json['errors']
+        assert None is response_json["data"]
+        assert response.status_code == 200, response.json["errors"]
 
 
 def test_issue_49(session, client, registered_routes, person, person_2):
     with client:
         for p in [person, person_2]:
-            response = client.get('/persons/' + str(
-                p.person_id) + '/relationships/computers?include=computers',
-                                  content_type='application/vnd.api+json')
-            assert response.status_code == 200, response.json['errors']
-            assert (json.loads(response.get_data()))['links'][
-                       'related'] == '/persons/' + str(
-                p.person_id) + '/computers'
+            response = client.get(
+                "/persons/"
+                + str(p.person_id)
+                + "/relationships/computers?include=computers",
+                content_type="application/vnd.api+json",
+            )
+            assert response.status_code == 200, response.json["errors"]
+            assert (json.loads(response.get_data()))["links"][
+                "related"
+            ] == "/persons/" + str(p.person_id) + "/computers"
 
 
 def test_post_relationship(client, registered_routes, computer, person):
-    payload = {
-        'data': [
-            {
-                'type': 'computer',
-                'id': str(computer.id)
-            }
-        ]
-    }
+    payload = {"data": [{"type": "computer", "id": str(computer.id)}]}
 
     with client:
-        response = client.post('/persons/' + str(
-            person.person_id) + '/relationships/computers?include=computers',
-                               data=json.dumps(payload),
-                               content_type='application/vnd.api+json')
-        assert response.status_code == 200, response.json['errors']
+        response = client.post(
+            "/persons/"
+            + str(person.person_id)
+            + "/relationships/computers?include=computers",
+            data=json.dumps(payload),
+            content_type="application/vnd.api+json",
+        )
+        assert response.status_code == 200, response.json["errors"]
 
 
 def test_post_relationship_not_list(client, registered_routes, computer, person):
-    payload = {
-        'data': {
-            'type': 'person',
-            'id': str(person.person_id)
-        }
-    }
+    payload = {"data": {"type": "person", "id": str(person.person_id)}}
 
     with client:
-        response = client.post('/computers/' + str(computer.id) + '/relationships/owner',
-                               data=json.dumps(payload),
-                               content_type='application/vnd.api+json')
-        assert response.status_code == 200, response.json['errors']
+        response = client.post(
+            "/computers/" + str(computer.id) + "/relationships/owner",
+            data=json.dumps(payload),
+            content_type="application/vnd.api+json",
+        )
+        assert response.status_code == 200, response.json["errors"]
 
 
 def test_patch_relationship(client, registered_routes, computer, person):
-    payload = {
-        'data': [
-            {
-                'type': 'computer',
-                'id': str(computer.id)
-            }
-        ]
-    }
+    payload = {"data": [{"type": "computer", "id": str(computer.id)}]}
 
     with client:
-        response = client.patch('/persons/' + str(
-            person.person_id) + '/relationships/computers?include=computers',
-                                data=json.dumps(payload),
-                                content_type='application/vnd.api+json')
-        assert response.status_code == 200, response.json['errors']
+        response = client.patch(
+            "/persons/"
+            + str(person.person_id)
+            + "/relationships/computers?include=computers",
+            data=json.dumps(payload),
+            content_type="application/vnd.api+json",
+        )
+        assert response.status_code == 200, response.json["errors"]
 
 
 def test_patch_relationship_single(client, registered_routes, computer, person):
-    payload = {
-        'data': {
-            'type': 'person',
-            'id': str(person.person_id)
-        }
-    }
+    payload = {"data": {"type": "person", "id": str(person.person_id)}}
     with client:
-        response = client.patch('/computers/' + str(computer.id) + '/relationships/owner',
-                                data=json.dumps(payload),
-                                content_type='application/vnd.api+json')
-        assert response.status_code == 200, response.json['errors']
+        response = client.patch(
+            "/computers/" + str(computer.id) + "/relationships/owner",
+            data=json.dumps(payload),
+            content_type="application/vnd.api+json",
+        )
+        assert response.status_code == 200, response.json["errors"]
 
 
 def test_delete_relationship(session, client, registered_routes, computer, person):
@@ -660,48 +682,43 @@ def test_delete_relationship(session, client, registered_routes, computer, perso
     person.computers = [computer]
     session_.commit()
 
-    payload = {
-        'data': [
-            {
-                'type': 'computer',
-                'id': str(computer.id)
-            }
-        ]
-    }
+    payload = {"data": [{"type": "computer", "id": str(computer.id)}]}
 
     with client:
-        response = client.delete('/persons/' + str(
-            person.person_id) + '/relationships/computers?include=computers',
-                                 data=json.dumps(payload),
-                                 content_type='application/vnd.api+json')
-        assert response.status_code == 200, response.json['errors']
+        response = client.delete(
+            "/persons/"
+            + str(person.person_id)
+            + "/relationships/computers?include=computers",
+            data=json.dumps(payload),
+            content_type="application/vnd.api+json",
+        )
+        assert response.status_code == 200, response.json["errors"]
 
 
-def test_delete_relationship_single(session, client, registered_routes, computer, person):
+def test_delete_relationship_single(
+    session, client, registered_routes, computer, person
+):
     session_ = session
     computer.person = person
     session_.commit()
 
-    payload = {
-        'data': {
-            'type': 'person',
-            'id': str(person.person_id)
-        }
-    }
+    payload = {"data": {"type": "person", "id": str(person.person_id)}}
 
     with client:
         response = client.delete(
-            '/computers/' + str(computer.id) + '/relationships/owner',
+            "/computers/" + str(computer.id) + "/relationships/owner",
             data=json.dumps(payload),
-            content_type='application/vnd.api+json')
-        assert response.status_code == 200, response.json['errors']
+            content_type="application/vnd.api+json",
+        )
+        assert response.status_code == 200, response.json["errors"]
 
 
 def test_get_list_response(client, registered_routes):
     with client:
-        response = client.get('/persons_response',
-                              content_type='application/vnd.api+json')
-        assert response.status_code == 200, response.json['errors']
+        response = client.get(
+            "/persons_response", content_type="application/vnd.api+json"
+        )
+        assert response.status_code == 200, response.json["errors"]
 
 
 def test_resource_kwargs(app):
@@ -711,7 +728,7 @@ def test_resource_kwargs(app):
         """
 
         def __init__(self, *args, **kwargs):
-            constant = kwargs.pop('constant')
+            constant = kwargs.pop("constant")
             super(TestResource, self).__init__(**kwargs)
             self.constant = constant
 
@@ -719,49 +736,64 @@ def test_resource_kwargs(app):
             return self.constant
 
     api = Api(app=app)
-    api.route(TestResource, 'resource_kwargs', '/resource_kwargs', resource_kwargs={
-        'constant': 'hello!',
-    })
+    api.route(
+        TestResource,
+        "resource_kwargs",
+        "/resource_kwargs",
+        resource_kwargs={"constant": "hello!",},
+    )
     api.init_app()
     with app.test_client() as client:
-        rv = client.get('/resource_kwargs', headers={
-            'Content-Type': 'application/vnd.api+json'
-        })
-        assert rv.json == 'hello!'
+        rv = client.get(
+            "/resource_kwargs", headers={"Content-Type": "application/vnd.api+json"}
+        )
+        assert rv.json == "hello!"
 
 
 # test various Accept headers
 def test_single_accept_header(client, registered_routes):
     with client:
-        response = client.get('/persons', content_type='application/vnd.api+json',
-                              headers={'Accept': 'application/vnd.api+json'})
-        assert response.status_code == 200, response.json['errors']
+        response = client.get(
+            "/persons",
+            content_type="application/vnd.api+json",
+            headers={"Accept": "application/vnd.api+json"},
+        )
+        assert response.status_code == 200, response.json["errors"]
 
 
 def test_multiple_accept_header(client, registered_routes):
     with client:
-        response = client.get('/persons', content_type='application/vnd.api+json',
-                              headers={
-                                  'Accept': '*/*, application/vnd.api+json, application/vnd.api+json;q=0.9'})
-        assert response.status_code == 200, response.json['errors']
+        response = client.get(
+            "/persons",
+            content_type="application/vnd.api+json",
+            headers={
+                "Accept": "*/*, application/vnd.api+json, application/vnd.api+json;q=0.9"
+            },
+        )
+        assert response.status_code == 200, response.json["errors"]
 
 
-@pytest.mark.skip('This is accepted using the werkzeug parser')
+@pytest.mark.skip("This is accepted using the werkzeug parser")
 def test_wrong_accept_header(client, registered_routes):
     with client:
-        response = client.get('/persons', content_type='application/vnd.api+json',
-                              headers={
-                                  'Accept': 'application/vnd.api+json;q=0.7, application/vnd.api+json;q=0.9'})
-        assert response.status_code == 406, response.json['errors']
+        response = client.get(
+            "/persons",
+            content_type="application/vnd.api+json",
+            headers={
+                "Accept": "application/vnd.api+json;q=0.7, application/vnd.api+json;q=0.9"
+            },
+        )
+        assert response.status_code == 406, response.json["errors"]
 
 
 # test Content-Type error
-@pytest.mark.skip('This is accepted using the werkzeug parser')
+@pytest.mark.skip("This is accepted using the werkzeug parser")
 def test_wrong_content_type(client, registered_routes):
     with client:
-        response = client.post('/persons',
-                               headers={'Content-Type': 'application/vnd.api+json;q=0.8'})
-        assert response.status_code == 415, response.json['errors']
+        response = client.post(
+            "/persons", headers={"Content-Type": "application/vnd.api+json;q=0.8"}
+        )
+        assert response.status_code == 415, response.json["errors"]
 
 
 @pytest.fixture(scope="module")
@@ -774,14 +806,16 @@ def wrong_data_layer():
 
 def test_wrong_data_layer_inheritence(wrong_data_layer):
     with pytest.raises(Exception):
+
         class PersonDetail(ResourceDetail):
-            data_layer = {'class': wrong_data_layer}
+            data_layer = {"class": wrong_data_layer}
 
         PersonDetail()
 
 
 def test_wrong_data_layer_kwargs_type():
     with pytest.raises(Exception):
+
         class PersonDetail(ResourceDetail):
             data_layer = list()
 
@@ -790,156 +824,177 @@ def test_wrong_data_layer_kwargs_type():
 
 def test_get_list_jsonapiexception(client, registered_routes):
     with client:
-        response = client.get('/persons_jsonapiexception',
-                              content_type='application/vnd.api+json')
-        assert response.status_code == 500, response.json['errors']
+        response = client.get(
+            "/persons_jsonapiexception", content_type="application/vnd.api+json"
+        )
+        assert response.status_code == 500, response.json["errors"]
 
 
 def test_get_list_exception(client, registered_routes):
     with client:
-        response = client.get('/persons_exception',
-                              content_type='application/vnd.api+json')
-        assert response.status_code == 500, response.json['errors']
+        response = client.get(
+            "/persons_exception", content_type="application/vnd.api+json"
+        )
+        assert response.status_code == 500, response.json["errors"]
 
 
 def test_get_list_without_schema(client, registered_routes):
     with client:
-        response = client.post('/persons_without_schema',
-                               content_type='application/vnd.api+json')
-        assert response.status_code == 500, response.json['errors']
+        response = client.post(
+            "/persons_without_schema", content_type="application/vnd.api+json"
+        )
+        assert response.status_code == 500, response.json["errors"]
 
 
 def test_get_list_bad_request(client, registered_routes):
     with client:
-        querystring = urlencode({'page[number': 3})
-        response = client.get('/persons' + '?' + querystring,
-                              content_type='application/vnd.api+json')
-        assert response.status_code == 400, response.json['errors']
+        querystring = urlencode({"page[number": 3})
+        response = client.get(
+            "/persons" + "?" + querystring, content_type="application/vnd.api+json"
+        )
+        assert response.status_code == 400, response.json["errors"]
 
 
 def test_get_list_invalid_fields(client, registered_routes):
     with client:
-        querystring = urlencode({'fields[person]': 'error'})
-        response = client.get('/persons' + '?' + querystring,
-                              content_type='application/vnd.api+json')
-        assert response.status_code == 400, response.json['errors']
+        querystring = urlencode({"fields[person]": "error"})
+        response = client.get(
+            "/persons" + "?" + querystring, content_type="application/vnd.api+json"
+        )
+        assert response.status_code == 400, response.json["errors"]
 
 
 def test_get_list_invalid_include(client, registered_routes):
     with client:
-        querystring = urlencode({'include': 'error'})
-        response = client.get('/persons' + '?' + querystring,
-                              content_type='application/vnd.api+json')
-        assert response.status_code == 400, response.json['errors']
+        querystring = urlencode({"include": "error"})
+        response = client.get(
+            "/persons" + "?" + querystring, content_type="application/vnd.api+json"
+        )
+        assert response.status_code == 400, response.json["errors"]
 
 
 def test_get_list_invalid_filters_parsing(client, registered_routes):
     with client:
-        querystring = urlencode({'filter': 'error'})
-        response = client.get('/persons' + '?' + querystring,
-                              content_type='application/vnd.api+json')
-        assert response.status_code == 400, response.json['errors']
+        querystring = urlencode({"filter": "error"})
+        response = client.get(
+            "/persons" + "?" + querystring, content_type="application/vnd.api+json"
+        )
+        assert response.status_code == 400, response.json["errors"]
 
 
 def test_get_list_invalid_page(client, registered_routes):
     with client:
-        querystring = urlencode({'page[number]': 'error'})
-        response = client.get('/persons' + '?' + querystring,
-                              content_type='application/vnd.api+json')
-        assert response.status_code == 400, response.json['errors']
+        querystring = urlencode({"page[number]": "error"})
+        response = client.get(
+            "/persons" + "?" + querystring, content_type="application/vnd.api+json"
+        )
+        assert response.status_code == 400, response.json["errors"]
 
 
 def test_get_list_invalid_sort(client, registered_routes):
     with client:
-        querystring = urlencode({'sort': 'error'})
-        response = client.get('/persons' + '?' + querystring,
-                              content_type='application/vnd.api+json')
-        assert response.status_code == 400, response.json['errors']
+        querystring = urlencode({"sort": "error"})
+        response = client.get(
+            "/persons" + "?" + querystring, content_type="application/vnd.api+json"
+        )
+        assert response.status_code == 400, response.json["errors"]
 
 
 def test_get_detail_object_not_found(client, registered_routes):
     with client:
-        response = client.get('/persons/3', content_type='application/vnd.api+json')
-        assert response.status_code == 200, response.json['errors']
+        response = client.get("/persons/3", content_type="application/vnd.api+json")
+        assert response.status_code == 200, response.json["errors"]
 
 
 def test_post_relationship_related_object_not_found(client, registered_routes, person):
-    payload = {
-        'data': [
-            {
-                'type': 'computer',
-                'id': '2'
-            }
-        ]
-    }
+    payload = {"data": [{"type": "computer", "id": "2"}]}
 
     with client:
         response = client.post(
-            '/persons/' + str(person.person_id) + '/relationships/computers',
+            "/persons/" + str(person.person_id) + "/relationships/computers",
             data=json.dumps(payload),
-            content_type='application/vnd.api+json')
-        assert response.status_code == 404, response.json['errors']
+            content_type="application/vnd.api+json",
+        )
+        assert response.status_code == 404, response.json["errors"]
 
 
-def test_get_relationship_relationship_field_not_found(client, registered_routes, person):
+def test_get_relationship_relationship_field_not_found(
+    client, registered_routes, person
+):
     with client:
         response = client.get(
-            '/persons/' + str(person.person_id) + '/relationships/computer',
-            content_type='application/vnd.api+json')
-        assert response.status_code == 500, response.json['errors']
+            "/persons/" + str(person.person_id) + "/relationships/computer",
+            content_type="application/vnd.api+json",
+        )
+        assert response.status_code == 500, response.json["errors"]
 
 
 def test_get_list_invalid_filters_val(client, registered_routes):
     with client:
         querystring = urlencode(
-            {'filter': json.dumps([{'name': 'computers', 'op': 'any'}])})
-        response = client.get('/persons' + '?' + querystring,
-                              content_type='application/vnd.api+json')
-        assert response.status_code == 400, response.json['errors']
+            {"filter": json.dumps([{"name": "computers", "op": "any"}])}
+        )
+        response = client.get(
+            "/persons" + "?" + querystring, content_type="application/vnd.api+json"
+        )
+        assert response.status_code == 400, response.json["errors"]
 
 
 def test_get_list_name(client, registered_routes):
     with client:
-        querystring = urlencode({'filter': json.dumps(
-            [{'name': 'computers__serial', 'op': 'any', 'val': '1'}])})
-        response = client.get('/persons' + '?' + querystring,
-                              content_type='application/vnd.api+json')
-        assert response.status_code == 200, response.json['errors']
+        querystring = urlencode(
+            {
+                "filter": json.dumps(
+                    [{"name": "computers__serial", "op": "any", "val": "1"}]
+                )
+            }
+        )
+        response = client.get(
+            "/persons" + "?" + querystring, content_type="application/vnd.api+json"
+        )
+        assert response.status_code == 200, response.json["errors"]
 
 
 def test_get_list_no_name(client, registered_routes):
     with client:
-        querystring = urlencode({'filter': json.dumps([{'op': 'any', 'val': '1'}])})
-        response = client.get('/persons' + '?' + querystring,
-                              content_type='application/vnd.api+json')
-        assert response.status_code == 400, response.json['errors']
+        querystring = urlencode({"filter": json.dumps([{"op": "any", "val": "1"}])})
+        response = client.get(
+            "/persons" + "?" + querystring, content_type="application/vnd.api+json"
+        )
+        assert response.status_code == 400, response.json["errors"]
 
 
 def test_get_list_no_op(client, registered_routes):
     with client:
         querystring = urlencode(
-            {'filter': json.dumps([{'name': 'computers__serial', 'val': '1'}])})
-        response = client.get('/persons' + '?' + querystring,
-                              content_type='application/vnd.api+json')
-        assert response.status_code == 400, response.json['errors']
+            {"filter": json.dumps([{"name": "computers__serial", "val": "1"}])}
+        )
+        response = client.get(
+            "/persons" + "?" + querystring, content_type="application/vnd.api+json"
+        )
+        assert response.status_code == 400, response.json["errors"]
 
 
 def test_get_list_attr_error(client, registered_routes):
     with client:
         querystring = urlencode(
-            {'filter': json.dumps([{'name': 'error', 'op': 'eq', 'val': '1'}])})
-        response = client.get('/persons' + '?' + querystring,
-                              content_type='application/vnd.api+json')
-        assert response.status_code == 400, response.json['errors']
+            {"filter": json.dumps([{"name": "error", "op": "eq", "val": "1"}])}
+        )
+        response = client.get(
+            "/persons" + "?" + querystring, content_type="application/vnd.api+json"
+        )
+        assert response.status_code == 400, response.json["errors"]
 
 
 def test_get_list_field_error(client, registered_routes):
     with client:
         querystring = urlencode(
-            {'filter': json.dumps([{'name': 'name', 'op': 'eq', 'field': 'error'}])})
-        response = client.get('/persons' + '?' + querystring,
-                              content_type='application/vnd.api+json')
-        assert response.status_code == 400, response.json['errors']
+            {"filter": json.dumps([{"name": "name", "op": "eq", "field": "error"}])}
+        )
+        response = client.get(
+            "/persons" + "?" + querystring, content_type="application/vnd.api+json"
+        )
+        assert response.status_code == 400, response.json["errors"]
 
 
 def test_sqlalchemy_data_layer_without_session(person_model, person_list):
@@ -955,31 +1010,36 @@ def test_sqlalchemy_data_layer_without_model(session, person_list):
 def test_sqlalchemy_data_layer_create_object_error(session, person_model, person_list):
     with pytest.raises(JsonApiException):
         dl = SqlalchemyDataLayer(
-            dict(session=session, model=person_model, resource=person_list))
+            dict(session=session, model=person_model, resource=person_list)
+        )
         dl.create_object(dict(), dict())
 
 
 def test_sqlalchemy_data_layer_get_object_error(session, person_model):
     with pytest.raises(Exception):
         dl = SqlalchemyDataLayer(
-            dict(session=session, model=person_model, id_field='error'))
+            dict(session=session, model=person_model, id_field="error")
+        )
         dl.get_object(dict())
 
 
-def test_sqlalchemy_data_layer_update_object_error(session, person_model, person_list,
-                                                   monkeypatch):
+def test_sqlalchemy_data_layer_update_object_error(
+    session, person_model, person_list, monkeypatch
+):
     def commit_mock():
         raise JsonApiException()
 
     with pytest.raises(JsonApiException):
         dl = SqlalchemyDataLayer(
-            dict(session=session, model=person_model, resource=person_list))
-        monkeypatch.setattr(dl.session, 'commit', commit_mock)
+            dict(session=session, model=person_model, resource=person_list)
+        )
+        monkeypatch.setattr(dl.session, "commit", commit_mock)
         dl.update_object(dict(), dict(), dict())
 
 
-def test_sqlalchemy_data_layer_delete_object_error(session, person_model, person_list,
-                                                   monkeypatch):
+def test_sqlalchemy_data_layer_delete_object_error(
+    session, person_model, person_list, monkeypatch
+):
     def commit_mock():
         raise JsonApiException()
 
@@ -988,562 +1048,499 @@ def test_sqlalchemy_data_layer_delete_object_error(session, person_model, person
 
     with pytest.raises(JsonApiException):
         dl = SqlalchemyDataLayer(
-            dict(session=session, model=person_model, resource=person_list))
-        monkeypatch.setattr(dl.session, 'commit', commit_mock)
-        monkeypatch.setattr(dl.session, 'delete', delete_mock)
+            dict(session=session, model=person_model, resource=person_list)
+        )
+        monkeypatch.setattr(dl.session, "commit", commit_mock)
+        monkeypatch.setattr(dl.session, "delete", delete_mock)
         dl.delete_object(dict(), dict())
 
 
-def test_sqlalchemy_data_layer_create_relationship_field_not_found(session, person_model):
+def test_sqlalchemy_data_layer_create_relationship_field_not_found(
+    session, person_model
+):
     with pytest.raises(Exception):
         dl = SqlalchemyDataLayer(dict(session=session, model=person_model))
-        dl.create_relationship(dict(), 'error', '', dict(id=1))
+        dl.create_relationship(dict(), "error", "", dict(id=1))
 
 
-def test_sqlalchemy_data_layer_create_relationship_error(session, person_model,
-                                                         get_object_mock, monkeypatch):
+def test_sqlalchemy_data_layer_create_relationship_error(
+    session, person_model, get_object_mock, monkeypatch
+):
     def commit_mock():
         raise JsonApiException()
 
     with pytest.raises(JsonApiException):
         dl = SqlalchemyDataLayer(dict(session=session, model=person_model))
-        monkeypatch.setattr(dl.session, 'commit', commit_mock)
-        monkeypatch.setattr(dl, 'get_object', get_object_mock)
-        dl.create_relationship(dict(data=None), 'foo', '', dict(id=1))
+        monkeypatch.setattr(dl.session, "commit", commit_mock)
+        monkeypatch.setattr(dl, "get_object", get_object_mock)
+        dl.create_relationship(dict(data=None), "foo", "", dict(id=1))
 
 
-def test_sqlalchemy_data_layer_get_relationship_field_not_found(session, person_model,
-                                                                person):
+def test_sqlalchemy_data_layer_get_relationship_field_not_found(
+    session, person_model, person
+):
     with pytest.raises(RelationNotFound):
         dl = SqlalchemyDataLayer(dict(session=session, model=person_model))
-        dl.get_relationship('error', '', '', dict(id=1))
+        dl.get_relationship("error", "", "", dict(id=1))
 
 
-def test_sqlalchemy_data_layer_update_relationship_field_not_found(session, person_model):
+def test_sqlalchemy_data_layer_update_relationship_field_not_found(
+    session, person_model
+):
     with pytest.raises(Exception):
         dl = SqlalchemyDataLayer(dict(session=session, model=person_model))
-        dl.update_relationship(dict(), 'error', '', dict(id=1))
+        dl.update_relationship(dict(), "error", "", dict(id=1))
 
 
-def test_sqlalchemy_data_layer_update_relationship_error(session, person_model,
-                                                         get_object_mock, monkeypatch):
+def test_sqlalchemy_data_layer_update_relationship_error(
+    session, person_model, get_object_mock, monkeypatch
+):
     def commit_mock():
         raise JsonApiException()
 
     with pytest.raises(JsonApiException):
         dl = SqlalchemyDataLayer(dict(session=session, model=person_model))
-        monkeypatch.setattr(dl.session, 'commit', commit_mock)
-        monkeypatch.setattr(dl, 'get_object', get_object_mock)
-        dl.update_relationship(dict(data=None), 'foo', '', dict(id=1))
+        monkeypatch.setattr(dl.session, "commit", commit_mock)
+        monkeypatch.setattr(dl, "get_object", get_object_mock)
+        dl.update_relationship(dict(data=None), "foo", "", dict(id=1))
 
 
-def test_sqlalchemy_data_layer_delete_relationship_field_not_found(session, person_model):
+def test_sqlalchemy_data_layer_delete_relationship_field_not_found(
+    session, person_model
+):
     with pytest.raises(Exception):
         dl = SqlalchemyDataLayer(dict(session=session, model=person_model))
-        dl.delete_relationship(dict(), 'error', '', dict(id=1))
+        dl.delete_relationship(dict(), "error", "", dict(id=1))
 
 
-def test_sqlalchemy_data_layer_delete_relationship_error(session, person_model,
-                                                         get_object_mock, monkeypatch):
+def test_sqlalchemy_data_layer_delete_relationship_error(
+    session, person_model, get_object_mock, monkeypatch
+):
     def commit_mock():
         raise JsonApiException()
 
     with pytest.raises(JsonApiException):
         dl = SqlalchemyDataLayer(dict(session=session, model=person_model))
-        monkeypatch.setattr(dl.session, 'commit', commit_mock)
-        monkeypatch.setattr(dl, 'get_object', get_object_mock)
-        dl.delete_relationship(dict(data=None), 'foo', '', dict(id=1))
+        monkeypatch.setattr(dl.session, "commit", commit_mock)
+        monkeypatch.setattr(dl, "get_object", get_object_mock)
+        dl.delete_relationship(dict(data=None), "foo", "", dict(id=1))
 
 
 def test_sqlalchemy_data_layer_sort_query_error(session, person_model, monkeypatch):
     with pytest.raises(InvalidSort):
         dl = SqlalchemyDataLayer(dict(session=session, model=person_model))
-        dl.sort_query(None, [dict(field='test')])
+        dl.sort_query(None, [dict(field="test")])
 
 
 def test_post_list_incorrect_type(client, registered_routes, computer):
     payload = {
-        'data': {
-            'type': 'error',
-            'attributes': {
-                'name': 'test'
+        "data": {
+            "type": "error",
+            "attributes": {"name": "test"},
+            "relationships": {
+                "computers": {"data": [{"type": "computer", "id": str(computer.id)}]}
             },
-            'relationships': {
-                'computers': {
-                    'data': [
-                        {
-                            'type': 'computer',
-                            'id': str(computer.id)
-                        }
-                    ]
-                }
-            }
         }
     }
 
     with client:
-        response = client.post('/persons', data=json.dumps(payload),
-                               content_type='application/vnd.api+json')
-        assert response.status_code == 409, response.json['errors']
+        response = client.post(
+            "/persons",
+            data=json.dumps(payload),
+            content_type="application/vnd.api+json",
+        )
+        assert response.status_code == 409, response.json["errors"]
 
 
 def test_post_list_validation_error(client, registered_routes, computer):
     payload = {
-        'data': {
-            'type': 'person',
-            'attributes': {},
-            'relationships': {
-                'computers': {
-                    'data': [
-                        {
-                            'type': 'computer',
-                            'id': str(computer.id)
-                        }
-                    ]
-                }
-            }
+        "data": {
+            "type": "person",
+            "attributes": {},
+            "relationships": {
+                "computers": {"data": [{"type": "computer", "id": str(computer.id)}]}
+            },
         }
     }
 
     with client:
-        response = client.post('/persons', data=json.dumps(payload),
-                               content_type='application/vnd.api+json')
-        assert response.status_code == 422, response.json['errors']
+        response = client.post(
+            "/persons",
+            data=json.dumps(payload),
+            content_type="application/vnd.api+json",
+        )
+        assert response.status_code == 422, response.json["errors"]
 
 
 def test_patch_detail_incorrect_type(client, registered_routes, computer, person):
     payload = {
-        'data': {
-            'id': str(person.person_id),
-            'type': 'error',
-            'attributes': {
-                'name': 'test2'
+        "data": {
+            "id": str(person.person_id),
+            "type": "error",
+            "attributes": {"name": "test2"},
+            "relationships": {
+                "computers": {"data": [{"type": "computer", "id": str(computer.id)}]}
             },
-            'relationships': {
-                'computers': {
-                    'data': [
-                        {
-                            'type': 'computer',
-                            'id': str(computer.id)
-                        }
-                    ]
-                }
-            }
         }
     }
 
     with client:
-        response = client.patch('/persons/' + str(person.person_id),
-                                data=json.dumps(payload),
-                                content_type='application/vnd.api+json')
-        assert response.status_code == 409, response.json['errors']
+        response = client.patch(
+            "/persons/" + str(person.person_id),
+            data=json.dumps(payload),
+            content_type="application/vnd.api+json",
+        )
+        assert response.status_code == 409, response.json["errors"]
 
 
 def test_patch_detail_validation_error(client, registered_routes, computer, person):
     payload = {
-        'data': {
-            'id': str(person.person_id),
-            'type': 'person',
-            'attributes': {
-                'name': {'test2': 'error'}
+        "data": {
+            "id": str(person.person_id),
+            "type": "person",
+            "attributes": {"name": {"test2": "error"}},
+            "relationships": {
+                "computers": {"data": [{"type": "computer", "id": str(computer.id)}]}
             },
-            'relationships': {
-                'computers': {
-                    'data': [
-                        {
-                            'type': 'computer',
-                            'id': str(computer.id)
-                        }
-                    ]
-                }
-            }
         }
     }
 
     with client:
-        response = client.patch('/persons/' + str(person.person_id),
-                                data=json.dumps(payload),
-                                content_type='application/vnd.api+json')
-        assert response.status_code == 422, response.json['errors']
+        response = client.patch(
+            "/persons/" + str(person.person_id),
+            data=json.dumps(payload),
+            content_type="application/vnd.api+json",
+        )
+        assert response.status_code == 422, response.json["errors"]
 
 
 def test_patch_detail_missing_id(client, registered_routes, computer, person):
     payload = {
-        'data': {
-            'type': 'person',
-            'attributes': {
-                'name': 'test2'
+        "data": {
+            "type": "person",
+            "attributes": {"name": "test2"},
+            "relationships": {
+                "computers": {"data": [{"type": "computer", "id": str(computer.id)}]}
             },
-            'relationships': {
-                'computers': {
-                    'data': [
-                        {
-                            'type': 'computer',
-                            'id': str(computer.id)
-                        }
-                    ]
-                }
-            }
         }
     }
 
     with client:
-        response = client.patch('/persons/' + str(person.person_id),
-                                data=json.dumps(payload),
-                                content_type='application/vnd.api+json')
-        assert response.status_code == 400, response.json['errors']
+        response = client.patch(
+            "/persons/" + str(person.person_id),
+            data=json.dumps(payload),
+            content_type="application/vnd.api+json",
+        )
+        assert response.status_code == 400, response.json["errors"]
 
 
 def test_patch_detail_wrong_id(client, registered_routes, computer, person):
     payload = {
-        'data': {
-            'id': 'error',
-            'type': 'person',
-            'attributes': {
-                'name': 'test2'
+        "data": {
+            "id": "error",
+            "type": "person",
+            "attributes": {"name": "test2"},
+            "relationships": {
+                "computers": {"data": [{"type": "computer", "id": str(computer.id)}]}
             },
-            'relationships': {
-                'computers': {
-                    'data': [
-                        {
-                            'type': 'computer',
-                            'id': str(computer.id)
-                        }
-                    ]
-                }
-            }
         }
     }
 
     with client:
-        response = client.patch('/persons/' + str(person.person_id),
-                                data=json.dumps(payload),
-                                content_type='application/vnd.api+json')
-        assert response.status_code == 422, response.json['errors']
+        response = client.patch(
+            "/persons/" + str(person.person_id),
+            data=json.dumps(payload),
+            content_type="application/vnd.api+json",
+        )
+        assert response.status_code == 422, response.json["errors"]
 
 
 def test_post_relationship_no_data(client, registered_routes, computer, person):
     with client:
-        response = client.post('/persons/' + str(
-            person.person_id) + '/relationships/computers?include=computers',
-                               data=json.dumps(dict()),
-                               content_type='application/vnd.api+json')
-        assert response.status_code == 400, response.json['errors']
+        response = client.post(
+            "/persons/"
+            + str(person.person_id)
+            + "/relationships/computers?include=computers",
+            data=json.dumps(dict()),
+            content_type="application/vnd.api+json",
+        )
+        assert response.status_code == 400, response.json["errors"]
 
 
-def test_post_relationship_not_list_missing_type(client, registered_routes, computer,
-                                                 person):
-    payload = {
-        'data': {
-            'id': str(person.person_id)
-        }
-    }
-
-    with client:
-        response = client.post('/computers/' + str(computer.id) + '/relationships/owner',
-                               data=json.dumps(payload),
-                               content_type='application/vnd.api+json')
-        assert response.status_code == 400, response.json['errors']
-
-
-def test_post_relationship_not_list_missing_id(client, registered_routes, computer,
-                                               person):
-    payload = {
-        'data': {
-            'type': 'person'
-        }
-    }
+def test_post_relationship_not_list_missing_type(
+    client, registered_routes, computer, person
+):
+    payload = {"data": {"id": str(person.person_id)}}
 
     with client:
-        response = client.post('/computers/' + str(computer.id) + '/relationships/owner',
-                               data=json.dumps(payload),
-                               content_type='application/vnd.api+json')
-        assert response.status_code == 400, response.json['errors']
+        response = client.post(
+            "/computers/" + str(computer.id) + "/relationships/owner",
+            data=json.dumps(payload),
+            content_type="application/vnd.api+json",
+        )
+        assert response.status_code == 400, response.json["errors"]
 
 
-def test_post_relationship_not_list_wrong_type(client, registered_routes, computer,
-                                               person):
-    payload = {
-        'data': {
-            'type': 'error',
-            'id': str(person.person_id)
-        }
-    }
+def test_post_relationship_not_list_missing_id(
+    client, registered_routes, computer, person
+):
+    payload = {"data": {"type": "person"}}
 
     with client:
-        response = client.post('/computers/' + str(computer.id) + '/relationships/owner',
-                               data=json.dumps(payload),
-                               content_type='application/vnd.api+json')
-        assert response.status_code == 409, response.json['errors']
+        response = client.post(
+            "/computers/" + str(computer.id) + "/relationships/owner",
+            data=json.dumps(payload),
+            content_type="application/vnd.api+json",
+        )
+        assert response.status_code == 400, response.json["errors"]
+
+
+def test_post_relationship_not_list_wrong_type(
+    client, registered_routes, computer, person
+):
+    payload = {"data": {"type": "error", "id": str(person.person_id)}}
+
+    with client:
+        response = client.post(
+            "/computers/" + str(computer.id) + "/relationships/owner",
+            data=json.dumps(payload),
+            content_type="application/vnd.api+json",
+        )
+        assert response.status_code == 409, response.json["errors"]
 
 
 def test_post_relationship_missing_type(client, registered_routes, computer, person):
-    payload = {
-        'data': [
-            {
-                'id': str(computer.id)
-            }
-        ]
-    }
+    payload = {"data": [{"id": str(computer.id)}]}
 
     with client:
-        response = client.post('/persons/' + str(
-            person.person_id) + '/relationships/computers?include=computers',
-                               data=json.dumps(payload),
-                               content_type='application/vnd.api+json')
-        assert response.status_code == 400, response.json['errors']
+        response = client.post(
+            "/persons/"
+            + str(person.person_id)
+            + "/relationships/computers?include=computers",
+            data=json.dumps(payload),
+            content_type="application/vnd.api+json",
+        )
+        assert response.status_code == 400, response.json["errors"]
 
 
 def test_post_relationship_missing_id(client, registered_routes, computer, person):
-    payload = {
-        'data': [
-            {
-                'type': 'computer',
-            }
-        ]
-    }
+    payload = {"data": [{"type": "computer",}]}
 
     with client:
-        response = client.post('/persons/' + str(
-            person.person_id) + '/relationships/computers?include=computers',
-                               data=json.dumps(payload),
-                               content_type='application/vnd.api+json')
-        assert response.status_code == 400, response.json['errors']
+        response = client.post(
+            "/persons/"
+            + str(person.person_id)
+            + "/relationships/computers?include=computers",
+            data=json.dumps(payload),
+            content_type="application/vnd.api+json",
+        )
+        assert response.status_code == 400, response.json["errors"]
 
 
 def test_post_relationship_wrong_type(client, registered_routes, computer, person):
-    payload = {
-        'data': [
-            {
-                'type': 'error',
-                'id': str(computer.id)
-            }
-        ]
-    }
+    payload = {"data": [{"type": "error", "id": str(computer.id)}]}
 
     with client:
-        response = client.post('/persons/' + str(
-            person.person_id) + '/relationships/computers?include=computers',
-                               data=json.dumps(payload),
-                               content_type='application/vnd.api+json')
-        assert response.status_code == 409, response.json['errors']
+        response = client.post(
+            "/persons/"
+            + str(person.person_id)
+            + "/relationships/computers?include=computers",
+            data=json.dumps(payload),
+            content_type="application/vnd.api+json",
+        )
+        assert response.status_code == 409, response.json["errors"]
 
 
 def test_patch_relationship_no_data(client, registered_routes, computer, person):
     with client:
-        response = client.patch('/persons/' + str(
-            person.person_id) + '/relationships/computers?include=computers',
-                                data=json.dumps(dict()),
-                                content_type='application/vnd.api+json')
-        assert response.status_code == 400, response.json['errors']
+        response = client.patch(
+            "/persons/"
+            + str(person.person_id)
+            + "/relationships/computers?include=computers",
+            data=json.dumps(dict()),
+            content_type="application/vnd.api+json",
+        )
+        assert response.status_code == 400, response.json["errors"]
 
 
-def test_patch_relationship_not_list_missing_type(client, registered_routes, computer,
-                                                  person):
-    payload = {
-        'data': {
-            'id': str(person.person_id)
-        }
-    }
-
-    with client:
-        response = client.patch('/computers/' + str(computer.id) + '/relationships/owner',
-                                data=json.dumps(payload),
-                                content_type='application/vnd.api+json')
-        assert response.status_code == 400, response.json['errors']
-
-
-def test_patch_relationship_not_list_missing_id(client, registered_routes, computer,
-                                                person):
-    payload = {
-        'data': {
-            'type': 'person'
-        }
-    }
+def test_patch_relationship_not_list_missing_type(
+    client, registered_routes, computer, person
+):
+    payload = {"data": {"id": str(person.person_id)}}
 
     with client:
-        response = client.patch('/computers/' + str(computer.id) + '/relationships/owner',
-                                data=json.dumps(payload),
-                                content_type='application/vnd.api+json')
-        assert response.status_code == 400, response.json['errors']
+        response = client.patch(
+            "/computers/" + str(computer.id) + "/relationships/owner",
+            data=json.dumps(payload),
+            content_type="application/vnd.api+json",
+        )
+        assert response.status_code == 400, response.json["errors"]
 
 
-def test_patch_relationship_not_list_wrong_type(client, registered_routes, computer,
-                                                person):
-    payload = {
-        'data': {
-            'type': 'error',
-            'id': str(person.person_id)
-        }
-    }
+def test_patch_relationship_not_list_missing_id(
+    client, registered_routes, computer, person
+):
+    payload = {"data": {"type": "person"}}
 
     with client:
-        response = client.patch('/computers/' + str(computer.id) + '/relationships/owner',
-                                data=json.dumps(payload),
-                                content_type='application/vnd.api+json')
-        assert response.status_code == 409, response.json['errors']
+        response = client.patch(
+            "/computers/" + str(computer.id) + "/relationships/owner",
+            data=json.dumps(payload),
+            content_type="application/vnd.api+json",
+        )
+        assert response.status_code == 400, response.json["errors"]
+
+
+def test_patch_relationship_not_list_wrong_type(
+    client, registered_routes, computer, person
+):
+    payload = {"data": {"type": "error", "id": str(person.person_id)}}
+
+    with client:
+        response = client.patch(
+            "/computers/" + str(computer.id) + "/relationships/owner",
+            data=json.dumps(payload),
+            content_type="application/vnd.api+json",
+        )
+        assert response.status_code == 409, response.json["errors"]
 
 
 def test_patch_relationship_missing_type(client, registered_routes, computer, person):
-    payload = {
-        'data': [
-            {
-                'id': str(computer.id)
-            }
-        ]
-    }
+    payload = {"data": [{"id": str(computer.id)}]}
 
     with client:
-        response = client.patch('/persons/' + str(
-            person.person_id) + '/relationships/computers?include=computers',
-                                data=json.dumps(payload),
-                                content_type='application/vnd.api+json')
-        assert response.status_code == 400, response.json['errors']
+        response = client.patch(
+            "/persons/"
+            + str(person.person_id)
+            + "/relationships/computers?include=computers",
+            data=json.dumps(payload),
+            content_type="application/vnd.api+json",
+        )
+        assert response.status_code == 400, response.json["errors"]
 
 
 def test_patch_relationship_missing_id(client, registered_routes, computer, person):
-    payload = {
-        'data': [
-            {
-                'type': 'computer',
-            }
-        ]
-    }
+    payload = {"data": [{"type": "computer",}]}
 
     with client:
-        response = client.patch('/persons/' + str(
-            person.person_id) + '/relationships/computers?include=computers',
-                                data=json.dumps(payload),
-                                content_type='application/vnd.api+json')
-        assert response.status_code == 400, response.json['errors']
+        response = client.patch(
+            "/persons/"
+            + str(person.person_id)
+            + "/relationships/computers?include=computers",
+            data=json.dumps(payload),
+            content_type="application/vnd.api+json",
+        )
+        assert response.status_code == 400, response.json["errors"]
 
 
 def test_patch_relationship_wrong_type(client, registered_routes, computer, person):
-    payload = {
-        'data': [
-            {
-                'type': 'error',
-                'id': str(computer.id)
-            }
-        ]
-    }
+    payload = {"data": [{"type": "error", "id": str(computer.id)}]}
 
     with client:
-        response = client.patch('/persons/' + str(
-            person.person_id) + '/relationships/computers?include=computers',
-                                data=json.dumps(payload),
-                                content_type='application/vnd.api+json')
-        assert response.status_code == 409, response.json['errors']
+        response = client.patch(
+            "/persons/"
+            + str(person.person_id)
+            + "/relationships/computers?include=computers",
+            data=json.dumps(payload),
+            content_type="application/vnd.api+json",
+        )
+        assert response.status_code == 409, response.json["errors"]
 
 
 def test_delete_relationship_no_data(client, registered_routes, computer, person):
     with client:
-        response = client.delete('/persons/' + str(
-            person.person_id) + '/relationships/computers?include=computers',
-                                 data=json.dumps(dict()),
-                                 content_type='application/vnd.api+json')
-        assert response.status_code == 400, response.json['errors']
+        response = client.delete(
+            "/persons/"
+            + str(person.person_id)
+            + "/relationships/computers?include=computers",
+            data=json.dumps(dict()),
+            content_type="application/vnd.api+json",
+        )
+        assert response.status_code == 400, response.json["errors"]
 
 
-def test_delete_relationship_not_list_missing_type(client, registered_routes, computer,
-                                                   person):
-    payload = {
-        'data': {
-            'id': str(person.person_id)
-        }
-    }
+def test_delete_relationship_not_list_missing_type(
+    client, registered_routes, computer, person
+):
+    payload = {"data": {"id": str(person.person_id)}}
 
     with client:
         response = client.delete(
-            '/computers/' + str(computer.id) + '/relationships/owner',
+            "/computers/" + str(computer.id) + "/relationships/owner",
             data=json.dumps(payload),
-            content_type='application/vnd.api+json')
-        assert response.status_code == 400, response.json['errors']
+            content_type="application/vnd.api+json",
+        )
+        assert response.status_code == 400, response.json["errors"]
 
 
-def test_delete_relationship_not_list_missing_id(client, registered_routes, computer,
-                                                 person):
-    payload = {
-        'data': {
-            'type': 'person'
-        }
-    }
+def test_delete_relationship_not_list_missing_id(
+    client, registered_routes, computer, person
+):
+    payload = {"data": {"type": "person"}}
 
     with client:
         response = client.delete(
-            '/computers/' + str(computer.id) + '/relationships/owner',
+            "/computers/" + str(computer.id) + "/relationships/owner",
             data=json.dumps(payload),
-            content_type='application/vnd.api+json')
-        assert response.status_code == 400, response.json['errors']
+            content_type="application/vnd.api+json",
+        )
+        assert response.status_code == 400, response.json["errors"]
 
 
-def test_delete_relationship_not_list_wrong_type(client, registered_routes, computer,
-                                                 person):
-    payload = {
-        'data': {
-            'type': 'error',
-            'id': str(person.person_id)
-        }
-    }
+def test_delete_relationship_not_list_wrong_type(
+    client, registered_routes, computer, person
+):
+    payload = {"data": {"type": "error", "id": str(person.person_id)}}
 
     with client:
         response = client.delete(
-            '/computers/' + str(computer.id) + '/relationships/owner',
+            "/computers/" + str(computer.id) + "/relationships/owner",
             data=json.dumps(payload),
-            content_type='application/vnd.api+json')
-        assert response.status_code == 409, response.json['errors']
+            content_type="application/vnd.api+json",
+        )
+        assert response.status_code == 409, response.json["errors"]
 
 
 def test_delete_relationship_missing_type(client, registered_routes, computer, person):
-    payload = {
-        'data': [
-            {
-                'id': str(computer.id)
-            }
-        ]
-    }
+    payload = {"data": [{"id": str(computer.id)}]}
 
     with client:
-        response = client.delete('/persons/' + str(
-            person.person_id) + '/relationships/computers?include=computers',
-                                 data=json.dumps(payload),
-                                 content_type='application/vnd.api+json')
-        assert response.status_code == 400, response.json['errors']
+        response = client.delete(
+            "/persons/"
+            + str(person.person_id)
+            + "/relationships/computers?include=computers",
+            data=json.dumps(payload),
+            content_type="application/vnd.api+json",
+        )
+        assert response.status_code == 400, response.json["errors"]
 
 
 def test_delete_relationship_missing_id(client, registered_routes, computer, person):
-    payload = {
-        'data': [
-            {
-                'type': 'computer',
-            }
-        ]
-    }
+    payload = {"data": [{"type": "computer",}]}
 
     with client:
-        response = client.delete('/persons/' + str(
-            person.person_id) + '/relationships/computers?include=computers',
-                                 data=json.dumps(payload),
-                                 content_type='application/vnd.api+json')
-        assert response.status_code == 400, response.json['errors']
+        response = client.delete(
+            "/persons/"
+            + str(person.person_id)
+            + "/relationships/computers?include=computers",
+            data=json.dumps(payload),
+            content_type="application/vnd.api+json",
+        )
+        assert response.status_code == 400, response.json["errors"]
 
 
 def test_delete_relationship_wrong_type(client, registered_routes, computer, person):
-    payload = {
-        'data': [
-            {
-                'type': 'error',
-                'id': str(computer.id)
-            }
-        ]
-    }
+    payload = {"data": [{"type": "error", "id": str(computer.id)}]}
 
     with client:
-        response = client.delete('/persons/' + str(
-            person.person_id) + '/relationships/computers?include=computers',
-                                 data=json.dumps(payload),
-                                 content_type='application/vnd.api+json')
-        assert response.status_code == 409, response.json['errors']
+        response = client.delete(
+            "/persons/"
+            + str(person.person_id)
+            + "/relationships/computers?include=computers",
+            data=json.dumps(payload),
+            content_type="application/vnd.api+json",
+        )
+        assert response.status_code == 409, response.json["errors"]
 
 
 def test_base_data_layer():
@@ -1613,13 +1610,13 @@ def test_qs_manager():
 
 def test_api(app, person_list):
     api = Api(app)
-    api.route(person_list, 'person_list', '/persons', '/person_list')
+    api.route(person_list, "person_list", "/persons", "/person_list")
     api.init_app()
 
 
 def test_api_resources(app, person_list):
     api = Api()
-    api.route(person_list, 'person_list2', '/persons', '/person_list')
+    api.route(person_list, "person_list2", "/persons", "/person_list")
     api.init_app(app)
 
 
@@ -1634,19 +1631,31 @@ def test_api_resources_multiple_route(app, person_list):
         def get(self):
             return self.view
 
-    api.route(DummyResource, 'endpoint1', '/url1')
-    api.route(DummyResource, 'endpoint2', '/url2')
+    api.route(DummyResource, "endpoint1", "/url1")
+    api.route(DummyResource, "endpoint2", "/url2")
     api.init_app(app)
 
     with app.test_client() as client:
-        assert client.get('/url1',
-                          content_type='application/vnd.api+json').json == 'endpoint1'
-        assert client.get('/url2',
-                          content_type='application/vnd.api+json').json == 'endpoint2'
+        assert (
+            client.get("/url1", content_type="application/vnd.api+json").json
+            == "endpoint1"
+        )
+        assert (
+            client.get("/url2", content_type="application/vnd.api+json").json
+            == "endpoint2"
+        )
 
 
-def test_relationship_containing_hyphens(api, app, client, computer_list, person_schema,
-                                         person_computers, computer_schema, person):
+def test_relationship_containing_hyphens(
+    api,
+    app,
+    client,
+    computer_list,
+    person_schema,
+    person_computers,
+    computer_schema,
+    person,
+):
     """
     This is a bit of a hack. Basically, since we can no longer have two attributes that read from the same key
     in Marshmallow 3, we have to create a new Schema and Resource here that name their relationship "computers_owned"
@@ -1655,27 +1664,35 @@ def test_relationship_containing_hyphens(api, app, client, computer_list, person
 
     class PersonOwnedSchema(person_schema):
         class Meta:
-            exclude = ('computers',)
+            exclude = ("computers",)
 
         computers_owned = Relationship(
-            related_view='api.computer_list',
-            related_view_kwargs={'person_id': '<person_id>'},
-            schema='ComputerSchema',
-            type_='computer',
+            related_view="api.computer_list",
+            related_view_kwargs={"person_id": "<person_id>"},
+            schema="ComputerSchema",
+            type_="computer",
             many=True,
-            attribute='computers'
+            attribute="computers",
         )
 
     class PersonComputersOwnedRelationship(person_computers):
         schema = PersonOwnedSchema
 
-    api.route(PersonComputersOwnedRelationship, 'person_computers_owned',
-              '/persons/<int:person_id>/relationships/computers-owned')
-    api.route(computer_list, 'computer_list', '/computers',
-              '/persons/<int:person_id>/computers')
+    api.route(
+        PersonComputersOwnedRelationship,
+        "person_computers_owned",
+        "/persons/<int:person_id>/relationships/computers-owned",
+    )
+    api.route(
+        computer_list,
+        "computer_list",
+        "/computers",
+        "/persons/<int:person_id>/computers",
+    )
     api.init_app(app)
 
     response = client.get(
-        '/persons/{}/relationships/computers-owned'.format(person.person_id),
-        content_type='application/vnd.api+json')
-    assert response.status_code == 200, response.json['errors']
+        "/persons/{}/relationships/computers-owned".format(person.person_id),
+        content_type="application/vnd.api+json",
+    )
+    assert response.status_code == 200, response.json["errors"]

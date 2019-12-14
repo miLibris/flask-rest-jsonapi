@@ -6,6 +6,7 @@ python:
   - '3.8'
 script:
   - pip install .[dev]
-  - coverage run --source flask_rest_jsonapi -m pytest -v
+  - pre-commit run --all-files
+  - coverage run --source flapison -m pytest -v
 after_success:
   - coveralls

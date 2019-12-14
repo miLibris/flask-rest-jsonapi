@@ -9,5 +9,7 @@ def jsonapi_errors(jsonapi_errors):
     :param iterable jsonapi_errors: an iterable of jsonapi error
     :return dict: a dict of errors according to jsonapi 1.0
     """
-    return {'errors': [jsonapi_error for jsonapi_error in jsonapi_errors],
-            'jsonapi': {'version': '1.0'}}
+    return {
+        "errors": [jsonapi_error for jsonapi_error in jsonapi_errors],
+        "jsonapi": {"version": "1.0"},
+    }

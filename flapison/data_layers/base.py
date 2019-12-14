@@ -8,37 +8,39 @@ import types
 class BaseDataLayer(object):
     """Base class of a data layer"""
 
-    REWRITABLE_METHODS = ('query',
-                          'before_create_object',
-                          'after_create_object',
-                          'before_get_object',
-                          'after_get_object',
-                          'before_get_collection',
-                          'after_get_collection',
-                          'before_update_object',
-                          'after_update_object',
-                          'before_delete_object',
-                          'after_delete_object',
-                          'before_create_relationship',
-                          'after_create_relationship',
-                          'before_get_relationship',
-                          'after_get_relationship',
-                          'before_update_relationship',
-                          'after_update_relationship',
-                          'before_delete_relationship',
-                          'after_delete_relationship',
-                          'retrieve_object_query')
+    REWRITABLE_METHODS = (
+        "query",
+        "before_create_object",
+        "after_create_object",
+        "before_get_object",
+        "after_get_object",
+        "before_get_collection",
+        "after_get_collection",
+        "before_update_object",
+        "after_update_object",
+        "before_delete_object",
+        "after_delete_object",
+        "before_create_relationship",
+        "after_create_relationship",
+        "before_get_relationship",
+        "after_get_relationship",
+        "before_update_relationship",
+        "after_update_relationship",
+        "before_delete_relationship",
+        "after_delete_relationship",
+        "retrieve_object_query",
+    )
 
     def __init__(self, kwargs):
         """Intialize an data layer instance with kwargs
 
         :param dict kwargs: information about data layer instance
         """
-        if kwargs.get('methods') is not None:
-            self.bound_rewritable_methods(kwargs['methods'])
-            kwargs.pop('methods')
+        if kwargs.get("methods") is not None:
+            self.bound_rewritable_methods(kwargs["methods"])
+            kwargs.pop("methods")
 
-        kwargs.pop('class', None)
+        kwargs.pop("class", None)
 
         for key, value in kwargs.items():
             setattr(self, key, value)
@@ -88,7 +90,9 @@ class BaseDataLayer(object):
         """
         raise NotImplementedError
 
-    def create_relationship(self, json_data, relationship_field, related_id_field, view_kwargs):
+    def create_relationship(
+        self, json_data, relationship_field, related_id_field, view_kwargs
+    ):
         """Create a relationship
 
         :param dict json_data: the request params
@@ -99,7 +103,9 @@ class BaseDataLayer(object):
         """
         raise NotImplementedError
 
-    def get_relationship(self, relationship_field, related_type_, related_id_field, view_kwargs):
+    def get_relationship(
+        self, relationship_field, related_type_, related_id_field, view_kwargs
+    ):
         """Get information about a relationship
 
         :param str relationship_field: the model attribute used for relationship
@@ -110,7 +116,9 @@ class BaseDataLayer(object):
         """
         raise NotImplementedError
 
-    def update_relationship(self, json_data, relationship_field, related_id_field, view_kwargs):
+    def update_relationship(
+        self, json_data, relationship_field, related_id_field, view_kwargs
+    ):
         """Update a relationship
 
         :param dict json_data: the request params
@@ -121,7 +129,9 @@ class BaseDataLayer(object):
         """
         raise NotImplementedError
 
-    def delete_relationship(self, json_data, relationship_field, related_id_field, view_kwargs):
+    def delete_relationship(
+        self, json_data, relationship_field, related_id_field, view_kwargs
+    ):
         """Delete a relationship
 
         :param dict json_data: the request params
@@ -221,7 +231,9 @@ class BaseDataLayer(object):
         """
         raise NotImplementedError
 
-    def before_create_relationship(self, json_data, relationship_field, related_id_field, view_kwargs):
+    def before_create_relationship(
+        self, json_data, relationship_field, related_id_field, view_kwargs
+    ):
         """Make work before to create a relationship
 
         :param dict json_data: the request params
@@ -232,7 +244,9 @@ class BaseDataLayer(object):
         """
         raise NotImplementedError
 
-    def after_create_relationship(self, obj, updated, json_data, relationship_field, related_id_field, view_kwargs):
+    def after_create_relationship(
+        self, obj, updated, json_data, relationship_field, related_id_field, view_kwargs
+    ):
         """Make work after to create a relationship
 
         :param obj: an object from data layer
@@ -245,7 +259,9 @@ class BaseDataLayer(object):
         """
         raise NotImplementedError
 
-    def before_get_relationship(self, relationship_field, related_type_, related_id_field, view_kwargs):
+    def before_get_relationship(
+        self, relationship_field, related_type_, related_id_field, view_kwargs
+    ):
         """Make work before to get information about a relationship
 
         :param str relationship_field: the model attribute used for relationship
@@ -256,8 +272,15 @@ class BaseDataLayer(object):
         """
         raise NotImplementedError
 
-    def after_get_relationship(self, obj, related_objects, relationship_field, related_type_, related_id_field,
-                               view_kwargs):
+    def after_get_relationship(
+        self,
+        obj,
+        related_objects,
+        relationship_field,
+        related_type_,
+        related_id_field,
+        view_kwargs,
+    ):
         """Make work after to get information about a relationship
 
         :param obj: an object from data layer
@@ -270,7 +293,9 @@ class BaseDataLayer(object):
         """
         raise NotImplementedError
 
-    def before_update_relationship(self, json_data, relationship_field, related_id_field, view_kwargs):
+    def before_update_relationship(
+        self, json_data, relationship_field, related_id_field, view_kwargs
+    ):
         """Make work before to update a relationship
 
         :param dict json_data: the request params
@@ -281,7 +306,9 @@ class BaseDataLayer(object):
         """
         raise NotImplementedError
 
-    def after_update_relationship(self, obj, updated, json_data, relationship_field, related_id_field, view_kwargs):
+    def after_update_relationship(
+        self, obj, updated, json_data, relationship_field, related_id_field, view_kwargs
+    ):
         """Make work after to update a relationship
 
         :param obj: an object from data layer
@@ -294,7 +321,9 @@ class BaseDataLayer(object):
         """
         raise NotImplementedError
 
-    def before_delete_relationship(self, json_data, relationship_field, related_id_field, view_kwargs):
+    def before_delete_relationship(
+        self, json_data, relationship_field, related_id_field, view_kwargs
+    ):
         """Make work before to delete a relationship
 
         :param dict json_data: the request params
@@ -304,7 +333,9 @@ class BaseDataLayer(object):
         """
         raise NotImplementedError
 
-    def after_delete_relationship(self, obj, updated, json_data, relationship_field, related_id_field, view_kwargs):
+    def after_delete_relationship(
+        self, obj, updated, json_data, relationship_field, related_id_field, view_kwargs
+    ):
         """Make work after to delete a relationship
 
         :param obj: an object from data layer

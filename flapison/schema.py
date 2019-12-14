@@ -21,63 +21,75 @@ def compute_schema(schema_cls, default_kwargs, qs, include):
     """
     # manage include_data parameter of the schema
     schema_kwargs = default_kwargs
-    schema_kwargs['include_data'] = tuple()
+    schema_kwargs["include_data"] = tuple()
 
     # collect sub-related_includes
     related_includes = {}
 
     if include:
         for include_path in include:
-            field = include_path.split('.')[0]
+            field = include_path.split(".")[0]
 
             if field not in schema_cls._declared_fields:
-                raise InvalidInclude("{} has no attribute {}".format(schema_cls.__name__, field))
+                raise InvalidInclude(
+                    "{} has no attribute {}".format(schema_cls.__name__, field)
+                )
             elif not isinstance(schema_cls._declared_fields[field], Relationship):
-                raise InvalidInclude("{} is not a relationship attribute of {}".format(field, schema_cls.__name__))
+                raise InvalidInclude(
+                    "{} is not a relationship attribute of {}".format(
+                        field, schema_cls.__name__
+                    )
+                )
 
-            schema_kwargs['include_data'] += (field, )
+            schema_kwargs["include_data"] += (field,)
             if field not in related_includes:
                 related_includes[field] = []
-            if '.' in include_path:
-                related_includes[field] += ['.'.join(include_path.split('.')[1:])]
+            if "." in include_path:
+                related_includes[field] += [".".join(include_path.split(".")[1:])]
 
     # make sure id field is in only parameter unless marshamllow will raise an Exception
-    if schema_kwargs.get('only') is not None and 'id' not in schema_kwargs['only']:
-        schema_kwargs['only'] += ('id',)
+    if schema_kwargs.get("only") is not None and "id" not in schema_kwargs["only"]:
+        schema_kwargs["only"] += ("id",)
 
     # create base schema instance
     schema = schema_cls(**schema_kwargs)
 
     # manage sparse fieldsets
     if schema.opts.type_ in qs.fields:
-        tmp_only = set(schema.declared_fields.keys()) & set(qs.fields[schema.opts.type_])
+        tmp_only = set(schema.declared_fields.keys()) & set(
+            qs.fields[schema.opts.type_]
+        )
         if schema.only:
             tmp_only &= set(schema.only)
         schema.only = tuple(tmp_only)
 
         # make sure again that id field is in only parameter unless marshamllow will raise an Exception
-        if schema.only is not None and 'id' not in schema.only:
-            schema.only += ('id',)
+        if schema.only is not None and "id" not in schema.only:
+            schema.only += ("id",)
 
     # manage compound documents
     if include:
         for include_path in include:
-            field = include_path.split('.')[0]
+            field = include_path.split(".")[0]
             relation_field = schema.declared_fields[field]
-            related_schema_cls = schema.declared_fields[field].__dict__['_Relationship__schema']
+            related_schema_cls = schema.declared_fields[field].__dict__[
+                "_Relationship__schema"
+            ]
             related_schema_kwargs = {}
-            if 'context' in default_kwargs:
-                related_schema_kwargs['context'] = default_kwargs['context']
+            if "context" in default_kwargs:
+                related_schema_kwargs["context"] = default_kwargs["context"]
             if isinstance(related_schema_cls, SchemaABC):
-                related_schema_kwargs['many'] = related_schema_cls.many
+                related_schema_kwargs["many"] = related_schema_cls.many
                 related_schema_cls = related_schema_cls.__class__
             if isinstance(related_schema_cls, str):
                 related_schema_cls = class_registry.get_class(related_schema_cls)
-            related_schema = compute_schema(related_schema_cls,
-                                            related_schema_kwargs,
-                                            qs,
-                                            related_includes[field] or None)
-            relation_field.__dict__['_Relationship__schema'] = related_schema
+            related_schema = compute_schema(
+                related_schema_cls,
+                related_schema_kwargs,
+                qs,
+                related_includes[field] or None,
+            )
+            relation_field.__dict__["_Relationship__schema"] = related_schema
 
     return schema
 
@@ -95,6 +107,7 @@ def get_model_field(schema, field):
     if schema._declared_fields[field].attribute is not None:
         return schema._declared_fields[field].attribute
     return field
+
 
 def get_nested_fields(schema, model_field=False):
     """Return nested fields of a schema to support a join
@@ -116,13 +129,18 @@ def get_nested_fields(schema, model_field=False):
 
     return nested_fields
 
+
 def get_relationships(schema, model_field=False):
     """Return relationship fields of a schema
 
     :param Schema schema: a marshmallow schema
     :param list: list of relationship fields of a schema
     """
-    relationships = [key for (key, value) in schema._declared_fields.items() if isinstance(value, Relationship)]
+    relationships = [
+        key
+        for (key, value) in schema._declared_fields.items()
+        if isinstance(value, Relationship)
+    ]
 
     if model_field is True:
         relationships = [get_model_field(schema, key) for key in relationships]
@@ -137,7 +155,7 @@ def get_related_schema(schema, field):
     :param field: the relationship field
     :return Schema: the related schema
     """
-    return schema._declared_fields[field].__dict__['_Relationship__schema']
+    return schema._declared_fields[field].__dict__["_Relationship__schema"]
 
 
 def get_schema_from_type(resource_type):
@@ -163,7 +181,10 @@ def get_schema_field(schema, field):
     :param str field: the name of the model field
     :return str: the name of the field in the schema
     """
-    schema_fields_to_model = {key: get_model_field(schema, key) for (key, value) in schema._declared_fields.items()}
+    schema_fields_to_model = {
+        key: get_model_field(schema, key)
+        for (key, value) in schema._declared_fields.items()
+    }
     for key, value in schema_fields_to_model.items():
         if value == field:
             return key
