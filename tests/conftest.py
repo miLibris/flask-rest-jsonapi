@@ -94,6 +94,7 @@ def string_json_attribute_person_model(base):
         # This model uses a String type for "json_tags" to avoid dependency on a nonstandard SQL type in testing, \
         # while still demonstrating support
         address = Column(MagicJSON)
+        tags = Column(MagicJSON)
 
     yield StringJsonAttributePerson
 
@@ -129,7 +130,9 @@ def computer_model(base):
 
 
 @pytest.fixture(scope="function")
-def engine(person_tag_model, person_single_tag_model, person_model, computer_model, string_json_attribute_person_model):
+def engine(
+        person_tag_model, person_single_tag_model, person_model,
+        computer_model, string_json_attribute_person_model):
     engine = create_engine("sqlite:///:memory:")
     person_tag_model.metadata.create_all(engine)
     person_single_tag_model.metadata.create_all(engine)
@@ -238,6 +241,7 @@ def string_json_attribute_person_schema(address_schema):
         name = fields.Str(required=True)
         birth_date = fields.DateTime()
         address = fields.Nested(address_schema, many=False)
+        tags = fields.List(fields.Dict())
 
     yield StringJsonAttributePersonSchema
 
