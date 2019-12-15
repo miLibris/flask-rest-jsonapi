@@ -41,29 +41,47 @@ class Node(object):
 
     def resolve(self):
         """Create filter for a particular node of the filter tree"""
-        if 'or' not in self.filter_ and 'and' not in self.filter_ and 'not' not in self.filter_:
+        if (
+            "or" not in self.filter_
+            and "and" not in self.filter_
+            and "not" not in self.filter_
+        ):
             value = self.value
 
             if isinstance(value, dict):
-                value = Node(self.related_model, value, self.resource, self.related_schema).resolve()
+                value = Node(
+                    self.related_model, value, self.resource, self.related_schema
+                ).resolve()
 
-            if '__' in self.filter_.get('name', ''):
-                value = {self.filter_['name'].split('__')[1]: value}
+            if "__" in self.filter_.get("name", ""):
+                value = {self.filter_["name"].split("__")[1]: value}
 
             if isinstance(value, dict):
                 return getattr(self.column, self.operator)(**value)
-            elif isinstance(self.column.prop, RelationshipProperty) and isinstance(value, (int, str)):
+            elif isinstance(self.column.prop, RelationshipProperty) and isinstance(
+                value, (int, str)
+            ):
                 relationship_key = next(iter(self.column.prop.local_columns))
                 return getattr(relationship_key, self.operator)(value)
             else:
                 return getattr(self.column, self.operator)(value)
 
-        if 'or' in self.filter_:
-            return or_(Node(self.model, filt, self.resource, self.schema).resolve() for filt in self.filter_['or'])
-        if 'and' in self.filter_:
-            return and_(Node(self.model, filt, self.resource, self.schema).resolve() for filt in self.filter_['and'])
-        if 'not' in self.filter_:
-            return not_(Node(self.model, self.filter_['not'], self.resource, self.schema).resolve())
+        if "or" in self.filter_:
+            return or_(
+                Node(self.model, filt, self.resource, self.schema).resolve()
+                for filt in self.filter_["or"]
+            )
+        if "and" in self.filter_:
+            return and_(
+                Node(self.model, filt, self.resource, self.schema).resolve()
+                for filt in self.filter_["and"]
+            )
+        if "not" in self.filter_:
+            return not_(
+                Node(
+                    self.model, self.filter_["not"], self.resource, self.schema
+                ).resolve()
+            )
 
     @property
     def name(self):
@@ -71,16 +89,18 @@ class Node(object):
 
         :return str: the name of the field to filter on
         """
-        name = self.filter_.get('name')
+        name = self.filter_.get("name")
 
         if name is None:
             raise InvalidFilters("Can't find name of a filter")
 
-        if '__' in name:
-            name = name.split('__')[0]
+        if "__" in name:
+            name = name.split("__")[0]
 
         if name not in self.schema._declared_fields:
-            raise InvalidFilters("{} has no attribute {}".format(self.schema.__name__, name))
+            raise InvalidFilters(
+                "{} has no attribute {}".format(self.schema.__name__, name)
+            )
 
         return name
 
@@ -91,7 +111,7 @@ class Node(object):
         :return str: the operator to use in the filter
         """
         try:
-            return self.filter_['op']
+            return self.filter_["op"]
         except KeyError:
             raise InvalidFilters("Can't find op of a filter")
 
@@ -110,7 +130,9 @@ class Node(object):
         try:
             return getattr(self.model, model_field)
         except AttributeError:
-            raise InvalidFilters("{} has no attribute {}".format(self.model.__name__, model_field))
+            raise InvalidFilters(
+                "{} has no attribute {}".format(self.model.__name__, model_field)
+            )
 
     @property
     def operator(self):
@@ -118,7 +140,7 @@ class Node(object):
 
         :return callable: a callable to make operation on a column
         """
-        operators = (self.op, self.op + '_', '__' + self.op + '__')
+        operators = (self.op, self.op + "_", "__" + self.op + "__")
 
         for op in operators:
             if hasattr(self.column, op):
@@ -132,18 +154,22 @@ class Node(object):
 
         :return: the value to filter on
         """
-        if self.filter_.get('field') is not None:
+        if self.filter_.get("field") is not None:
             try:
-                result = getattr(self.model, self.filter_['field'])
+                result = getattr(self.model, self.filter_["field"])
             except AttributeError:
-                raise InvalidFilters("{} has no attribute {}".format(self.model.__name__, self.filter_['field']))
+                raise InvalidFilters(
+                    "{} has no attribute {}".format(
+                        self.model.__name__, self.filter_["field"]
+                    )
+                )
             else:
                 return result
         else:
-            if 'val' not in self.filter_:
+            if "val" not in self.filter_:
                 raise InvalidFilters("Can't find value or field in a filter")
 
-            return self.filter_['val']
+            return self.filter_["val"]
 
     @property
     def related_model(self):
@@ -154,9 +180,15 @@ class Node(object):
         relationship_field = self.name
 
         if relationship_field not in get_relationships(self.schema):
-            raise InvalidFilters("{} has no relationship attribute {}".format(self.schema.__name__, relationship_field))
+            raise InvalidFilters(
+                "{} has no relationship attribute {}".format(
+                    self.schema.__name__, relationship_field
+                )
+            )
 
-        return getattr(self.model, get_model_field(self.schema, relationship_field)).property.mapper.class_
+        return getattr(
+            self.model, get_model_field(self.schema, relationship_field)
+        ).property.mapper.class_
 
     @property
     def related_schema(self):
@@ -167,6 +199,10 @@ class Node(object):
         relationship_field = self.name
 
         if relationship_field not in get_relationships(self.schema):
-            raise InvalidFilters("{} has no relationship attribute {}".format(self.schema.__name__, relationship_field))
+            raise InvalidFilters(
+                "{} has no relationship attribute {}".format(
+                    self.schema.__name__, relationship_field
+                )
+            )
 
         return self.schema._declared_fields[relationship_field].schema.__class__

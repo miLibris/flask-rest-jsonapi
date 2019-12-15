@@ -17,7 +17,14 @@ from flapison.resource import ResourceList, ResourceRelationship
 class Api(object):
     """The main class of the Api"""
 
-    def __init__(self, app=None, blueprint=None, decorators=None, request_parsers=None, response_renderers=None):
+    def __init__(
+        self,
+        app=None,
+        blueprint=None,
+        decorators=None,
+        request_parsers=None,
+        response_renderers=None,
+    ):
         """Initialize an instance of the Api
 
         :param app: the flask application
@@ -49,10 +56,12 @@ class Api(object):
             self.blueprint = blueprint
 
         for resource in self.resources:
-            self.route(resource['resource'],
-                       resource['view'],
-                       *resource['urls'],
-                       url_rule_options=resource['url_rule_options'])
+            self.route(
+                resource["resource"],
+                resource["view"],
+                *resource["urls"],
+                url_rule_options=resource["url_rule_options"]
+            )
 
         if self.blueprint is not None:
             self.app.register_blueprint(self.blueprint)
@@ -61,7 +70,7 @@ class Api(object):
             for blueprint in additional_blueprints:
                 self.app.register_blueprint(blueprint)
 
-        self.app.config.setdefault('PAGE_SIZE', 30)
+        self.app.config.setdefault("PAGE_SIZE", 30)
 
     def route(self, resource, view, *urls, **kwargs):
         """Create an api view.
@@ -71,17 +80,17 @@ class Api(object):
         :param list urls: the urls of the view
         :param dict kwargs: additional options of the route
         """
-        url_rule_options = kwargs.get('url_rule_options') or dict()
+        url_rule_options = kwargs.get("url_rule_options") or dict()
 
         # Allow the customization of the resource class instance
-        resource_kwargs = kwargs.get('resource_kwargs', {})
+        resource_kwargs = kwargs.get("resource_kwargs", {})
 
         # Find the parent object for this route, and also the correct endpoint name
-        if 'blueprint' in kwargs:
-            view_name = '.'.join([kwargs['blueprint'].name, view])
-            blueprint = kwargs['blueprint']
+        if "blueprint" in kwargs:
+            view_name = ".".join([kwargs["blueprint"].name, view])
+            blueprint = kwargs["blueprint"]
         elif self.blueprint is not None:
-            view_name = '.'.join([self.blueprint.name, view])
+            view_name = ".".join([self.blueprint.name, view])
             blueprint = self.blueprint
         elif self.app is not None:
             view_name = view
@@ -96,28 +105,27 @@ class Api(object):
 
         # Create a resource instance with these arguments
         combined_kwargs = {
-            'endpoint': view_name,
-            'request_parsers': self.request_parsers,
-            'response_renderers': self.response_renderers
+            "endpoint": view_name,
+            "request_parsers": self.request_parsers,
+            "response_renderers": self.response_renderers,
         }
         # Update the default arguments with user provided ones
         combined_kwargs.update(resource_kwargs)
         # Now actually create the instance
-        view_func = resource.as_view(
-            view,
-            **combined_kwargs
-        )
+        view_func = resource.as_view(view, **combined_kwargs)
 
         if blueprint is not None:
             for url in urls:
                 blueprint.add_url_rule(url, view_func=view_func, **url_rule_options)
         else:
-            self.resources.append({
-                'resource': resource,
-                'view': view,
-                'urls': urls,
-                'url_rule_options': url_rule_options
-            })
+            self.resources.append(
+                {
+                    "resource": resource,
+                    "view": view,
+                    "urls": urls,
+                    "url_rule_options": url_rule_options,
+                }
+            )
 
         self.resource_registry.append(resource)
 
@@ -133,18 +141,20 @@ class Api(object):
             endpoint = request.endpoint
             resource = None
             if endpoint:
-                resource = getattr(self.app.view_functions[endpoint], 'view_class', None)
+                resource = getattr(
+                    self.app.view_functions[endpoint], "view_class", None
+                )
 
-            if resource and not getattr(resource, 'disable_oauth', None):
-                scopes = request.args.get('scopes')
+            if resource and not getattr(resource, "disable_oauth", None):
+                scopes = request.args.get("scopes")
 
-                if getattr(resource, 'schema'):
+                if getattr(resource, "schema"):
                     scopes = [self.build_scope(resource, request.method)]
                 elif scopes:
-                    scopes = scopes.split(',')
+                    scopes = scopes.split(",")
 
                     if scopes:
-                        scopes = scopes.split(',')
+                        scopes = scopes.split(",")
 
                 valid, req = oauth_manager.verify_request(scopes)
 
@@ -166,19 +176,21 @@ class Api(object):
         :param str method: an http method
         :return str: the name of the scope
         """
-        if ResourceList in inspect.getmro(resource) and method == 'GET':
-            prefix = 'list'
+        if ResourceList in inspect.getmro(resource) and method == "GET":
+            prefix = "list"
         else:
-            method_to_prefix = {'GET': 'get',
-                                'POST': 'create',
-                                'PATCH': 'update',
-                                'DELETE': 'delete'}
+            method_to_prefix = {
+                "GET": "get",
+                "POST": "create",
+                "PATCH": "update",
+                "DELETE": "delete",
+            }
             prefix = method_to_prefix[method]
 
             if ResourceRelationship in inspect.getmro(resource):
-                prefix = '_'.join([prefix, 'relationship'])
+                prefix = "_".join([prefix, "relationship"])
 
-        return '_'.join([prefix, resource.schema.opts.type_])
+        return "_".join([prefix, resource.schema.opts.type_])
 
     def permission_manager(self, permission_manager, with_decorators=True):
         """Use permission manager to enable permission for API
@@ -189,17 +201,21 @@ class Api(object):
 
         if with_decorators:
             for resource in self.resource_registry:
-                if getattr(resource, 'disable_permission', None) is not True:
-                    for method in getattr(resource, 'methods', ('GET', 'POST', 'PATCH', 'DELETE')):
-                        setattr(resource,
-                                method.lower(),
-                                self.has_permission()(getattr(resource, method.lower())))
+                if getattr(resource, "disable_permission", None) is not True:
+                    for method in getattr(
+                        resource, "methods", ("GET", "POST", "PATCH", "DELETE")
+                    ):
+                        setattr(
+                            resource,
+                            method.lower(),
+                            self.has_permission()(getattr(resource, method.lower())),
+                        )
 
     def has_permission(self, *args, **kwargs):
         """Decorator used to check permissions before to call resource manager method"""
 
         def wrapper(view):
-            if getattr(view, '_has_permissions_decorator', False) is True:
+            if getattr(view, "_has_permissions_decorator", False) is True:
                 return view
 
             @wraps(view)

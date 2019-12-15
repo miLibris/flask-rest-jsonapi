@@ -5,9 +5,9 @@ from flapison.resource import ResourceList, ResourceDetail, ResourceRelationship
 from flapison.exceptions import JsonApiException
 
 __all__ = [
-    'Api',
-    'ResourceList',
-    'ResourceDetail',
-    'ResourceRelationship',
-    'JsonApiException'
+    "Api",
+    "ResourceList",
+    "ResourceDetail",
+    "ResourceRelationship",
+    "JsonApiException",
 ]
