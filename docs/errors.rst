@@ -5,7 +5,7 @@ Errors
 
 .. currentmodule:: flask_rest_jsonapi
 
-JSONAPI 1.0 specification recommand to return errors like that:
+JSONAPI 1.0 specification recommend to return errors like that:
 
 .. sourcecode:: http
 
