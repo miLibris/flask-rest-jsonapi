@@ -61,8 +61,17 @@ class QueryStringManager(object):
         return results
 
     def _simple_filters(self, dict_):
-        return [{"name": key, "op": "eq", "val": value}
-                for (key, value) in dict_.items()]
+        """Return filter list
+
+        :return list: list of dict for filter parameters. Includes support for 'in' for list values
+        """
+        filter_list = []
+        for (key, value) in dict_.items():
+            operator = 'eq'
+            if isinstance(value, list):
+                operator = 'in'
+            filter_list.append({"name": key, "op": operator, "val": value})
+        return filter_list
 
     @property
     def querystring(self):
