@@ -250,7 +250,7 @@ class ResourceDetail(with_metaclass(ResourceMeta, Resource)):
                                 qs,
                                 qs.include)
 
-        result = schema.dump(obj)
+        result = schema.dump(obj) if obj else None
 
         final_result = self.after_get(result)
 
