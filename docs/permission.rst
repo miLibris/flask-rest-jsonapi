@@ -41,7 +41,7 @@ The permission manager must be a function that looks like this:
 
     Flask-REST-JSONAPI use a decorator to check permission for each method named has_permission. You can provide args and kwargs to this decorators so you can retrieve this args and kwargs in the permission_manager. The default usage of the permission system does not provides any args or kwargs to the decorator.
 
-If permission is denied I recommand to raise exception like that:
+If permission is denied I recommend to raise exception like that:
 
 .. code-block:: python
 
