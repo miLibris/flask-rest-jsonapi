@@ -19,6 +19,7 @@ from flask_rest_jsonapi.querystring import QueryStringManager as QSManager
 from flask_rest_jsonapi.data_layers.alchemy import SqlalchemyDataLayer
 from flask_rest_jsonapi.data_layers.base import BaseDataLayer
 from flask_rest_jsonapi.data_layers.filtering.alchemy import Node
+from flask_rest_jsonapi.decorators import check_headers, check_method_requirements, jsonapi_exception_formatter
 import flask_rest_jsonapi.decorators
 import flask_rest_jsonapi.resource
 import flask_rest_jsonapi.schema
@@ -1023,6 +1024,46 @@ def test_get_list_response(client, register_routes):
     with client:
         response = client.get('/persons_response', content_type='application/vnd.api+json')
         assert response.status_code == 200, response.json['errors']
+
+
+class TestResourceArgs:
+    def test_resource_args(self, app):
+        class TestResource(ResourceDetail):
+            """
+            This fake resource always renders a constructor parameter
+            """
+            def __init__(self, *args, **kwargs):
+                super(TestResource, self).__init__()
+                self.constant = args[0]
+
+            def get(self):
+                return self.constant
+        api = Api(app=app)
+        api.route(TestResource, 'resource_args', '/resource_args', resource_args=['hello!'])
+        api.init_app()
+        with app.test_client() as client:
+            rv = client.get('/resource_args')
+            assert rv.json == 'hello!'
+
+    def test_resource_kwargs(self, app):
+        class TestResource(ResourceDetail):
+            """
+            This fake resource always renders a constructor parameter
+            """
+            def __init__(self, *args, **kwargs):
+                super(TestResource, self).__init__()
+                self.constant = kwargs.get('constant')
+
+            def get(self):
+                return self.constant
+        api = Api(app=app)
+        api.route(TestResource, 'resource_kwargs', '/resource_kwargs', resource_kwargs={
+            'constant': 'hello!'
+        })
+        api.init_app()
+        with app.test_client() as client:
+            rv = client.get('/resource_kwargs')
+            assert rv.json == 'hello!'
 
 
 # test various Accept headers
