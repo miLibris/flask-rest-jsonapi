@@ -149,7 +149,7 @@ equals to:
 
 .. sourcecode:: http
 
-    GET /persons?filter[name]=[{"name":"name","op":"eq","val":"John"}] HTTP/1.1
+    GET /persons?filter=[{"name":"name","op":"eq","val":"John"}] HTTP/1.1
     Accept: application/vnd.api+json
 
 
@@ -164,4 +164,4 @@ which equals to:
 
 .. sourcecode:: http
 
-    GET /persons?filter[name]=[{"name":"name","op":"eq","val":"John"}, {"name":"gender","op":"eq","val":"male"}] HTTP/1.1
+    GET /persons?filter=[{"name":"name","op":"eq","val":"John"}, {"name":"gender","op":"eq","val":"male"}] HTTP/1.1
