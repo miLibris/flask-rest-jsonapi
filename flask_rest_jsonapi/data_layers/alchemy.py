@@ -87,7 +87,7 @@ class SqlalchemyDataLayer(BaseDataLayer):
 
         query = self.retrieve_object_query(view_kwargs, filter_field, filter_value)
 
-        if qs is not None:
+        if qs is not None and getattr(self, 'eagerload_includes', True):
             query = self.eagerload_includes(query, qs)
 
         try:
