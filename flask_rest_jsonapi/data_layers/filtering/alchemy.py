@@ -5,7 +5,7 @@
 from sqlalchemy import and_, or_, not_
 
 from flask_rest_jsonapi.exceptions import InvalidFilters
-from flask_rest_jsonapi.schema import get_relationships, get_model_field
+from flask_rest_jsonapi.schema import get_relationships, get_nested_fields, get_model_field
 
 
 def create_filters(model, filter_info, resource):
@@ -143,26 +143,27 @@ class Node(object):
 
     @property
     def related_model(self):
-        """Get the related model of a relationship field
+        """Get the related model of a related (relationship or nested) field
 
         :return DeclarativeMeta: the related model
         """
-        relationship_field = self.name
+        related_field_name = self.name
 
-        if relationship_field not in get_relationships(self.schema):
-            raise InvalidFilters("{} has no relationship attribute {}".format(self.schema.__name__, relationship_field))
+        related_fields = get_relationships(self.schema) + get_nested_fields(self.schema)
+        if related_field_name not in related_fields:
+            raise InvalidFilters("{} has no relationship or nested attribute {}".format(self.schema.__name__, related_field_name))
 
-        return getattr(self.model, get_model_field(self.schema, relationship_field)).property.mapper.class_
+        return getattr(self.model, get_model_field(self.schema, related_field_name)).property.mapper.class_
 
     @property
     def related_schema(self):
-        """Get the related schema of a relationship field
+        """Get the related schema of a related (relationship or nested) field
 
         :return Schema: the related schema
         """
-        relationship_field = self.name
+        related_field_name = self.name
+        related_fields = get_relationships(self.schema) + get_nested_fields(self.schema)
+        if related_field_name not in related_fields:
+            raise InvalidFilters("{} has no relationship or nested attribute {}".format(self.schema.__name__, related_field_name))
 
-        if relationship_field not in get_relationships(self.schema):
-            raise InvalidFilters("{} has no relationship attribute {}".format(self.schema.__name__, relationship_field))
-
-        return self.schema._declared_fields[relationship_field].schema.__class__
+        return self.schema._declared_fields[related_field_name].schema.__class__
