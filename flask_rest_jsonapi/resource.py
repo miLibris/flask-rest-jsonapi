@@ -53,12 +53,22 @@ class ResourceMeta(MethodViewType):
 class Resource(MethodView):
     """Base resource class"""
 
-    def __new__(cls):
+    def __new__(cls, **kwargs):
         """Constructor of a resource instance"""
         if hasattr(cls, '_data_layer'):
             cls._data_layer.resource = cls
 
         return super(Resource, cls).__new__(cls)
+
+    def __init__(self, endpoint=None):
+        # By default we assign each Resource class with a view/endpoint. However if the
+        # same resource is used for multiple routes, the endpoint will be overwritten.
+        # This ensures the Resource instances have the correct view
+        if endpoint is not None:
+            self.view = endpoint
+
+    def parse_request(self):
+        return self.request_parsers[request.content_type](request)
 
     @jsonapi_exception_formatter
     def dispatch_request(self, *args, **kwargs):

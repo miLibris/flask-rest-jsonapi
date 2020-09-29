@@ -66,27 +66,41 @@ class Api(object):
         :param list urls: the urls of the view
         :param dict kwargs: additional options of the route
         """
-        resource.view = view
         url_rule_options = kwargs.get('url_rule_options') or dict()
 
-        view_func = resource.as_view(view)
-
+        # Find the parent object for this route, and also the correct endpoint name
         if 'blueprint' in kwargs:
-            resource.view = '.'.join([kwargs['blueprint'].name, resource.view])
-            for url in urls:
-                kwargs['blueprint'].add_url_rule(url, view_func=view_func, **url_rule_options)
+            view_name = '.'.join([kwargs['blueprint'].name, view])
+            blueprint = kwargs['blueprint']
         elif self.blueprint is not None:
-            resource.view = '.'.join([self.blueprint.name, resource.view])
-            for url in urls:
-                self.blueprint.add_url_rule(url, view_func=view_func, **url_rule_options)
+            view_name = '.'.join([self.blueprint.name, view])
+            blueprint = self.blueprint
         elif self.app is not None:
-            for url in urls:
-                self.app.add_url_rule(url, view_func=view_func, **url_rule_options)
+            view_name = view
+            blueprint = self.app
         else:
-            self.resources.append({'resource': resource,
-                                   'view': view,
-                                   'urls': urls,
-                                   'url_rule_options': url_rule_options})
+            view_name = view
+            blueprint = None
+
+        # Give the resource class a default endpoint. This will be overwritten if route()
+        # is called again for this resource
+        resource.view = view_name
+
+        view_func = resource.as_view(
+            view,
+            endpoint=view_name,
+        )
+
+        if blueprint is not None:
+            for url in urls:
+                blueprint.add_url_rule(url, view_func=view_func, **url_rule_options)
+        else:
+            self.resources.append({
+                'resource': resource,
+                'view': view,
+                'urls': urls,
+                'url_rule_options': url_rule_options
+            })
 
         self.resource_registry.append(resource)
 
