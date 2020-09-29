@@ -148,6 +148,8 @@ class ResourceList(with_metaclass(ResourceMeta, Resource)):
         json_data = request.get_json() or {}
 
         qs = QSManager(request.args, self.schema)
+        
+        self.before_marshmallow(args, kwargs)
 
         schema = compute_schema(self.schema,
                                 getattr(self, 'post_schema_kwargs', dict()),
