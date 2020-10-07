@@ -150,7 +150,7 @@ class ResourceList(with_metaclass(ResourceMeta, Resource)):
         json_data = request.get_json() or {}
 
         qs = QSManager(request.args, self.schema)
-        
+
         self.before_marshmallow(args, kwargs)
 
         schema = compute_schema(self.schema,
@@ -263,7 +263,6 @@ class ResourceDetail(with_metaclass(ResourceMeta, Resource)):
 
         qs = QSManager(request.args, self.schema)
         schema_kwargs = getattr(self, 'patch_schema_kwargs', dict())
-        schema_kwargs.update({'partial': True})
 
         self.before_marshmallow(args, kwargs)
 
@@ -273,7 +272,7 @@ class ResourceDetail(with_metaclass(ResourceMeta, Resource)):
                                 qs.include)
 
         try:
-            data = schema.load(json_data)
+            data = schema.load(json_data, partial=True)
         except IncorrectTypeError as e:
             errors = e.messages
             for error in errors['errors']:
