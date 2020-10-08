@@ -577,7 +577,7 @@ def test_query_string_manager(person_schema):
 
 
 def test_resource(app, person_model, person_schema, session, monkeypatch):
-    def schema_load_mock(*args):
+    def schema_load_mock(*args, **kwargs):
         raise ValidationError(dict(errors=[dict(status=None, title=None)]))
 
     with app.app_context():
