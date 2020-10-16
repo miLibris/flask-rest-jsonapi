@@ -517,7 +517,12 @@ class SqlalchemyDataLayer(BaseDataLayer):
             field = sort_opt['field']
             if not hasattr(self.model, field):
                 raise InvalidSort("{} has no attribute {}".format(self.model.__name__, field))
-            query = query.order_by(getattr(getattr(self.model, field), sort_opt['order'])())
+            if sort_opt['relationship']:
+                relationField = getattr(self.model, field)
+                relationClass = relationField.mapper.class_
+                query = query.join(relationField).order_by(getattr(getattr(relationClass, 'id'), sort_opt['order'])())
+            else:
+                query = query.order_by(getattr(getattr(self.model, field), sort_opt['order'])())
         return query
 
     def paginate_query(self, query, paginate_info):
