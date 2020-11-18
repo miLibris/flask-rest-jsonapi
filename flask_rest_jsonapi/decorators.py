@@ -82,6 +82,7 @@ def jsonapi_exception_formatter(func):
         except Exception as e:
             if current_app.config['DEBUG'] is True or current_app.config.get('PROPAGATE_EXCEPTIONS') is True:
                 raise
+            current_app.log_exception(e)
 
             if 'sentry' in current_app.extensions:
                 current_app.extensions['sentry'].captureException()
