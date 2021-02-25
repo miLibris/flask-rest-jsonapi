@@ -1,15 +1,15 @@
 from setuptools import setup, find_packages
 
-__version__ = '0.31.2'
+__version__ = '1.0.0'
 
 setup(
-    name="Flask-REST-JSONAPI",
+    name="flask-rested-jsonapi",
     version=__version__,
     description='Flask extension to create REST web api according to JSONAPI 1.0 specification with Flask, Marshmallow \
                  and data provider of your choice (SQLAlchemy, MongoDB, ...)',
-    url='https://github.com/miLibris/flask-rest-jsonapi',
-    author='miLibris API Team',
-    author_email='pf@milibris.net',
+    url='https://github.com/Alias-Innovations/flask-rested-jsonapi',
+    author='Alias Innovations Team',
+    author_email='alias-team@aliasinnov.com',
     license='MIT',
     classifiers=[
         'Framework :: Flask',

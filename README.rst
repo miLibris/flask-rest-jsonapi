@@ -8,15 +8,17 @@
     :target: http://flask-rest-jsonapi.readthedocs.io/en/latest/?badge=latest
     :alt: Documentation Status
 
-Flask-REST-JSONAPI
+Flask-RESTed-JSONAPI
 ##################
+
+This is just a maintaned fork of the popular Flask-REST-JSONAPI extension which can be found `here <https://flask-restless.readthedocs.io/>`_
 
 Flask-REST-JSONAPI is a flask extension for building REST APIs. It combines the power of `Flask-Restless <https://flask-restless.readthedocs.io/>`_ and the flexibility of `Flask-RESTful <https://flask-restful.readthedocs.io/>`_ around a strong specification `JSONAPI 1.0 <http://jsonapi.org/>`_. This framework is designed to quickly build REST APIs and fit the complexity of real life projects with legacy data and multiple data storages.
 
 Install
 =======
 
-    pip install Flask-REST-JSONAPI
+    pip install flask-rested-jsonapi
 
 A minimal API
 =============
