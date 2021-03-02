@@ -5,9 +5,9 @@ Include related objects
 
 .. currentmodule:: flask_rest_jsonapi
 
-You can include related object(s) details to responses with the querystring parameter named "include". You can use "include" parameter on any kind of route (classical CRUD route or relationships route) and any kind of http methods as long as method return data.
+You can include related object(s) details in responses with the query string parameter named "include". You can use the "include" parameter on any kind of route (classical CRUD route or relationships route) and any kind of HTTP methods as long as the method returns data.
 
-This features will add an additional key in result named "included"
+This feature will add an additional key in the result named "included"
 
 Example:
 
@@ -174,4 +174,4 @@ Response:
       }
     }
 
-I know it is an absurd example because it will include details of related person computers and details of the person that is already in the response. But it is just for example.
+It's an absurd example because it will include details of the related person's computers and details of the person that is already in the response. But it is just for demonstration.
