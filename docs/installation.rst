@@ -20,7 +20,7 @@ The development version can be downloaded from `its page at GitHub
 
 .. note::
 
-    If you don't have virtualenv please install it before
+    If you don't have virtualenv please install it
 
     $ pip install virtualenv
 
