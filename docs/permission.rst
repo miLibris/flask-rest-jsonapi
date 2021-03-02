@@ -5,7 +5,7 @@ Permission
 
 .. currentmodule:: flask_rest_jsonapi
 
-Flask-REST-JSONAPI provides a very agnostic permission system.
+Flask-REST-JSONAPI provides an agnostic permission system.
 
 Example:
 
@@ -23,7 +23,7 @@ Example:
 
 In this previous example, the API will check permission before each method call with the permission_manager function.
 
-The permission manager must be a function that looks like this:
+The permission_manager must be a function that looks like this:
 
 .. code-block:: python
 
@@ -39,9 +39,9 @@ The permission manager must be a function that looks like this:
 
 .. note::
 
-    Flask-REST-JSONAPI use a decorator to check permission for each method named has_permission. You can provide args and kwargs to this decorators so you can retrieve this args and kwargs in the permission_manager. The default usage of the permission system does not provides any args or kwargs to the decorator.
+    Flask-REST-JSONAPI uses a decorator named has_permission to check permission for each method. You can provide args and kwargs to this decorator so you can retrieve them in the permission_manager. The default usage of the permission system does not provide any args or kwargs to the decorator.
 
-If permission is denied I recommend to raise exception like that:
+If permission is denied, raising an exception is recommended:
 
 .. code-block:: python
 
@@ -50,7 +50,7 @@ If permission is denied I recommend to raise exception like that:
                            title='Permission denied',
                            status='403')
 
-You can disable the permission system or make custom permission checking management of a resource like that:
+You can disable the permission system or create custom permission checking of a resource like this:
 
 .. code-block:: python
 
@@ -66,7 +66,7 @@ You can disable the permission system or make custom permission checking managem
 
 .. warning::
 
-    If you want to use both permission system and oauth support to retrieve information like user from oauth (request.oauth.user) in the permission system you have to initialize permission system before to initialize oauth support because of decorators cascading.
+    If you want to use both the permission system and OAuth support to retrieve information such as a user (request.oauth.user), you have to initialize the permission system before initializing OAuth support. This is because of decorator cascading.
 
 Example:
 
