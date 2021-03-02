@@ -5,7 +5,7 @@ OAuth
 
 .. currentmodule:: flask_rest_jsonapi
 
-Flask-REST-JSONAPI support OAuth via `Flask-OAuthlib <https://github.com/lepture/flask-oauthlib>`_
+Flask-REST-JSONAPI supports OAuth via `Flask-OAuthlib <https://github.com/lepture/flask-oauthlib>`_
 
 Example:
 
@@ -27,7 +27,7 @@ In this example Flask-REST-JSONAPI will protect all your resource methods with t
 
     oauth2.require_oauth(<scope>)
 
-The pattern of the scope is like that ::
+The pattern of the scope is ::
 
     <action>_<resource_type>
 
@@ -43,7 +43,7 @@ Example ::
 
     list_person
 
-If you want to customize the scope you can provide a function that computes your custom scope. The function have to looks like that:
+If you want to customize the scope you can provide a function that computes your custom scope. The function has to look like this:
 
 .. code-block:: python
 
@@ -74,9 +74,9 @@ Usage example:
 
 .. note::
 
-    You can name the custom scope computation method as you want but you have to set the 2 required parameters: resource and method like in this previous example.
+    You can name the custom scope computation method as you want but you have to set the two required parameters "resource" and "method" as in this previous example.
 
-If you want to disable OAuth or make custom methods protection for a resource you can add this option to the resource manager.
+If you want to disable OAuth or create custom method protection for a resource you can add this option to the resource manager.
 
 Example:
 
