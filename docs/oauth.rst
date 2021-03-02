@@ -90,4 +90,4 @@ Example:
 
         @oauth2.require_oauth('custom_scope')
         def get(*args, **kwargs):
-            return 'Hello world !'
+            return 'Hello world!'
