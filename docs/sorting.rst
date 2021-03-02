@@ -5,11 +5,11 @@ Sorting
 
 .. currentmodule:: flask_rest_jsonapi
 
-You can sort results with querystring parameter named "sort"
+You can sort results using the query string parameter named "sort"
 
 .. note::
 
-    Examples are not urlencoded for a better readability
+    Examples are not URL encoded for better readability
 
 Example:
 
@@ -21,7 +21,7 @@ Example:
 Multiple sort
 -------------
 
-You can sort on multiple fields like that:
+You can sort on multiple fields like this:
 
 .. sourcecode:: http
 
@@ -31,7 +31,7 @@ You can sort on multiple fields like that:
 Descending sort
 ---------------
 
-You can make desc sort with the character "-" like that:
+You can in descendin gorder using a minus symbol, "-", like this:
 
 .. sourcecode:: http
 
@@ -41,7 +41,7 @@ You can make desc sort with the character "-" like that:
 Multiple sort + Descending sort
 -------------------------------
 
-Of course, you can combine both like that:
+Of course, you can combine both like this:
 
 .. sourcecode:: http
 
