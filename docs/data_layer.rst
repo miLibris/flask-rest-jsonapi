@@ -5,13 +5,13 @@ Data layer
 
 .. currentmodule:: flask_rest_jsonapi
 
-| The data layer is a CRUD interface between resource manager and data. It is a very flexible system to use any ORM or data storage. You can even create a data layer that use multiple ORMs and data storage to manage your own objects. The data layer implements a CRUD interface for objects and relationships. It also manage pagination, filtering and sorting.
+| The data layer is a CRUD interface between resource manager and data. It is a very flexible system to use any ORM or data storage. You can even create a data layer that uses multiple ORMs and data storage to manage your own objects. The data layer implements a CRUD interface for objects and relationships. It also manages pagination, filtering and sorting.
 |
-| Flask-REST-JSONAPI has a full featured data layer that use the popular ORM `SQLAlchemy <https://www.sqlalchemy.org/>`_.
+| Flask-REST-JSONAPI has a full-featured data layer that uses the popular ORM `SQLAlchemy <https://www.sqlalchemy.org/>`_.
 
 .. note::
 
-    The default data layer used by a resource manager is the SQLAlchemy one. So if you want to use it, you don't have to specify the class of the data layer in the resource manager
+    The default data layer used by a resource manager is the SQLAlchemy one. So if that's what you want to use, you don't have to specify the class of the data layer in the resource manager
 
 To configure the data layer you have to set its required parameters in the resource manager.
 
@@ -28,11 +28,11 @@ Example:
         data_layer = {'session': db.session,
                       'model': Person}
 
-You can also plug additional methods to your data layer in the resource manager. There are two kinds of additional methods:
+You can also plug additional methods into your data layer in the resource manager. There are two kinds of additional methods:
 
-* query: the "query" additional method takes view_kwargs as parameter and return an alternative query to retrieve the collection of objects in the GET method of the ResourceList manager.
+* query: the "query" additional method takes view_kwargs as parameter and returns an alternative query to retrieve the collection of objects in the GET method of the ResourceList manager.
 
-* pre / post process methods: all CRUD and relationship(s) operations have a pre / post process methods. Thanks to it you can make additional work before and after each operations of the data layer. Parameters of each pre / post process methods are available in the `flask_rest_jsonapi.data_layers.base.Base <https://github.com/miLibris/flask-rest-jsonapi/blob/master/flask_rest_jsonapi/data_layers/base.py>`_ base class.
+* pre-/postprocess methods: all CRUD and relationship(s) operations have pre-/postprocess methods. Thanks to these you can do additional work before and after each operation of the data layer. Parameters of each pre-/postprocess method are available in the `flask_rest_jsonapi.data_layers.base.Base <https://github.com/miLibris/flask-rest-jsonapi/blob/master/flask_rest_jsonapi/data_layers/base.py>`_ base class.
 
 Example:
 
@@ -68,7 +68,7 @@ Example:
 
 .. note::
 
-    You don't have to declare additional data layer methods in the resource manager. You can declare them in a dedicated module or in the declaration of the model.
+    You don't have to declare additional data layer methods in the resource manager. You can declare them in a dedicated module or in the model's declaration.
 
 Example:
 
@@ -100,12 +100,12 @@ Optional parameters:
     :id_field: the field used as identifier field instead of the primary key of the model
     :url_field: the name of the parameter in the route to get value to filter with. Instead "id" is used.
 
-By default SQLAlchemy eagerload related data specified in include querystring parameter. If you want to disable this feature you must add eagerload_includes: False to data layer parameters.
+By default SQLAlchemy eagerly loads related data specified in the include query string parameter. If you want to disable this feature you must add eagerload_includes: False to the data layer parameters.
 
 Custom data layer
 -----------------
 
-Like I said previously you can create and use your own data layer. A custom data layer must inherit from `flask_rest_jsonapi.data_layers.base.Base <https://github.com/miLibris/flask-rest-jsonapi/blob/master/flask_rest_jsonapi/data_layers/base.py>`_. You can see the full scope of possibilities of a data layer in this base class.
+As previously mentioned, you can create and use your own data layer. A custom data layer must inherit from `flask_rest_jsonapi.data_layers.base.Base <https://github.com/miLibris/flask-rest-jsonapi/blob/master/flask_rest_jsonapi/data_layers/base.py>`_. You can see the full scope of possibilities of a data layer in this base class.
 
 Usage example:
 
