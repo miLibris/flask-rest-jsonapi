@@ -5,7 +5,7 @@ Errors
 
 .. currentmodule:: flask_rest_jsonapi
 
-JSONAPI 1.0 specification recommend to return errors like that:
+The JSON:API 1.0 specification recommends to return errors like this:
 
 .. sourcecode:: http
 
@@ -28,9 +28,9 @@ JSONAPI 1.0 specification recommend to return errors like that:
       }
     }
 
-The "source" field gives information about the error if it is located in data provided or in querystring parameter.
+The "source" field gives information about the error if it is located in data provided or in a query string parameter.
 
-The previous example displays error located in data provided instead of this next example displays error located in querystring parameter "include":
+The previous example shows an error located in data provided. The following example shows error in the query string parameter "include":
 
 .. sourcecode:: http
 
@@ -53,13 +53,13 @@ The previous example displays error located in data provided instead of this nex
       }
     }
 
-Flask-REST-JSONAPI provides two kind of helpers to achieve error displaying:
+Flask-REST-JSONAPI provides two kinds of helpers for displaying errors:
 
 | * **the errors module**: you can import jsonapi_errors from the `errors module <https://github.com/miLibris/flask-rest-jsonapi/blob/master/flask_rest_jsonapi/errors.py>`_ to create the structure of a list of errors according to JSONAPI 1.0 specification
 |
-| * **the exceptions module**: you can import lot of exceptions from this `module <https://github.com/miLibris/flask-rest-jsonapi/blob/master/flask_rest_jsonapi/exceptions.py>`_ that helps you to raise exceptions that will be well formatted according to JSONAPI 1.0 specification
+| * **the exceptions module**: you can import a lot of exceptions from this `module <https://github.com/miLibris/flask-rest-jsonapi/blob/master/flask_rest_jsonapi/exceptions.py>`_ that helps you to raise exceptions that will be well-formatted according to the JSON:API 1.0 specification
 
-When you create custom code for your api I recommand to use exceptions from exceptions module of Flask-REST-JSONAPI to raise errors because JsonApiException based exceptions are catched and rendered according to JSONAPI 1.0 specification.
+When you create custom code for your API I recommand using exceptions from the Flask-REST-JSONAPI's exceptions module to raise errors because JsonApiException-based exceptions are caught and rendered according to the JSON:API 1.0 specification.
 
 Example:
 
