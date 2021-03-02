@@ -7,7 +7,7 @@ Quickstart
 
 It's time to write your first REST API. This guide assumes you have a working understanding of `Flask <http://flask.pocoo.org>`_, and that you have already installed both Flask and Flask-REST-JSONAPI. If not, then follow the steps in the :ref:`installation` section.
 
-In this section you will learn basic usage of Flask-REST-JSONAPI around a small tutorial that use the SQLAlchemy data layer. This tutorial show you an example of a person and his computers.
+In this section you will learn basic usage of Flask-REST-JSONAPI around a small tutorial that uses the SQLAlchemy data layer. This tutorial shows you an example of a person and their computers.
 
 First example
 -------------
@@ -175,7 +175,7 @@ An example of Flask-REST-JSONAPI API looks like this:
         # Start application
         app.run(debug=True)
 
-This example provides this api:
+This example provides the following API:
 
 +------------------------------------------+--------+------------------+-------------------------------------------------------+
 | url                                      | method | endpoint         | action                                                |
@@ -229,7 +229,7 @@ This example provides this api:
 
 .. warning::
 
-    In this example, I use Flask-SQLAlchemy so you have to install it before to run the example.
+    In this example, I use Flask-SQLAlchemy so you have to install it before running the example.
 
     $ pip install flask_sqlalchemy
 
@@ -435,12 +435,12 @@ Response:
 Relationships
 -------------
 
-| Now let's use relationships tools. First, create 3 computers named Halo, Nestor and Comodor like in previous example.
+| Now let's use some relationship tools. First, create three computers named Halo, Nestor and Commodore like in the previous example.
 |
-| Done ?
+| Done?
 | Ok. So let's continue this tutorial.
 |
-| We assume that Halo has id: 2, Nestor id: 3 and Comodor has id: 4.
+| We assume that Halo has id: 2, Nestor id: 3 and Commodore has id: 4.
 
 Create object with related object(s)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -535,18 +535,18 @@ Response:
       }
     }
 
-You can see that I have added the querystring parameter "include" to the url
+You can see that we have added the query string parameter "include" to the URL
 
 .. sourcecode:: http
 
     POST /persons?include=computers HTTP/1.1
 
-Thanks to this parameter, related computers details are included to the result. If you want to learn more: :ref:`include_related_objects`
+Thanks to this parameter, the related computers' details are included in the result. If you want to learn more: :ref:`include_related_objects`
 
 Update object and his relationships
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Now John sell his Amstrad and buy a new computer named Nestor (id: 3). So we want to link this new computer to John. John have also made a mistake in his birth_date so let's update this 2 things in the same time.
+Now John sell his Amstrad and buy a new computer named Nestor (id: 3). So we want to link this new computer to John. John also made a mistake in his birth_date so let's update these two things at the same time.
 
 Request:
 
@@ -640,7 +640,7 @@ Response:
 Create relationship
 ~~~~~~~~~~~~~~~~~~~
 
-Now John buy a new computer named Comodor so let's link it to John.
+Now John buys a new computer named Commodore so let's link it to John.
 
 Request:
 
@@ -719,7 +719,7 @@ Response:
           "type": "computer",
           "id": "4",
           "attributes": {
-            "serial": "Comodor"
+            "serial": "Commodore"
           },
           "relationships": {
             "owner": {
@@ -746,7 +746,7 @@ Response:
 Delete relationship
 ~~~~~~~~~~~~~~~~~~~
 
-Now John sell his old Nestor computer so let's unlink it from John.
+Now John sells his old Nestor computer, so let's unlink it from John.
 
 Request:
 
@@ -803,7 +803,7 @@ Response:
           "type": "computer",
           "id": "4",
           "attributes": {
-            "serial": "Comodor"
+            "serial": "Commodore"
           },
           "relationships": {
             "owner": {
@@ -826,4 +826,4 @@ Response:
       }
     }
 
-If you want to see more examples go to `JSON API 1.0 specification <http://jsonapi.org/>`_
+For more examples see the `JSON:API 1.0 specification <http://jsonapi.org/>`_
