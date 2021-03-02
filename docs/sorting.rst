@@ -31,7 +31,7 @@ You can sort on multiple fields like this:
 Descending sort
 ---------------
 
-You can in descendin gorder using a minus symbol, "-", like this:
+You can in descending order using a minus symbol, "-", like this:
 
 .. sourcecode:: http
 
