@@ -20,27 +20,26 @@ def check_headers(func):
     """
     @wraps(func)
     def wrapper(*args, **kwargs):
+        acceptable_content_types = current_app.config.get('AVAILABLE_REQUEST_HEADERS', ('application/vnd.api+json'))
         if request.method in ('POST', 'PATCH'):
-            if 'Content-Type' not in request.headers or\
-                    'application/vnd.api+json' not in request.headers['Content-Type'] or\
-                    request.headers['Content-Type'] != 'application/vnd.api+json':
-                error = json.dumps(jsonapi_errors([{'source': '',
-                                                    'detail': "Content-Type header must be application/vnd.api+json",
-                                                    'title': 'Invalid request header',
-                                                    'status': '415'}]), cls=JSONEncoder)
+            if 'Content-Type' not in request.headers or request.headers['Content-Type'] not in acceptable_content_types:
+                error = json.dumps(jsonapi_errors([
+                    {'source': '',
+                     'detail': f"Content-Type header must be of type {acceptable_content_types}",
+                     'title': 'Invalid request header',
+                     'status': '415'
+                     }]), cls=JSONEncoder)
                 return make_response(error, 415, {'Content-Type': 'application/vnd.api+json'})
         if 'Accept' in request.headers:
             flag = False
             for accept in request.headers['Accept'].split(','):
-                if accept.strip() == 'application/vnd.api+json':
+                if accept.strip() in acceptable_content_types:
                     flag = False
                     break
-                if 'application/vnd.api+json' in accept and accept.strip() != 'application/vnd.api+json':
-                    flag = True
             if flag is True:
                 error = json.dumps(jsonapi_errors([{'source': '',
-                                                    'detail': ('Accept header must be application/vnd.api+json without'
-                                                               'media type parameters'),
+                                                    'detail': (f'Accept header must be in {acceptable_content_types} '
+                                                               'without media type parameters'),
                                                     'title': 'Invalid request header',
                                                     'status': '406'}]), cls=JSONEncoder)
                 return make_response(error, 406, {'Content-Type': 'application/vnd.api+json'})

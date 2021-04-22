@@ -15,7 +15,7 @@ from marshmallow import ValidationError
 
 from flask_rest_jsonapi.querystring import QueryStringManager as QSManager
 from flask_rest_jsonapi.pagination import add_pagination_links
-from flask_rest_jsonapi.exceptions import InvalidType, BadRequest, RelationNotFound
+from flask_rest_jsonapi.exceptions import InvalidType, BadRequest, RelationNotFound, ObjectNotFound
 from flask_rest_jsonapi.decorators import check_headers, check_method_requirements, jsonapi_exception_formatter
 from flask_rest_jsonapi.schema import compute_schema, get_relationships, get_model_field
 from flask_rest_jsonapi.data_layers.base import BaseDataLayer
@@ -106,6 +106,38 @@ class Resource(MethodView):
 
         return make_response(json_reponse, status_code, headers)
 
+    def get_data(self):
+        data = request.get_json()
+        if request.headers['Content-Type'] == 'application/json':
+            data = {
+                'data': {
+                    'type': self.schema.Meta.type_,
+                    'attributes': data
+                }
+            }
+        return data
+
+    def _validate_schema(self, args, kwargs, schema):
+        json_data = self.get_data()
+
+        self.before_marshmallow(args, kwargs)
+
+        try:
+            data = schema.load(json_data)
+        except IncorrectTypeError as e:
+            errors = e.messages
+            for error in errors['errors']:
+                error['status'] = '409'
+                error['title'] = "Incorrect type"
+            return errors, 409
+        except ValidationError as e:
+            errors = e.messages
+            for message in errors['errors']:
+                message['status'] = '422'
+                message['title'] = "Validation error"
+            return errors, 422
+        return data
+
 
 class ResourceList(with_metaclass(ResourceMeta, Resource)):
     """Base class of a resource list manager"""
@@ -147,31 +179,17 @@ class ResourceList(with_metaclass(ResourceMeta, Resource)):
     @check_method_requirements
     def post(self, *args, **kwargs):
         """Create an object"""
-        json_data = request.get_json() or {}
 
         qs = QSManager(request.args, self.schema)
-
-        self.before_marshmallow(args, kwargs)
 
         schema = compute_schema(self.schema,
                                 getattr(self, 'post_schema_kwargs', dict()),
                                 qs,
                                 qs.include)
 
-        try:
-            data = schema.load(json_data)
-        except IncorrectTypeError as e:
-            errors = e.messages
-            for error in errors['errors']:
-                error['status'] = '409'
-                error['title'] = "Incorrect type"
-            return errors, 409
-        except ValidationError as e:
-            errors = e.messages
-            for message in errors['errors']:
-                message['status'] = '422'
-                message['title'] = "Validation error"
-            return errors, 422
+        data = self._validate_schema(args, kwargs, schema)
+        if isinstance(data, tuple):
+            return data
 
         self.before_post(args, kwargs, data=data)
 
@@ -259,39 +277,15 @@ class ResourceDetail(with_metaclass(ResourceMeta, Resource)):
     @check_method_requirements
     def patch(self, *args, **kwargs):
         """Update an object"""
-        json_data = request.get_json() or {}
-
         qs = QSManager(request.args, self.schema)
         schema_kwargs = getattr(self, 'patch_schema_kwargs', dict())
-
-        self.before_marshmallow(args, kwargs)
 
         schema = compute_schema(self.schema,
                                 schema_kwargs,
                                 qs,
                                 qs.include)
 
-        try:
-            data = schema.load(json_data, partial=True)
-        except IncorrectTypeError as e:
-            errors = e.messages
-            for error in errors['errors']:
-                error['status'] = '409'
-                error['title'] = "Incorrect type"
-            return errors, 409
-        except ValidationError as e:
-            errors = e.messages
-            for message in errors['errors']:
-                message['status'] = '422'
-                message['title'] = "Validation error"
-            return errors, 422
-
-        if 'id' not in json_data['data']:
-            raise BadRequest('Missing id in "data" node',
-                             source={'pointer': '/data/id'})
-        if (str(json_data['data']['id']) != str(kwargs[getattr(self._data_layer, 'url_field', 'id')])):
-            raise BadRequest('Value of id does not match the resource identifier in url',
-                             source={'pointer': '/data/id'})
+        data = self._validate_schema(args, kwargs, schema)
 
         self.before_patch(args, kwargs, data=data)
 
@@ -344,7 +338,10 @@ class ResourceDetail(with_metaclass(ResourceMeta, Resource)):
         pass
 
     def get_object(self, kwargs, qs):
-        return self._data_layer.get_object(kwargs, qs=qs)
+        obj = self._data_layer.get_object(kwargs, qs=qs)
+        if not obj:
+            raise ObjectNotFound(f"{self.schema.Meta.type_}: {kwargs['id']} not found")
+        return obj
 
     def update_object(self, data, qs, kwargs):
         obj = self._data_layer.get_object(kwargs, qs=qs)
@@ -390,7 +387,7 @@ class ResourceRelationship(with_metaclass(ResourceMeta, Resource)):
     @check_method_requirements
     def post(self, *args, **kwargs):
         """Add / create relationship(s)"""
-        json_data = request.get_json() or {}
+        json_data = self.get_data()
 
         relationship_field, model_relationship_field, related_type_, related_id_field = self._get_relationship_data()
 
@@ -434,7 +431,7 @@ class ResourceRelationship(with_metaclass(ResourceMeta, Resource)):
     @check_method_requirements
     def patch(self, *args, **kwargs):
         """Update a relationship"""
-        json_data = request.get_json() or {}
+        json_data = self.get_data()
 
         relationship_field, model_relationship_field, related_type_, related_id_field = self._get_relationship_data()
 
@@ -478,7 +475,7 @@ class ResourceRelationship(with_metaclass(ResourceMeta, Resource)):
     @check_method_requirements
     def delete(self, *args, **kwargs):
         """Delete relationship(s)"""
-        json_data = request.get_json() or {}
+        json_data = self.get_data()
 
         relationship_field, model_relationship_field, related_type_, related_id_field = self._get_relationship_data()
 
