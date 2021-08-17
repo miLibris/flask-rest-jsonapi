@@ -1888,6 +1888,7 @@ def test_api(app, person_list):
     api = Api(app)
     api.route(person_list, 'person_list', '/persons', '/person_list')
     api.init_app()
+    api.app.view_functions.clear()
 
 
 def test_api_resources(app, person_list):
