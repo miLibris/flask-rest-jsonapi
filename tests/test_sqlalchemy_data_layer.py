@@ -1895,6 +1895,7 @@ def test_api_resources(app, person_list):
     api = Api()
     api.route(person_list, 'person_list2', '/persons', '/person_list')
     api.init_app(app)
+    api.app.view_functions.clear()
 
 
 def test_relationship_containing_hyphens(api, app, client, person_schema, person_computers, register_routes,
