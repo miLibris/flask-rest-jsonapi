@@ -58,11 +58,11 @@ If you want to filter through relationships you can do that:
 
     When you filter on relationships use "any" operator for "to many" relationships and "has" operator for "to one" relationships.
 
-There is a shortcut to achieve the same filter:
+For filters where the nested operator is *eq* (as opposed to *ilike* in the above), a shortcut is available:
 
 .. sourcecode:: http
 
-    GET /persons?filter=[{"name":"computers__serial","op":"ilike","val":"%Amstrad%"}] HTTP/1.1
+    GET /persons?filter=[{"name":"computers__serial","op":"any","val":"Amstrad"}] HTTP/1.1
     Accept: application/vnd.api+json
 
 You can also use boolean combination of operations:
@@ -72,8 +72,8 @@ You can also use boolean combination of operations:
     GET /persons?filter=[
       {
         "name":"computers__serial",
-        "op":"ilike",
-        "val":"%Amstrad%"
+        "op":"any",
+        "val":"Amstrad"
       },
       {
         "or": [
