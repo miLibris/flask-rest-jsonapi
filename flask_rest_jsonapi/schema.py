@@ -23,14 +23,35 @@ def compute_schema(schema_cls, default_kwargs, qs, include):
     schema_kwargs = default_kwargs
     schema_kwargs['include_data'] = tuple()
 
+
+    # manage sparse fieldsets
+    only_arg = None
+    if schema_kwargs.get('only') is not None:
+        only_arg = set(schema_kwargs['only'])
+    if schema_cls.opts.type_ in qs.fields:
+        # Validation handled by QSManager class, safe to assume any fields we see here exist
+        sparse_fields = set(qs.fields[schema_cls.opts.type_])
+        if only_arg is not None:
+            only_arg &= sparse_fields
+        else:
+            only_arg = sparse_fields
+    if only_arg is not None:
+        # make sure id field is in only parameter unless marshamllow will raise an Exception
+        only_arg.add('id')
+        schema_kwargs['only'] = only_arg
+
     # collect sub-related_includes
     related_includes = {}
-
     if include:
+        available_fields = (
+            schema_kwargs['only']
+            if 'only' in schema_kwargs
+            else schema_cls._declared_fields
+        )
         for include_path in include:
             field = include_path.split('.')[0]
 
-            if field not in schema_cls._declared_fields:
+            if field not in available_fields:
                 raise InvalidInclude("{} has no attribute {}".format(schema_cls.__name__, field))
             elif not isinstance(schema_cls._declared_fields[field], Relationship):
                 raise InvalidInclude("{} is not a relationship attribute of {}".format(field, schema_cls.__name__))
@@ -41,23 +62,8 @@ def compute_schema(schema_cls, default_kwargs, qs, include):
             if '.' in include_path:
                 related_includes[field] += ['.'.join(include_path.split('.')[1:])]
 
-    # make sure id field is in only parameter unless marshamllow will raise an Exception
-    if schema_kwargs.get('only') is not None and 'id' not in schema_kwargs['only']:
-        schema_kwargs['only'] += ('id',)
-
     # create base schema instance
     schema = schema_cls(**schema_kwargs)
-
-    # manage sparse fieldsets
-    if schema.opts.type_ in qs.fields:
-        tmp_only = set(schema.declared_fields.keys()) & set(qs.fields[schema.opts.type_])
-        if schema.only:
-            tmp_only &= set(schema.only)
-        schema.only = tuple(tmp_only)
-
-        # make sure again that id field is in only parameter unless marshamllow will raise an Exception
-        if schema.only is not None and 'id' not in schema.only:
-            schema.only += ('id',)
 
     # manage compound documents
     if include:
