@@ -7,13 +7,13 @@ methods, speficy which blueprint to use, define the Api routes and plug addition
 import inspect
 from functools import wraps
 
-from flask import request, abort
+from flask import abort, request
 
-from flask_rest_jsonapi.resource import ResourceList, ResourceRelationship
 from flask_rest_jsonapi.decorators import jsonapi_exception_formatter
+from flask_rest_jsonapi.resource import ResourceList, ResourceRelationship
 
 
-class Api(object):
+class Api:
     """The main class of the Api"""
 
     def __init__(self, app=None, blueprint=None, decorators=None):
@@ -78,14 +78,17 @@ class Api(object):
         if 'blueprint' in kwargs:
             resource.view = '.'.join([kwargs['blueprint'].name, resource.view])
             for url in urls:
-                kwargs['blueprint'].add_url_rule(url, view_func=view_func, **url_rule_options)
+                kwargs['blueprint'].add_url_rule(
+                    url, view_func=view_func, **url_rule_options)
         elif self.blueprint is not None:
             resource.view = '.'.join([self.blueprint.name, resource.view])
             for url in urls:
-                self.blueprint.add_url_rule(url, view_func=view_func, **url_rule_options)
+                self.blueprint.add_url_rule(
+                    url, view_func=view_func, **url_rule_options)
         elif self.app is not None:
             for url in urls:
-                self.app.add_url_rule(url, view_func=view_func, **url_rule_options)
+                self.app.add_url_rule(
+                    url, view_func=view_func, **url_rule_options)
         else:
             self.resources.append({'resource': resource,
                                    'view': view,
@@ -105,7 +108,8 @@ class Api(object):
             endpoint = request.endpoint
             resource = None
             if endpoint:
-                resource = getattr(self.app.view_functions[endpoint], 'view_class', None)
+                resource = getattr(
+                    self.app.view_functions[endpoint], 'view_class', None)
 
             if resource and not getattr(resource, 'disable_oauth', None):
                 scopes = request.args.get('scopes')
@@ -176,7 +180,8 @@ class Api(object):
             @wraps(view)
             @jsonapi_exception_formatter
             def decorated(*view_args, **view_kwargs):
-                self.check_permissions(view, view_args, view_kwargs, *args, **kwargs)
+                self.check_permissions(
+                    view, view_args, view_kwargs, *args, **kwargs)
                 return view(*view_args, **view_kwargs)
             decorated._has_permissions_decorator = True
             return decorated
